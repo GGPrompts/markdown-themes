@@ -149,7 +149,7 @@ function FileList({
           {files.map((file) => (
             <div
               key={file.path}
-              className="flex items-center gap-3 text-sm py-2 px-3 rounded-lg group"
+              className="flex items-center gap-2 text-sm py-2 px-3 rounded-lg group"
               style={{ backgroundColor: 'transparent' }}
               onMouseEnter={(e) =>
                 (e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--bg-secondary) 50%, transparent)')
@@ -158,13 +158,13 @@ function FileList({
             >
               <FileIcon status={file.status} />
               <span
-                className="font-mono truncate flex-1 text-sm"
-                style={{ color: 'var(--text-primary)' }}
+                className="font-mono truncate text-sm"
+                style={{ color: 'var(--text-primary)', maxWidth: '400px' }}
               >
                 {file.path}
               </span>
 
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
                 {/* Individual discard */}
                 {showDiscard && onDiscard && (
                   <button

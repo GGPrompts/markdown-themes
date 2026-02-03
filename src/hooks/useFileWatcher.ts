@@ -45,7 +45,10 @@ export function useFileWatcher({ path, streamingTimeout = 1500 }: UseFileWatcher
     const setupWatcher = async () => {
       try {
         unwatch = await watchImmediate(path, (event) => {
-          if (event.type.modify || event.type.create) {
+          const eventType = event.type;
+          const isModify = typeof eventType === 'object' && 'modify' in eventType;
+          const isCreate = typeof eventType === 'object' && 'create' in eventType;
+          if (isModify || isCreate) {
             const now = Date.now();
             const timeSinceLastChange = now - lastChangeRef.current;
             lastChangeRef.current = now;

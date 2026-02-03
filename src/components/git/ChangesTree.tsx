@@ -10,6 +10,7 @@ import {
   Plus,
   Minus,
   Undo2,
+  EyeOff,
 } from 'lucide-react';
 import type { GitFile } from '../../hooks/useGitRepos';
 
@@ -21,6 +22,7 @@ interface ChangesTreeProps {
   onUnstage?: (files: string[]) => void;
   onDiscard?: (files: string[]) => void;
   onDiscardAll?: () => void;
+  onIgnore?: (file: string) => void;
   loading?: string | null;
 }
 
@@ -48,6 +50,7 @@ interface FileListProps {
   onAction?: (files: string[]) => void;
   onDiscard?: (files: string[]) => void;
   onDiscardAll?: () => void;
+  onIgnore?: (file: string) => void;
   showDiscard?: boolean;
   loading?: boolean;
   discardLoading?: boolean;
@@ -62,6 +65,7 @@ function FileList({
   onAction,
   onDiscard,
   onDiscardAll,
+  onIgnore,
   showDiscard,
   loading,
   discardLoading,
@@ -188,6 +192,28 @@ function FileList({
                   </button>
                 )}
 
+                {/* Add to .gitignore */}
+                {onIgnore && (
+                  <button
+                    onClick={() => onIgnore(file.path)}
+                    className="flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors"
+                    style={{
+                      color: 'var(--text-secondary)',
+                      backgroundColor: 'transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                    title="Add to .gitignore"
+                  >
+                    <EyeOff className="w-3.5 h-3.5" />
+                    <span>Ignore</span>
+                  </button>
+                )}
+
                 {/* Individual stage/unstage */}
                 {onAction && ActionIcon && (
                   <button
@@ -227,6 +253,7 @@ export function ChangesTree({
   onUnstage,
   onDiscard,
   onDiscardAll,
+  onIgnore,
   loading,
 }: ChangesTreeProps) {
   const totalChanges = staged.length + unstaged.length + untracked.length;
@@ -270,6 +297,7 @@ export function ChangesTree({
         actionIcon={Plus}
         actionLabel="Stage"
         onAction={onStage}
+        onIgnore={onIgnore}
         loading={loading === 'stage'}
       />
     </div>

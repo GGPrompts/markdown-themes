@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { GitRepo } from '../../hooks/useGitRepos';
 import { useGitOperations } from '../../hooks/useGitOperations';
+import { appendToFile } from '../../lib/api';
 import { StatusBadge } from './StatusBadge';
 import { ChangesTree } from './ChangesTree';
 import { CommitForm } from './CommitForm';
@@ -99,6 +100,16 @@ export function RepoCard({
 
   const handleGenerateMessage = async (): Promise<string> => {
     return await generateMessage();
+  };
+
+  const handleIgnore = async (file: string) => {
+    const gitignorePath = `${repo.path}/.gitignore`;
+    try {
+      await appendToFile(gitignorePath, file);
+      onRefresh();
+    } catch (err) {
+      console.error('Failed to add to .gitignore:', err);
+    }
   };
 
   return (
@@ -278,6 +289,7 @@ export function RepoCard({
               onUnstage={handleUnstage}
               onDiscard={handleDiscard}
               onDiscardAll={handleDiscardAll}
+              onIgnore={handleIgnore}
               loading={loading}
             />
           </div>

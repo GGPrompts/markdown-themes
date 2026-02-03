@@ -205,3 +205,40 @@ export async function queueToChat(command: string): Promise<void> {
     };
   });
 }
+
+/**
+ * Write content to a file via TabzChrome API
+ */
+export async function writeFile(path: string, content: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/files/write`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path, content }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || `Failed to write file: ${response.status}`);
+  }
+}
+
+/**
+ * Append a line to a file (creates file if it doesn't exist)
+ */
+export async function appendToFile(path: string, line: string): Promise<void> {
+  let currentContent = '';
+
+  try {
+    const file = await fetchFileContent(path);
+    currentContent = file.content;
+  } catch {
+    // File doesn't exist, start fresh
+  }
+
+  // Ensure content ends with newline, then append new line
+  const newContent = currentContent.endsWith('\n') || currentContent === ''
+    ? currentContent + line + '\n'
+    : currentContent + '\n' + line + '\n';
+
+  await writeFile(path, newContent);
+}

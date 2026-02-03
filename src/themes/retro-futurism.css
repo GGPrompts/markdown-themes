@@ -582,27 +582,51 @@
 
 /* ========================================
    SIDEBAR FILE TREE
-   Ensure readable text in sidebar
+   Clean, readable sidebar without glossy buttons
    ======================================== */
 
 .theme-retro-futurism aside {
   /* Override CSS variables for sidebar context */
-  --text-primary: #0d2535;
-  --text-secondary: #2a4a5a;
+  --text-primary: #1a2f3d;
+  --text-secondary: #3a5a6a;
   --bg-secondary: var(--off-white);
-  --bg-primary: var(--cream);
+  --bg-primary: rgba(255, 255, 255, 0.6);
   --accent: var(--burnt-orange);
   --border: var(--brass);
   background: var(--off-white) !important;
   border-right: 2px solid var(--brass) !important;
 }
 
-/* Tone down file type icons - less neon, more retro */
-.theme-retro-futurism aside svg {
-  filter: saturate(0.6) brightness(0.8);
+/* Remove glossy button styling from sidebar */
+.theme-retro-futurism aside button {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  color: var(--text-primary) !important;
 }
 
-/* Keep folder icons normal */
+.theme-retro-futurism aside button::before {
+  display: none !important;
+}
+
+.theme-retro-futurism aside button:hover {
+  background: rgba(212, 175, 55, 0.15) !important;
+  color: var(--burnt-orange) !important;
+}
+
+/* Selected file styling */
+.theme-retro-futurism aside button[style*="color-mix"] {
+  background: rgba(204, 85, 0, 0.12) !important;
+  color: var(--burnt-orange) !important;
+}
+
+/* Tone down file type icons - less neon, more retro */
+.theme-retro-futurism aside svg {
+  filter: saturate(0.5) brightness(0.75);
+}
+
+/* Keep chevron icons crisp */
 .theme-retro-futurism aside button > span:first-of-type svg {
   filter: none;
 }

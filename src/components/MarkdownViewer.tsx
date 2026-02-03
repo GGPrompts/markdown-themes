@@ -56,7 +56,7 @@ export const MarkdownViewer = forwardRef<MarkdownViewerHandle, MarkdownViewerPro
 
   if (!content) {
     return (
-      <div className="flex items-center justify-center h-full text-text-secondary">
+      <div className="flex items-center justify-center h-full" style={{ color: 'var(--text-secondary)' }}>
         <p>Open a markdown file to get started</p>
       </div>
     );

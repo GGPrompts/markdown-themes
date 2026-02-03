@@ -8,20 +8,20 @@ interface ThemeSelectorProps {
 export function ThemeSelector({ currentTheme, onThemeChange }: ThemeSelectorProps) {
   return (
     <div className="flex items-center gap-2">
-      <label htmlFor="theme-select" className="text-sm text-text-secondary">
+      <label htmlFor="theme-select" className="text-sm" style={{ color: 'var(--text-secondary)' }}>
         Theme:
       </label>
       <select
         id="theme-select"
         value={currentTheme}
         onChange={(e) => onThemeChange(e.target.value as ThemeId)}
-        className="
-          px-3 py-1.5 rounded-[var(--radius)]
-          bg-bg-secondary text-text-primary
-          border border-border
-          focus:outline-none focus:ring-2 focus:ring-accent
-          cursor-pointer
-        "
+        className="px-3 py-1.5 cursor-pointer focus:outline-none"
+        style={{
+          borderRadius: 'var(--radius)',
+          backgroundColor: 'var(--bg-secondary)',
+          color: 'var(--text-primary)',
+          border: '1px solid var(--border)',
+        }}
       >
         {themes.map((theme) => (
           <option key={theme.id} value={theme.id}>

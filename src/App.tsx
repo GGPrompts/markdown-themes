@@ -101,7 +101,7 @@ function App() {
   const canExport = !loading && !error && !!markdownContent;
 
   return (
-    <div className={`min-h-screen flex flex-col bg-bg-primary ${themeClass}`}>
+    <div className={`min-h-screen flex flex-col ${themeClass}`} style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
       <Toolbar
         currentFile={currentFile}
         currentTheme={appState.theme}
@@ -129,7 +129,7 @@ function App() {
         <main className="flex-1 flex flex-col overflow-hidden">
           {loading && (
             <div className="flex items-center justify-center h-full">
-              <p className="text-text-secondary">Loading...</p>
+              <p style={{ color: 'var(--text-secondary)' }}>Loading...</p>
             </div>
           )}
 

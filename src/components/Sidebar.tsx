@@ -26,22 +26,26 @@ function TreeItem({ node, currentFile, onFileSelect, depth }: TreeItemProps) {
       <div>
         <button
           onClick={() => setExpanded(!expanded)}
-          className="
-            w-full text-left py-1.5 pr-2
-            flex items-center gap-1.5
-            text-sm text-text-secondary
-            hover:bg-bg-primary hover:text-text-primary
-            transition-colors
-          "
-          style={{ paddingLeft }}
+          className="w-full text-left py-1.5 pr-2 flex items-center gap-1.5 text-sm transition-colors"
+          style={{
+            paddingLeft,
+            color: 'var(--text-secondary)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+            e.currentTarget.style.color = 'var(--text-primary)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = 'var(--text-secondary)';
+          }}
         >
           <span
-            className="
-              w-4 h-4 flex items-center justify-center
-              text-text-secondary
-              transition-transform
-            "
-            style={{ transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)' }}
+            className="w-4 h-4 flex items-center justify-center transition-transform"
+            style={{
+              color: 'var(--text-secondary)',
+              transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+            }}
           >
             <ChevronIcon />
           </span>
@@ -70,17 +74,23 @@ function TreeItem({ node, currentFile, onFileSelect, depth }: TreeItemProps) {
   return (
     <button
       onClick={() => onFileSelect(node.path)}
-      className={`
-        w-full text-left py-1.5 pr-2
-        flex items-center gap-1.5
-        text-sm
-        transition-colors
-        ${isSelected
-          ? 'bg-accent/20 text-accent font-medium'
-          : 'text-text-primary hover:bg-bg-primary'
+      className="w-full text-left py-1.5 pr-2 flex items-center gap-1.5 text-sm transition-colors"
+      style={{
+        paddingLeft: paddingLeft + 20,
+        backgroundColor: isSelected ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : 'transparent',
+        color: isSelected ? 'var(--accent)' : 'var(--text-primary)',
+        fontWeight: isSelected ? 500 : 400,
+      }}
+      onMouseEnter={(e) => {
+        if (!isSelected) {
+          e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
         }
-      `}
-      style={{ paddingLeft: paddingLeft + 20 }}
+      }}
+      onMouseLeave={(e) => {
+        if (!isSelected) {
+          e.currentTarget.style.backgroundColor = 'transparent';
+        }
+      }}
     >
       <span className="w-4 h-4 flex items-center justify-center">
         <FileIcon />
@@ -94,31 +104,40 @@ export function Sidebar({ fileTree, currentFile, workspacePath, onFileSelect, on
   const workspaceName = workspacePath?.split('/').pop() ?? workspacePath?.split('\\').pop() ?? 'Workspace';
 
   return (
-    <aside className="
-      w-[250px] min-w-[250px]
-      flex flex-col
-      bg-bg-secondary border-r border-border
-      h-full overflow-hidden
-    ">
+    <aside
+      className="w-[250px] min-w-[250px] flex flex-col h-full overflow-hidden"
+      style={{
+        backgroundColor: 'var(--bg-secondary)',
+        borderRight: '1px solid var(--border)',
+      }}
+    >
       {/* Header */}
-      <div className="
-        flex items-center justify-between
-        px-3 py-2.5
-        border-b border-border
-        bg-bg-secondary
-      ">
-        <span className="text-sm font-medium text-text-primary truncate" title={workspacePath ?? ''}>
+      <div
+        className="flex items-center justify-between px-3 py-2.5"
+        style={{
+          borderBottom: '1px solid var(--border)',
+          backgroundColor: 'var(--bg-secondary)',
+        }}
+      >
+        <span
+          className="text-sm font-medium truncate"
+          style={{ color: 'var(--text-primary)' }}
+          title={workspacePath ?? ''}
+        >
           {workspaceName}
         </span>
         <button
           onClick={onClose}
-          className="
-            w-6 h-6 flex items-center justify-center
-            rounded
-            text-text-secondary
-            hover:text-text-primary hover:bg-bg-primary
-            transition-colors
-          "
+          className="w-6 h-6 flex items-center justify-center rounded transition-colors"
+          style={{ color: 'var(--text-secondary)' }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = 'var(--text-primary)';
+            e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = 'var(--text-secondary)';
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
           title="Close workspace"
         >
           <CloseIcon />
@@ -128,7 +147,7 @@ export function Sidebar({ fileTree, currentFile, workspacePath, onFileSelect, on
       {/* File tree */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden py-2">
         {fileTree.length === 0 ? (
-          <p className="px-3 py-2 text-sm text-text-secondary">
+          <p className="px-3 py-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
             No markdown files found
           </p>
         ) : (

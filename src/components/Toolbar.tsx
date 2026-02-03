@@ -63,37 +63,39 @@ export function Toolbar({ currentFile, currentTheme, isStreaming, hasWorkspace, 
   const fileName = currentFile ? getFileName(currentFile) : null;
 
   return (
-    <header className="
-      flex items-center justify-between
-      px-4 py-3
-      bg-bg-secondary border-b border-border
-      select-none
-    ">
+    <header
+      className="flex items-center justify-between px-4 py-3 select-none"
+      style={{
+        backgroundColor: 'var(--bg-secondary)',
+        borderBottom: '1px solid var(--border)',
+      }}
+    >
       <div className="flex items-center gap-4">
         <div className="relative" ref={dropdownRef}>
           <div className="flex">
             <button
               onClick={handleOpenFile}
-              className="
-                px-4 py-1.5 rounded-l-[var(--radius)]
-                bg-accent text-white
-                hover:bg-accent-hover
-                transition-colors
-                font-medium text-sm
-              "
+              className="px-4 py-1.5 text-white font-medium text-sm transition-colors"
+              style={{
+                backgroundColor: 'var(--accent)',
+                borderRadius: 'var(--radius) 0 0 var(--radius)',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-hover)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--accent)'}
             >
               Open File
             </button>
             {recentFiles.length > 0 && (
               <button
                 onClick={() => setShowRecentFiles(!showRecentFiles)}
-                className="
-                  px-2 py-1.5 rounded-r-[var(--radius)]
-                  bg-accent text-white
-                  hover:bg-accent-hover
-                  transition-colors
-                  border-l border-white/20
-                "
+                className="px-2 py-1.5 text-white transition-colors"
+                style={{
+                  backgroundColor: 'var(--accent)',
+                  borderRadius: '0 var(--radius) var(--radius) 0',
+                  borderLeft: '1px solid rgba(255,255,255,0.2)',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--accent-hover)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--accent)'}
                 title="Recent files"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -104,14 +106,18 @@ export function Toolbar({ currentFile, currentTheme, isStreaming, hasWorkspace, 
           </div>
 
           {showRecentFiles && recentFiles.length > 0 && (
-            <div className="
-              absolute top-full left-0 mt-1 z-50
-              min-w-[280px] max-w-[400px]
-              bg-bg-secondary border border-border
-              rounded-[var(--radius)] shadow-lg
-              py-1 overflow-hidden
-            ">
-              <div className="px-3 py-1.5 text-xs text-text-secondary uppercase tracking-wide border-b border-border">
+            <div
+              className="absolute top-full left-0 mt-1 z-50 min-w-[280px] max-w-[400px] py-1 overflow-hidden shadow-lg"
+              style={{
+                backgroundColor: 'var(--bg-secondary)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius)',
+              }}
+            >
+              <div
+                className="px-3 py-1.5 text-xs uppercase tracking-wide"
+                style={{ color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}
+              >
                 Recent Files
               </div>
               <div className="max-h-[300px] overflow-y-auto">
@@ -119,16 +125,13 @@ export function Toolbar({ currentFile, currentTheme, isStreaming, hasWorkspace, 
                   <button
                     key={path}
                     onClick={() => handleRecentFileClick(path)}
-                    className="
-                      w-full px-3 py-2 text-left
-                      text-sm text-text-primary
-                      hover:bg-bg-primary
-                      transition-colors
-                      flex flex-col gap-0.5
-                    "
+                    className="w-full px-3 py-2 text-left text-sm transition-colors flex flex-col gap-0.5"
+                    style={{ color: 'var(--text-primary)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   >
                     <span className="font-medium truncate">{getFileName(path)}</span>
-                    <span className="text-xs text-text-secondary truncate">{path}</span>
+                    <span className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>{path}</span>
                   </button>
                 ))}
               </div>
@@ -139,35 +142,42 @@ export function Toolbar({ currentFile, currentTheme, isStreaming, hasWorkspace, 
         {!hasWorkspace && (
           <button
             onClick={handleOpenFolder}
-            className="
-              px-4 py-1.5 rounded-[var(--radius)]
-              bg-bg-primary text-text-primary
-              border border-border
-              hover:bg-bg-secondary
-              transition-colors
-              font-medium text-sm
-            "
+            className="px-4 py-1.5 font-medium text-sm transition-colors"
+            style={{
+              backgroundColor: 'var(--bg-primary)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-primary)'}
           >
             Open Folder
           </button>
         )}
         {fileName && (
-          <span className="text-sm text-text-secondary truncate max-w-[300px]" title={currentFile ?? ''}>
+          <span className="text-sm truncate max-w-[300px]" style={{ color: 'var(--text-secondary)' }} title={currentFile ?? ''}>
             {fileName}
           </span>
         )}
         {canExport && (
           <button
             onClick={onExport}
-            className="
-              px-3 py-1.5 rounded-[var(--radius)]
-              bg-bg-primary text-text-primary
-              border border-border
-              hover:bg-bg-secondary hover:border-accent
-              transition-colors
-              font-medium text-sm
-              flex items-center gap-1.5
-            "
+            className="px-3 py-1.5 font-medium text-sm transition-colors flex items-center gap-1.5"
+            style={{
+              backgroundColor: 'var(--bg-primary)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+              e.currentTarget.style.borderColor = 'var(--accent)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+              e.currentTarget.style.borderColor = 'var(--border)';
+            }}
             title="Export to HTML"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,10 +187,10 @@ export function Toolbar({ currentFile, currentTheme, isStreaming, hasWorkspace, 
           </button>
         )}
         {isStreaming && (
-          <span className="flex items-center gap-2 text-sm text-accent">
+          <span className="flex items-center gap-2 text-sm" style={{ color: 'var(--accent)' }}>
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: 'var(--accent)' }}></span>
+              <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: 'var(--accent)' }}></span>
             </span>
             AI writing...
           </span>

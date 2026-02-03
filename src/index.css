@@ -25,20 +25,16 @@
   --border: #2a2a3e;
 }
 
-/* Custom theme layer */
-@theme {
-  --color-bg-primary: var(--bg-primary);
-  --color-bg-secondary: var(--bg-secondary);
-  --color-text-primary: var(--text-primary);
-  --color-text-secondary: var(--text-secondary);
-  --color-accent: var(--accent);
-  --color-accent-hover: var(--accent-hover);
-  --color-border: var(--border);
-  --font-family-body: var(--font-body);
-  --font-family-heading: var(--font-heading);
-  --font-family-mono: var(--font-mono);
-  --radius-theme: var(--radius);
-}
+/* Utility classes for theme colors - use these instead of @theme since we need dynamic CSS vars */
+.bg-theme-primary { background-color: var(--bg-primary); }
+.bg-theme-secondary { background-color: var(--bg-secondary); }
+.text-theme-primary { color: var(--text-primary); }
+.text-theme-secondary { color: var(--text-secondary); }
+.text-theme-accent { color: var(--accent); }
+.bg-theme-accent { background-color: var(--accent); }
+.bg-theme-accent-hover:hover { background-color: var(--accent-hover); }
+.border-theme { border-color: var(--border); }
+.border-theme-accent { border-color: var(--accent); }
 
 /* Base styles */
 body {

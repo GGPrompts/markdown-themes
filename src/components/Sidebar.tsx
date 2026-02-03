@@ -627,8 +627,8 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
         style={{ cursor: 'col-resize' }}
         onMouseDown={handleDragStart}
       >
-        {/* Wider invisible hit area */}
-        <div className="absolute inset-y-0 -left-1 -right-1" />
+        {/* Wider invisible hit area - only extends left into sidebar, not right into content */}
+        <div className="absolute inset-y-0 -left-2 right-0" />
         {/* Visual indicator on hover */}
         <div
           className="absolute inset-y-0 left-0 right-0 transition-colors group-hover:bg-[var(--accent)]"

@@ -32,6 +32,7 @@ export function useFileWatcher({
   const wsRef = useRef<WebSocket | null>(null);
   const streamingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttemptRef = useRef(0);
+  const currentPathRef = useRef<string | null>(null);
   const maxReconnectAttempts = 5;
   const mountedRef = useRef(true);
 
@@ -40,6 +41,30 @@ export function useFileWatcher({
     if (streamingTimerRef.current) {
       clearTimeout(streamingTimerRef.current);
       streamingTimerRef.current = null;
+    }
+  }, []);
+
+  // Subscribe to a file path on the existing connection
+  const subscribeTo = useCallback((ws: WebSocket, filePath: string) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(
+        JSON.stringify({
+          type: 'file-watch',
+          path: filePath,
+        })
+      );
+    }
+  }, []);
+
+  // Unsubscribe from a file path
+  const unsubscribeFrom = useCallback((ws: WebSocket, filePath: string) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(
+        JSON.stringify({
+          type: 'file-unwatch',
+          path: filePath,
+        })
+      );
     }
   }, []);
 
@@ -97,9 +122,16 @@ export function useFileWatcher({
     [streamingTimeout, clearStreamingTimer]
   );
 
-  // Connect to WebSocket and subscribe to file
-  const connect = useCallback(async () => {
-    if (!path || wsRef.current?.readyState === WebSocket.OPEN) {
+  // Connect to WebSocket (only called once, maintains connection)
+  const connect = useCallback(async (initialPath: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      // Already connected, just subscribe to new path
+      subscribeTo(wsRef.current, initialPath);
+      return;
+    }
+
+    if (wsRef.current?.readyState === WebSocket.CONNECTING) {
+      // Connection in progress, wait for it
       return;
     }
 
@@ -120,12 +152,9 @@ export function useFileWatcher({
         reconnectAttemptRef.current = 0;
 
         // Subscribe to file watching
-        ws.send(
-          JSON.stringify({
-            type: 'file-watch',
-            path: path,
-          })
-        );
+        if (currentPathRef.current) {
+          subscribeTo(ws, currentPathRef.current);
+        }
       };
 
       ws.onmessage = handleMessage;
@@ -133,20 +162,20 @@ export function useFileWatcher({
       ws.onclose = () => {
         if (!mountedRef.current) return;
 
-        setConnected(false);
         wsRef.current = null;
+        setConnected(false);
 
         // Attempt reconnection with exponential backoff
-        if (reconnectAttemptRef.current < maxReconnectAttempts) {
+        if (reconnectAttemptRef.current < maxReconnectAttempts && currentPathRef.current) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttemptRef.current), 10000);
           reconnectAttemptRef.current++;
 
           setTimeout(() => {
-            if (mountedRef.current && path) {
-              connect();
+            if (mountedRef.current && currentPathRef.current) {
+              connect(currentPathRef.current);
             }
           }, delay);
-        } else {
+        } else if (reconnectAttemptRef.current >= maxReconnectAttempts) {
           setError('Lost connection to TabzChrome. Please ensure the backend is running.');
           setLoading(false);
         }
@@ -174,75 +203,96 @@ export function useFileWatcher({
         reconnectAttemptRef.current++;
 
         setTimeout(() => {
-          if (mountedRef.current && path) {
-            connect();
+          if (mountedRef.current && currentPathRef.current) {
+            connect(currentPathRef.current);
           }
         }, delay);
       }
     }
-  }, [path, handleMessage]);
+  }, [handleMessage, subscribeTo]);
 
-  // Disconnect and cleanup
+  // Disconnect and cleanup (only on unmount or explicit close)
   const disconnect = useCallback(() => {
     if (wsRef.current) {
-      // Unsubscribe before closing
-      if (wsRef.current.readyState === WebSocket.OPEN && path) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: 'file-unwatch',
-            path: path,
-          })
-        );
+      if (wsRef.current.readyState === WebSocket.OPEN && currentPathRef.current) {
+        unsubscribeFrom(wsRef.current, currentPathRef.current);
       }
       wsRef.current.close();
       wsRef.current = null;
     }
     setConnected(false);
     clearStreamingTimer();
-  }, [path, clearStreamingTimer]);
+  }, [clearStreamingTimer, unsubscribeFrom]);
 
   // Reload file content
   const reload = useCallback(() => {
-    if (!path) return;
+    if (!currentPathRef.current) return;
 
-    // Disconnect and reconnect to get fresh content
-    disconnect();
+    const filePath = currentPathRef.current;
     setContent('');
     setLoading(true);
     setError(null);
 
-    // Small delay before reconnecting
-    setTimeout(() => {
-      if (mountedRef.current) {
-        reconnectAttemptRef.current = 0;
-        connect();
-      }
-    }, 100);
-  }, [path, disconnect, connect]);
+    // Unsubscribe and resubscribe to get fresh content
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      unsubscribeFrom(wsRef.current, filePath);
+      setTimeout(() => {
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          subscribeTo(wsRef.current, filePath);
+        }
+      }, 50);
+    } else {
+      // Need to reconnect
+      reconnectAttemptRef.current = 0;
+      connect(filePath);
+    }
+  }, [connect, subscribeTo, unsubscribeFrom]);
 
-  // Effect: Connect when path changes
+  // Effect: Handle path changes - switch subscription without reconnecting
   useEffect(() => {
+    const previousPath = currentPathRef.current;
+    currentPathRef.current = path;
     mountedRef.current = true;
 
     if (!path) {
-      // No path, reset state
+      // No path, reset state and unsubscribe
+      if (previousPath && wsRef.current?.readyState === WebSocket.OPEN) {
+        unsubscribeFrom(wsRef.current, previousPath);
+      }
       setContent('');
       setLoading(false);
       setError(null);
       setIsStreaming(false);
-      disconnect();
       return;
     }
 
-    // Connect to WebSocket
-    reconnectAttemptRef.current = 0;
-    connect();
+    // If we have a connection, switch subscription
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      if (previousPath && previousPath !== path) {
+        unsubscribeFrom(wsRef.current, previousPath);
+      }
+      setLoading(true);
+      setContent('');
+      setError(null);
+      subscribeTo(wsRef.current, path);
+    } else {
+      // Need to establish connection
+      reconnectAttemptRef.current = 0;
+      connect(path);
+    }
 
+    return () => {
+      // Only fully disconnect on unmount, not on path change
+    };
+  }, [path, connect, subscribeTo, unsubscribeFrom]);
+
+  // Cleanup on unmount
+  useEffect(() => {
     return () => {
       mountedRef.current = false;
       disconnect();
     };
-  }, [path, connect, disconnect]);
+  }, [disconnect]);
 
   return {
     content,

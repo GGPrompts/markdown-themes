@@ -116,13 +116,17 @@ body {
 /* Shiki syntax highlighting integration */
 .streamdown-content pre.shiki {
   background-color: var(--bg-secondary) !important;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  padding: 1rem !important;
+  margin: 1rem 0 !important;
 }
 
-.streamdown-content .shiki code {
+.streamdown-content pre.shiki code {
   font-family: var(--font-mono);
-  background: transparent;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
 }
 
 /* Inline code (not in pre blocks) */

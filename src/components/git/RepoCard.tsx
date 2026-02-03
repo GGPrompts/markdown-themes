@@ -22,6 +22,8 @@ interface RepoCardProps {
   onToggleExpand: () => void;
   onRefresh: () => void;
   isFocused?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }
 
 export function RepoCard({
@@ -31,6 +33,8 @@ export function RepoCard({
   onToggleExpand,
   onRefresh,
   isFocused = false,
+  isSelected = false,
+  onToggleSelect,
 }: RepoCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const hasChanges =
@@ -115,7 +119,7 @@ export function RepoCard({
     >
       {/* Header - always visible */}
       <div
-        className="flex items-center gap-3 p-3 cursor-pointer"
+        className="flex items-center gap-2 p-3 cursor-pointer"
         style={{ backgroundColor: 'var(--bg-secondary)' }}
         onClick={onToggleExpand}
         onMouseEnter={(e) =>
@@ -123,6 +127,20 @@ export function RepoCard({
         }
         onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-secondary)')}
       >
+        {/* Selection checkbox */}
+        {onToggleSelect && (
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => { e.stopPropagation(); onToggleSelect(); }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-4 h-4 rounded cursor-pointer"
+            style={{
+              accentColor: 'var(--accent)',
+            }}
+          />
+        )}
+
         {/* Expand chevron */}
         <button className="p-0.5 rounded" style={{ color: 'var(--text-secondary)' }}>
           {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -140,15 +158,13 @@ export function RepoCard({
         </span>
 
         {/* Status badge */}
-        <div className="ml-auto">
-          <StatusBadge
-            staged={repo.staged.length}
-            unstaged={repo.unstaged.length}
-            untracked={repo.untracked.length}
-            ahead={repo.ahead}
-            behind={repo.behind}
-          />
-        </div>
+        <StatusBadge
+          staged={repo.staged.length}
+          unstaged={repo.unstaged.length}
+          untracked={repo.untracked.length}
+          ahead={repo.ahead}
+          behind={repo.behind}
+        />
 
         {/* Quick GitHub link */}
         {repo.githubUrl && (

@@ -9,12 +9,16 @@ import { isPromptyFile } from '../utils/promptyUtils';
 import { type ThemeId } from '../themes';
 import { ArrowLeft, FolderOpen, FileText, X } from 'lucide-react';
 
+// Default home path for WSL - can be customized
+const DEFAULT_HOME_PATH = '/home/marci';
+
 export function Prompts() {
   const [currentFile, setCurrentFile] = useState<string | null>(null);
   const [showPathInput, setShowPathInput] = useState(false);
   const [pathInputValue, setPathInputValue] = useState('');
   const [pathInputMode, setPathInputMode] = useState<'file' | 'folder'>('file');
-  const [libraryPath, setLibraryPath] = useState<string | null>(null);
+  const [projectPath, setProjectPath] = useState<string | null>(null);
+  const [showLibrary, setShowLibrary] = useState(true);
   const pathInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -34,10 +38,10 @@ export function Prompts() {
 
   // Restore last workspace on mount
   useEffect(() => {
-    if (!storeLoading && appState.lastWorkspace && !libraryPath) {
-      setLibraryPath(appState.lastWorkspace);
+    if (!storeLoading && appState.lastWorkspace && !projectPath) {
+      setProjectPath(appState.lastWorkspace);
     }
-  }, [storeLoading, appState.lastWorkspace, libraryPath]);
+  }, [storeLoading, appState.lastWorkspace, projectPath]);
 
   // Focus input when modal opens
   useEffect(() => {
@@ -76,7 +80,7 @@ export function Prompts() {
 
   const handleFolderSelect = useCallback(
     (path: string) => {
-      setLibraryPath(path);
+      setProjectPath(path);
       saveLastWorkspace(path);
       addRecentFolder(path);
     },
@@ -84,10 +88,12 @@ export function Prompts() {
   );
 
   const handleCloseLibrary = useCallback(() => {
-    setLibraryPath(null);
-    setCurrentFile(null);
-    saveLastWorkspace(null);
-  }, [saveLastWorkspace]);
+    setShowLibrary(false);
+  }, []);
+
+  const handleOpenLibrary = useCallback(() => {
+    setShowLibrary(true);
+  }, []);
 
   const handleOpenFile = () => {
     setPathInputMode('file');
@@ -185,28 +191,38 @@ export function Prompts() {
             Open .prompty
           </button>
 
-          {!libraryPath && (
-            <button
-              type="button"
-              onClick={handleOpenFolder}
-              className="btn-secondary px-3 py-1.5 text-sm flex items-center gap-1.5"
-              style={{ borderRadius: 'var(--radius)' }}
-            >
-              <FolderOpen size={16} />
-              Open Library
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleOpenFolder}
+            className="btn-secondary px-3 py-1.5 text-sm flex items-center gap-1.5"
+            style={{ borderRadius: 'var(--radius)' }}
+            title="Set project folder for .prompts"
+          >
+            <FolderOpen size={16} />
+            Set Project
+          </button>
 
-          {libraryPath && (
+          {showLibrary ? (
             <button
               type="button"
               onClick={handleCloseLibrary}
               className="btn-secondary px-3 py-1.5 text-sm flex items-center gap-1.5"
               style={{ borderRadius: 'var(--radius)' }}
-              title="Close prompt library"
+              title="Hide prompt library sidebar"
             >
               <X size={16} />
-              Close Library
+              Hide Library
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleOpenLibrary}
+              className="btn-secondary px-3 py-1.5 text-sm flex items-center gap-1.5"
+              style={{ borderRadius: 'var(--radius)' }}
+              title="Show prompt library sidebar"
+            >
+              <FolderOpen size={16} />
+              Show Library
             </button>
           )}
 
@@ -262,9 +278,10 @@ export function Prompts() {
 
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
-        {libraryPath && (
+        {showLibrary && (
           <PromptLibrary
-            rootPath={libraryPath}
+            homePath={DEFAULT_HOME_PATH}
+            projectPath={projectPath ?? undefined}
             selectedPath={currentFile ?? undefined}
             onSelectPrompt={handleFileSelect}
           />
@@ -383,11 +400,21 @@ export function Prompts() {
               </div>
             </form>
             <p className="text-xs mt-3" style={{ color: 'var(--text-secondary)' }}>
-              Enter the full path to a{' '}
-              {pathInputMode === 'file' ? '.prompty file' : 'folder containing .prompty files'} in
-              WSL.
-              <br />
-              Example: /home/user/prompts{pathInputMode === 'file' ? '/my-prompt.prompty' : ''}
+              {pathInputMode === 'file' ? (
+                <>
+                  Enter the full path to a .prompty file in WSL.
+                  <br />
+                  Example: /home/user/prompts/my-prompt.prompty
+                </>
+              ) : (
+                <>
+                  Enter the project folder path. The library will scan for .prompts folder inside it.
+                  <br />
+                  Global prompts from ~/.prompts are always shown.
+                  <br />
+                  Example: /home/user/projects/my-project
+                </>
+              )}
             </p>
           </div>
         </div>

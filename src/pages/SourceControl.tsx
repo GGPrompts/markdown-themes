@@ -54,8 +54,23 @@ export function SourceControl() {
   // Track focused repo index for keyboard navigation
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
 
+  // Track selected repos for bulk operations
+  const [selectedRepos, setSelectedRepos] = useState<Set<string>>(new Set());
+
   const toggleExpand = useCallback((repoName: string) => {
     setExpandedRepos((prev) => {
+      const next = new Set(prev);
+      if (next.has(repoName)) {
+        next.delete(repoName);
+      } else {
+        next.add(repoName);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleSelect = useCallback((repoName: string) => {
+    setSelectedRepos((prev) => {
       const next = new Set(prev);
       if (next.has(repoName)) {
         next.delete(repoName);
@@ -108,30 +123,45 @@ export function SourceControl() {
     );
   }, [filteredRepos]);
 
-  // Bulk operation handlers
-  const handleFetchAll = useCallback(() => {
-    const repoNames = filteredRepos.map((r) => r.name);
+  // Selection callbacks (must be after filteredRepos is defined)
+  const selectAllFiltered = useCallback(() => {
+    setSelectedRepos(new Set(filteredRepos.map((r) => r.name)));
+  }, [filteredRepos]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedRepos(new Set());
+    clearProgress();
+  }, [clearProgress]);
+
+  // Check if all filtered repos are selected
+  const allSelected = useMemo(() => {
+    return filteredRepos.length > 0 && filteredRepos.every((r) => selectedRepos.has(r.name));
+  }, [filteredRepos, selectedRepos]);
+
+  // Bulk operation handlers - now operate on selected repos only
+  const handleFetchSelected = useCallback(() => {
+    const repoNames = Array.from(selectedRepos);
     fetchAll(repoNames, () => {
       clearProgress();
       refetch();
     }, projectsDir);
-  }, [filteredRepos, fetchAll, clearProgress, refetch, projectsDir]);
+  }, [selectedRepos, fetchAll, clearProgress, refetch, projectsDir]);
 
-  const handlePullAll = useCallback(() => {
-    const repoNames = filteredRepos.map((r) => r.name);
+  const handlePullSelected = useCallback(() => {
+    const repoNames = Array.from(selectedRepos);
     pullAll(repoNames, () => {
       clearProgress();
       refetch();
     }, projectsDir);
-  }, [filteredRepos, pullAll, clearProgress, refetch, projectsDir]);
+  }, [selectedRepos, pullAll, clearProgress, refetch, projectsDir]);
 
-  const handlePushAll = useCallback(() => {
-    const repoNames = filteredRepos.map((r) => r.name);
+  const handlePushSelected = useCallback(() => {
+    const repoNames = Array.from(selectedRepos);
     pushAll(repoNames, () => {
       clearProgress();
       refetch();
     }, projectsDir);
-  }, [filteredRepos, pushAll, clearProgress, refetch, projectsDir]);
+  }, [selectedRepos, pushAll, clearProgress, refetch, projectsDir]);
 
   // Auto-expand if only one repo is showing (on initial load)
   const hasAutoExpanded = useRef(false);
@@ -278,9 +308,13 @@ export function SourceControl() {
       {filteredRepos.length > 0 && (
         <BulkActionsBar
           repoCount={filteredRepos.length}
-          onFetchAll={handleFetchAll}
-          onPullAll={handlePullAll}
-          onPushAll={handlePushAll}
+          selectedCount={selectedRepos.size}
+          allSelected={allSelected}
+          onSelectAll={selectAllFiltered}
+          onDeselectAll={clearSelection}
+          onFetchSelected={handleFetchSelected}
+          onPullSelected={handlePullSelected}
+          onPushSelected={handlePushSelected}
           progress={progress}
           isRunning={isRunning}
         />
@@ -385,6 +419,8 @@ export function SourceControl() {
                   onToggleExpand={() => toggleExpand(repo.name)}
                   onRefresh={refetch}
                   isFocused={focusedIndex === index}
+                  isSelected={selectedRepos.has(repo.name)}
+                  onToggleSelect={() => toggleSelect(repo.name)}
                 />
               );
             })}

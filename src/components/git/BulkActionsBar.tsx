@@ -1,11 +1,15 @@
-import { Download, Upload, RefreshCw, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Download, Upload, RefreshCw, CheckCircle, AlertCircle, Loader2, X } from 'lucide-react';
 import { BulkOperationProgress, BulkOperationType } from '../../hooks/useBulkGitOperations';
 
 interface BulkActionsBarProps {
   repoCount: number;
-  onFetchAll: () => void;
-  onPullAll: () => void;
-  onPushAll: () => void;
+  selectedCount: number;
+  allSelected: boolean;
+  onSelectAll: () => void;
+  onDeselectAll: () => void;
+  onFetchSelected: () => void;
+  onPullSelected: () => void;
+  onPushSelected: () => void;
   progress: BulkOperationProgress | null;
   isRunning: boolean;
 }
@@ -18,9 +22,13 @@ const operationLabels: Record<BulkOperationType, string> = {
 
 export function BulkActionsBar({
   repoCount,
-  onFetchAll,
-  onPullAll,
-  onPushAll,
+  selectedCount,
+  allSelected,
+  onSelectAll,
+  onDeselectAll,
+  onFetchSelected,
+  onPullSelected,
+  onPushSelected,
   progress,
   isRunning,
 }: BulkActionsBarProps) {
@@ -28,71 +36,103 @@ export function BulkActionsBar({
   const failedCount = progress?.results.filter((r) => !r.success).length ?? 0;
   const failedRepos = progress?.results.filter((r) => !r.success) ?? [];
 
+  const hasSelection = selectedCount > 0;
+
   return (
     <div
       className="flex flex-col gap-2 p-3"
       style={{
         borderBottom: '1px solid var(--border)',
-        backgroundColor: 'color-mix(in srgb, var(--accent) 5%, transparent)',
+        backgroundColor: hasSelection
+          ? 'color-mix(in srgb, var(--accent) 10%, transparent)'
+          : 'color-mix(in srgb, var(--accent) 5%, transparent)',
       }}
     >
       {/* Actions row */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-4">
+        {/* Select All checkbox */}
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={allSelected && repoCount > 0}
+            onChange={() => (allSelected ? onDeselectAll() : onSelectAll())}
+            className="w-4 h-4 rounded cursor-pointer"
+            style={{ accentColor: 'var(--accent)' }}
+          />
+          <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            Select All
+          </span>
+        </label>
+
+        {/* Selected count */}
         <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-          {repoCount} repo{repoCount !== 1 ? 's' : ''}
+          {selectedCount} of {repoCount} selected
         </span>
 
         <div className="flex items-center gap-2 ml-auto">
           <button
-            onClick={onFetchAll}
-            disabled={isRunning}
-            className="min-w-[100px] h-10 px-4 flex items-center justify-center gap-2 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={onFetchSelected}
+            disabled={isRunning || !hasSelection}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               backgroundColor: 'var(--bg-secondary)',
               border: '1px solid var(--border)',
               color: 'var(--text-primary)',
             }}
-            title="Fetch from remote for all repos"
+            title={hasSelection ? `Fetch ${selectedCount} selected repos` : 'Select repos to fetch'}
           >
             <RefreshCw
-              className={`w-5 h-5 ${isRunning && progress?.operation === 'fetch' ? 'animate-spin' : ''}`}
+              className={`w-4 h-4 ${isRunning && progress?.operation === 'fetch' ? 'animate-spin' : ''}`}
             />
-            Fetch All
+            Fetch
           </button>
 
           <button
-            onClick={onPullAll}
-            disabled={isRunning}
-            className="min-w-[100px] h-10 px-4 flex items-center justify-center gap-2 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={onPullSelected}
+            disabled={isRunning || !hasSelection}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               backgroundColor: 'var(--bg-secondary)',
               border: '1px solid var(--border)',
               color: 'var(--text-primary)',
             }}
-            title="Pull changes for all repos"
+            title={hasSelection ? `Pull ${selectedCount} selected repos` : 'Select repos to pull'}
           >
             <Download
-              className={`w-5 h-5 ${isRunning && progress?.operation === 'pull' ? 'animate-bounce' : ''}`}
+              className={`w-4 h-4 ${isRunning && progress?.operation === 'pull' ? 'animate-bounce' : ''}`}
             />
-            Pull All
+            Pull
           </button>
 
           <button
-            onClick={onPushAll}
-            disabled={isRunning}
-            className="min-w-[100px] h-10 px-4 flex items-center justify-center gap-2 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={onPushSelected}
+            disabled={isRunning || !hasSelection}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               backgroundColor: 'var(--bg-secondary)',
               border: '1px solid var(--border)',
               color: 'var(--text-primary)',
             }}
-            title="Push changes for all repos"
+            title={hasSelection ? `Push ${selectedCount} selected repos` : 'Select repos to push'}
           >
             <Upload
-              className={`w-5 h-5 ${isRunning && progress?.operation === 'push' ? 'animate-bounce' : ''}`}
+              className={`w-4 h-4 ${isRunning && progress?.operation === 'push' ? 'animate-bounce' : ''}`}
             />
-            Push All
+            Push
           </button>
+
+          {/* Clear selection button */}
+          {hasSelection && (
+            <button
+              onClick={onDeselectAll}
+              disabled={isRunning}
+              className="p-1.5 rounded-lg transition-colors disabled:opacity-50"
+              style={{ color: 'var(--text-secondary)' }}
+              title="Clear selection"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 

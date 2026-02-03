@@ -98,15 +98,33 @@ body {
   50% { opacity: 0; }
 }
 
-/* Streamdown code blocks - aggressive border reset */
-.streamdown-content pre,
-.streamdown-content pre *,
-.streamdown-content .code-block,
-.streamdown-content .code-block *,
-.streamdown-content [class*="shiki"],
-.streamdown-content [class*="shiki"] * {
-  border-color: transparent !important;
-  outline: none !important;
+/* Streamdown code blocks - target data-streamdown attributes */
+.streamdown-content [data-streamdown="code-block"] {
+  border: none !important;
+  background-color: var(--bg-secondary);
+  border-radius: var(--radius);
+}
+
+.streamdown-content [data-streamdown="code-block-header"] {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-secondary) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.streamdown-content [data-streamdown="code-block-body"] {
+  background-color: var(--bg-secondary) !important;
+  border: none !important;
+  border-top: none !important;
+}
+
+.streamdown-content [data-streamdown="code-block-copy-button"],
+.streamdown-content [data-streamdown="code-block-download-button"] {
+  color: var(--text-secondary) !important;
+}
+
+.streamdown-content [data-streamdown="code-block-copy-button"]:hover,
+.streamdown-content [data-streamdown="code-block-download-button"]:hover {
+  color: var(--text-primary) !important;
 }
 
 .streamdown-content pre {
@@ -141,56 +159,6 @@ body {
   padding: 0 !important;
 }
 
-/* Streamdown code block container */
-.streamdown-content .code-block {
-  border: none !important;
-  border-radius: var(--radius);
-  overflow: hidden;
-  margin: 1rem 0;
-}
-
-/* Code block header with language label and buttons */
-.streamdown-content .code-block-header {
-  background-color: var(--bg-secondary);
-  border-bottom: 1px solid var(--border);
-  padding: 0.5rem 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-
-/* Copy and download buttons */
-.streamdown-content .code-block-copy-button,
-.streamdown-content .code-block-download-button {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 4px;
-  transition: color 0.15s, background-color 0.15s;
-}
-
-.streamdown-content .code-block-copy-button:hover,
-.streamdown-content .code-block-download-button:hover {
-  color: var(--text-primary);
-  background-color: var(--bg-primary);
-}
-
-/* Code block body */
-.streamdown-content .code-block-body {
-  background-color: var(--bg-secondary);
-  padding: 1rem;
-}
-
-.streamdown-content .code-block-body pre {
-  margin: 0 !important;
-  padding: 0 !important;
-  background: transparent !important;
-}
 
 /* Inline code (not in pre blocks) */
 .streamdown-content :not(pre) > code {

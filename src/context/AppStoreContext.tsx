@@ -5,6 +5,12 @@ const MAX_RECENT_FILES = 10;
 const MAX_RECENT_FOLDERS = 5;
 const STORAGE_KEY = 'markdown-themes-settings';
 
+export interface FavoriteItem {
+  path: string;
+  isDirectory: boolean;
+  addedAt: number; // timestamp for ordering
+}
+
 export interface AppState {
   theme: ThemeId;
   recentFiles: string[];
@@ -12,6 +18,7 @@ export interface AppState {
   lastWorkspace?: string;
   fontSize: number;
   sidebarWidth: number;
+  favorites: FavoriteItem[];
 }
 
 const DEFAULT_STATE: AppState = {
@@ -21,6 +28,7 @@ const DEFAULT_STATE: AppState = {
   lastWorkspace: undefined,
   fontSize: 100,
   sidebarWidth: 250,
+  favorites: [],
 };
 
 interface AppStoreContextValue {
@@ -33,6 +41,8 @@ interface AppStoreContextValue {
   saveFontSize: (fontSize: number) => void;
   saveSidebarWidth: (width: number) => void;
   clearRecentFiles: () => void;
+  toggleFavorite: (path: string, isDirectory: boolean) => void;
+  isFavorite: (path: string) => boolean;
 }
 
 const AppStoreContext = createContext<AppStoreContextValue | null>(null);
@@ -50,6 +60,7 @@ function loadFromStorage(): AppState {
       lastWorkspace: parsed.lastWorkspace ?? DEFAULT_STATE.lastWorkspace,
       fontSize: parsed.fontSize ?? DEFAULT_STATE.fontSize,
       sidebarWidth: parsed.sidebarWidth ?? DEFAULT_STATE.sidebarWidth,
+      favorites: parsed.favorites ?? DEFAULT_STATE.favorites,
     };
   } catch {
     return DEFAULT_STATE;
@@ -135,6 +146,29 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const toggleFavorite = useCallback((path: string, isDirectory: boolean) => {
+    setState((prev) => {
+      const existingIndex = prev.favorites.findIndex((f) => f.path === path);
+      let newFavorites: FavoriteItem[];
+
+      if (existingIndex >= 0) {
+        // Remove from favorites
+        newFavorites = prev.favorites.filter((f) => f.path !== path);
+      } else {
+        // Add to favorites
+        newFavorites = [...prev.favorites, { path, isDirectory, addedAt: Date.now() }];
+      }
+
+      const next = { ...prev, favorites: newFavorites };
+      saveToStorage(next);
+      return next;
+    });
+  }, []);
+
+  const isFavorite = useCallback((path: string): boolean => {
+    return state.favorites.some((f) => f.path === path);
+  }, [state.favorites]);
+
   return (
     <AppStoreContext.Provider
       value={{
@@ -147,6 +181,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         saveFontSize,
         saveSidebarWidth,
         clearRecentFiles,
+        toggleFavorite,
+        isFavorite,
       }}
     >
       {children}

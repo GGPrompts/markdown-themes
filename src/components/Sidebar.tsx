@@ -3,6 +3,7 @@ import type { FileTreeNode } from '../context/WorkspaceContext';
 import { useFileFilter, type ScopedFileTreeNode } from '../hooks/useFileFilter';
 import { FILTERS, type FilterId } from '../lib/filters';
 import { getFileIconInfo } from '../utils/fileIcons';
+import type { FavoriteItem } from '../context/AppStoreContext';
 
 interface SidebarProps {
   fileTree: FileTreeNode[];
@@ -20,6 +21,10 @@ interface SidebarProps {
   onFileSelect: (path: string) => void;
   onFileDoubleClick?: (path: string) => void;
   onRightFileSelect?: (path: string) => void;
+  /** Favorites data and callbacks */
+  favorites: FavoriteItem[];
+  toggleFavorite: (path: string, isDirectory: boolean) => void;
+  isFavorite: (path: string) => boolean;
 }
 
 interface TreeItemProps {
@@ -34,11 +39,19 @@ interface TreeItemProps {
   onToggleExpand: () => void;
   expandedPaths: Set<string>;
   onToggleExpandPath: (path: string) => void;
+  isFavorite: (path: string) => boolean;
+  toggleFavorite: (path: string, isDirectory: boolean) => void;
 }
 
-function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick, onRightFileSelect, depth, isExpanded, onToggleExpand, expandedPaths, onToggleExpandPath }: TreeItemProps) {
+function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick, onRightFileSelect, depth, isExpanded, onToggleExpand, expandedPaths, onToggleExpandPath, isFavorite, toggleFavorite }: TreeItemProps) {
   const isSelected = node.path === currentFile;
   const paddingLeft = 12 + depth * 16;
+  const favorited = isFavorite(node.path);
+
+  const handleStarClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleFavorite(node.path, node.isDirectory);
+  };
 
   // Scope header nodes (Project / User (~)) get special styling
   if (node.isScopeHeader) {
@@ -89,6 +102,8 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
                 onToggleExpand={() => onToggleExpandPath(child.path)}
                 expandedPaths={expandedPaths}
                 onToggleExpandPath={onToggleExpandPath}
+                isFavorite={isFavorite}
+                toggleFavorite={toggleFavorite}
               />
             ))}
           </div>
@@ -102,7 +117,7 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
       <div>
         <button
           onClick={onToggleExpand}
-          className="w-full text-left py-1.5 pr-2 flex items-center gap-1.5 text-sm transition-colors"
+          className="group/item w-full text-left py-1.5 pr-2 flex items-center gap-1.5 text-sm transition-colors"
           style={{
             paddingLeft,
             color: 'var(--text-secondary)',
@@ -128,7 +143,17 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
           <span className="w-4 h-4 flex items-center justify-center">
             <FolderIcon open={isExpanded} />
           </span>
-          <span className="truncate">{node.name}</span>
+          <span className="truncate flex-1">{node.name}</span>
+          <span
+            onClick={handleStarClick}
+            className={`w-4 h-4 flex items-center justify-center transition-opacity cursor-pointer ${favorited ? 'opacity-100' : 'opacity-0 group-hover/item:opacity-100'}`}
+            style={{ color: favorited ? 'var(--accent)' : 'var(--text-secondary)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = favorited ? 'var(--accent)' : 'var(--text-secondary)'; }}
+            title={favorited ? 'Remove from favorites' : 'Add to favorites'}
+          >
+            {favorited ? <StarFilledIcon /> : <StarOutlineIcon />}
+          </span>
         </button>
         {isExpanded && node.children && (
           <div>
@@ -146,6 +171,8 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
                 onToggleExpand={() => onToggleExpandPath(child.path)}
                 expandedPaths={expandedPaths}
                 onToggleExpandPath={onToggleExpandPath}
+                isFavorite={isFavorite}
+                toggleFavorite={toggleFavorite}
               />
             ))}
           </div>
@@ -167,27 +194,112 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
     <button
       onClick={handleClick}
       onDoubleClick={() => onFileDoubleClick?.(node.path)}
-      className="w-full text-left py-1.5 pr-2 flex items-center gap-1.5 text-sm transition-colors"
-      style={{
-        paddingLeft: paddingLeft + 20,
-        backgroundColor: isSelected ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : 'transparent',
-        color: isSelected ? 'var(--accent)' : 'var(--text-primary)',
-        fontWeight: isSelected ? 500 : 400,
-      }}
-      onMouseEnter={(e) => {
-        if (!isSelected) {
-          e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isSelected) {
-          e.currentTarget.style.backgroundColor = 'transparent';
-        }
-      }}
-      title={isSplit ? 'Click to open, Ctrl+click to open in right pane' : undefined}
-    >
-      <FileIcon path={node.path} />
-      <span className="truncate">{node.name}</span>
+      className="group/item w-full text-left py-1.5 pr-2 flex items-center gap-1.5 text-sm transition-colors"
+        style={{
+          paddingLeft: paddingLeft + 20,
+          backgroundColor: isSelected ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : 'transparent',
+          color: isSelected ? 'var(--accent)' : 'var(--text-primary)',
+          fontWeight: isSelected ? 500 : 400,
+        }}
+        onMouseEnter={(e) => {
+          if (!isSelected) {
+            e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isSelected) {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }
+        }}
+        title={isSplit ? 'Click to open, Ctrl+click to open in right pane' : undefined}
+      >
+        <FileIcon path={node.path} />
+        <span className="truncate flex-1">{node.name}</span>
+        <span
+          onClick={handleStarClick}
+          className={`w-4 h-4 flex items-center justify-center transition-opacity cursor-pointer ${favorited ? 'opacity-100' : 'opacity-0 group-hover/item:opacity-100'}`}
+          style={{ color: favorited ? 'var(--accent)' : 'var(--text-secondary)' }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = favorited ? 'var(--accent)' : 'var(--text-secondary)'; }}
+          title={favorited ? 'Remove from favorites' : 'Add to favorites'}
+        >
+          {favorited ? <StarFilledIcon /> : <StarOutlineIcon />}
+        </span>
+    </button>
+  );
+}
+
+// FavoriteItem component for the favorites section
+interface FavoriteItemProps {
+  favorite: FavoriteItem;
+  currentFile: string | null;
+  isSplit?: boolean;
+  onFileSelect: (path: string) => void;
+  onFileDoubleClick?: (path: string) => void;
+  onRightFileSelect?: (path: string) => void;
+  toggleFavorite: (path: string, isDirectory: boolean) => void;
+}
+
+function FavoriteItem({ favorite, currentFile, isSplit, onFileSelect, onFileDoubleClick, onRightFileSelect, toggleFavorite }: FavoriteItemProps) {
+  const isSelected = favorite.path === currentFile;
+  const fileName = favorite.path.split('/').pop() ?? favorite.path;
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (favorite.isDirectory) return; // Don't select directories
+    if (isSplit && (e.ctrlKey || e.metaKey) && onRightFileSelect) {
+      onRightFileSelect(favorite.path);
+    } else {
+      onFileSelect(favorite.path);
+    }
+  };
+
+  const handleStarClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleFavorite(favorite.path, favorite.isDirectory);
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      onDoubleClick={() => !favorite.isDirectory && onFileDoubleClick?.(favorite.path)}
+      className="group/fav w-full text-left py-1.5 pr-2 flex items-center gap-1.5 text-sm transition-colors"
+        style={{
+          paddingLeft: 32,
+          backgroundColor: isSelected ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : 'transparent',
+          color: isSelected ? 'var(--accent)' : 'var(--text-primary)',
+          fontWeight: isSelected ? 500 : 400,
+          cursor: favorite.isDirectory ? 'default' : 'pointer',
+        }}
+        onMouseEnter={(e) => {
+          if (!isSelected) {
+            e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isSelected) {
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }
+        }}
+        title={favorite.path}
+      >
+        {favorite.isDirectory ? (
+          <span className="w-4 h-4 flex items-center justify-center">
+            <FolderIcon open={false} />
+          </span>
+        ) : (
+          <FileIcon path={favorite.path} />
+        )}
+        <span className="truncate flex-1">{fileName}</span>
+        <span
+          onClick={handleStarClick}
+          className="w-4 h-4 flex items-center justify-center transition-opacity cursor-pointer opacity-0 group-hover/fav:opacity-100"
+          style={{ color: 'var(--accent)' }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--accent)'; }}
+          title="Remove from favorites"
+        >
+          <StarFilledIcon />
+        </span>
     </button>
   );
 }
@@ -237,10 +349,11 @@ function filterTreeBySearch<T extends FileTreeNode>(nodes: T[], query: string): 
 const MIN_SIDEBAR_WIDTH = 150;
 const MAX_SIDEBAR_WIDTH = 400;
 
-export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSplit, width = 250, onWidthChange, onWidthChangeEnd, onFileSelect, onFileDoubleClick, onRightFileSelect }: SidebarProps) {
+export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSplit, width = 250, onWidthChange, onWidthChangeEnd, onFileSelect, onFileDoubleClick, onRightFileSelect, favorites, toggleFavorite, isFavorite }: SidebarProps) {
   const workspaceName = workspacePath?.split('/').pop() ?? workspacePath?.split('\\').pop() ?? 'Workspace';
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [favoritesExpanded, setFavoritesExpanded] = useState(true);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
   const filterMenuRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
@@ -596,29 +709,83 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
       </div>
 
       {/* File tree - mr-2 creates space for drag handle so scrollbar isn't covered */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden py-2 mr-2">
-        {searchFilteredFiles.length === 0 ? (
-          <p className="px-3 py-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
-            {isSearching ? 'No matching files' : isFiltered ? 'No matching files' : 'No markdown files found'}
-          </p>
-        ) : (
-          searchFilteredFiles.map((node) => (
-            <TreeItem
-              key={node.path}
-              node={node}
-              currentFile={currentFile}
-              isSplit={isSplit}
-              onFileSelect={onFileSelect}
-              onFileDoubleClick={onFileDoubleClick}
-              onRightFileSelect={onRightFileSelect}
-              depth={0}
-              isExpanded={expandedPaths.has(node.path)}
-              onToggleExpand={() => toggleExpandPath(node.path)}
-              expandedPaths={expandedPaths}
-              onToggleExpandPath={toggleExpandPath}
-            />
-          ))
+      <div className="flex-1 overflow-y-auto overflow-x-hidden mr-2">
+        {/* Favorites section - hidden when empty */}
+        {favorites.length > 0 && (
+          <div style={{ borderBottom: '1px solid var(--border)' }}>
+            <button
+              onClick={() => setFavoritesExpanded(!favoritesExpanded)}
+              className="w-full text-left py-2 px-3 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide transition-colors"
+              style={{
+                color: 'var(--accent)',
+                backgroundColor: 'color-mix(in srgb, var(--accent) 8%, transparent)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--accent) 15%, transparent)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--accent) 8%, transparent)';
+              }}
+            >
+              <span
+                className="w-4 h-4 flex items-center justify-center transition-transform"
+                style={{
+                  transform: favoritesExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                }}
+              >
+                <ChevronIcon />
+              </span>
+              <StarFilledIcon />
+              <span>Favorites ({favorites.length})</span>
+            </button>
+            {favoritesExpanded && (
+              <div className="py-1">
+                {favorites
+                  .sort((a, b) => a.addedAt - b.addedAt)
+                  .map((fav) => (
+                    <FavoriteItem
+                      key={fav.path}
+                      favorite={fav}
+                      currentFile={currentFile}
+                      isSplit={isSplit}
+                      onFileSelect={onFileSelect}
+                      onFileDoubleClick={onFileDoubleClick}
+                      onRightFileSelect={onRightFileSelect}
+                      toggleFavorite={toggleFavorite}
+                    />
+                  ))}
+              </div>
+            )}
+          </div>
         )}
+
+        {/* Main file tree */}
+        <div className="py-2">
+          {searchFilteredFiles.length === 0 ? (
+            <p className="px-3 py-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+              {isSearching ? 'No matching files' : isFiltered ? 'No matching files' : 'No markdown files found'}
+            </p>
+          ) : (
+            searchFilteredFiles.map((node) => (
+              <TreeItem
+                key={node.path}
+                node={node}
+                currentFile={currentFile}
+                isSplit={isSplit}
+                onFileSelect={onFileSelect}
+                onFileDoubleClick={onFileDoubleClick}
+                onRightFileSelect={onRightFileSelect}
+                depth={0}
+                isExpanded={expandedPaths.has(node.path)}
+                onToggleExpand={() => toggleExpandPath(node.path)}
+                expandedPaths={expandedPaths}
+                onToggleExpandPath={toggleExpandPath}
+                isFavorite={isFavorite}
+                toggleFavorite={toggleFavorite}
+              />
+            ))
+          )}
+        </div>
       </div>
 
       {/* Drag handle for resizing - positioned in the mr-2 gap */}
@@ -737,6 +904,22 @@ function CloseIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
       <path d="M18 6L6 18M6 6l12 12" />
+    </svg>
+  );
+}
+
+function StarOutlineIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
+
+function StarFilledIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2">
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
     </svg>
   );
 }

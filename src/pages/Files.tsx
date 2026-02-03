@@ -36,6 +36,8 @@ export function Files() {
     addRecentFile,
     saveFontSize,
     saveSidebarWidth,
+    toggleFavorite,
+    isFavorite,
   } = useAppStore();
 
   // Local state for sidebar width during drag (for smooth updates)
@@ -199,6 +201,9 @@ export function Files() {
             onFileSelect={handleFileSelect}
             onFileDoubleClick={handleFileDoubleClick}
             onRightFileSelect={handleRightFileSelect}
+            favorites={appState.favorites}
+            toggleFavorite={toggleFavorite}
+            isFavorite={isFavorite}
           />
         )}
 

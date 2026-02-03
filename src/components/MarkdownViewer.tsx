@@ -45,7 +45,7 @@ export const MarkdownViewer = forwardRef<MarkdownViewerHandle, MarkdownViewerPro
   }
 
   return (
-    <article ref={containerRef} className="prose prose-lg max-w-none p-8" style={{ fontSize: `${fontSize}%` }}>
+    <article ref={containerRef} className="prose prose-lg max-w-none p-8" style={{ zoom: fontSize / 100 }}>
       <Streamdown
         isAnimating={isStreaming}
         caret={isStreaming ? 'block' : undefined}

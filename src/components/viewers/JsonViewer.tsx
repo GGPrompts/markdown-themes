@@ -1,5 +1,71 @@
 import { useState, useMemo, useCallback } from 'react';
 
+/**
+ * Strip comments from JSONC (JSON with comments) content.
+ * Handles // line comments and /* block comments *\/
+ * Preserves comments inside string literals.
+ */
+function stripJsonComments(jsonc: string): string {
+  let result = '';
+  let i = 0;
+  let inString = false;
+  let stringChar = '';
+
+  while (i < jsonc.length) {
+    const char = jsonc[i];
+    const next = jsonc[i + 1];
+
+    // Track string state (handle escape sequences)
+    if (inString) {
+      result += char;
+      if (char === '\\' && i + 1 < jsonc.length) {
+        result += next;
+        i += 2;
+        continue;
+      }
+      if (char === stringChar) {
+        inString = false;
+      }
+      i++;
+      continue;
+    }
+
+    // Check for string start
+    if (char === '"' || char === "'") {
+      inString = true;
+      stringChar = char;
+      result += char;
+      i++;
+      continue;
+    }
+
+    // Check for line comment
+    if (char === '/' && next === '/') {
+      // Skip until end of line
+      while (i < jsonc.length && jsonc[i] !== '\n') {
+        i++;
+      }
+      continue;
+    }
+
+    // Check for block comment
+    if (char === '/' && next === '*') {
+      i += 2;
+      // Skip until */
+      while (i < jsonc.length - 1 && !(jsonc[i] === '*' && jsonc[i + 1] === '/')) {
+        i++;
+      }
+      i += 2; // Skip */
+      continue;
+    }
+
+    result += char;
+    i++;
+  }
+
+  return result;
+}
+
 interface JsonViewerProps {
   content: string;
   fontSize?: number;
@@ -195,7 +261,9 @@ export function JsonViewer({ content, fontSize = 100 }: JsonViewerProps) {
   const parsedData = useMemo(() => {
     try {
       setParseError(null);
-      return JSON.parse(content);
+      // Strip comments for JSONC support (tsconfig.json, etc.)
+      const stripped = stripJsonComments(content);
+      return JSON.parse(stripped);
     } catch (err) {
       setParseError(err instanceof Error ? err.message : 'Invalid JSON');
       return null;

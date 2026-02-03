@@ -81,7 +81,20 @@ Tailwind's `@theme` directive maps these to utility classes.
 npm run dev          # Vite dev server (localhost:5173)
 npm run build        # Production build
 npm run preview      # Preview production build
+npm run test:run     # Run tests once (use before commits)
+npm test             # Run tests in watch mode
 ```
+
+## Testing
+
+Tests use Vitest + React Testing Library. Run `npm run test:run` before committing.
+
+**Test coverage:**
+- `src/utils/frontmatter.test.ts` - YAML frontmatter parsing
+- `src/utils/promptyUtils.test.ts` - Prompty variable detection/substitution
+- `src/lib/filters.test.ts` - File tree filtering
+- `src/context/AppStoreContext.test.tsx` - localStorage persistence
+- `src/components/viewers/JsonViewer.test.ts` - JSONC comment stripping
 
 ## Prerequisites
 

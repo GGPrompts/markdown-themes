@@ -595,8 +595,8 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
         </div>
       </div>
 
-      {/* File tree */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden py-2">
+      {/* File tree - mr-2 creates space for drag handle so scrollbar isn't covered */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden py-2 mr-2">
         {searchFilteredFiles.length === 0 ? (
           <p className="px-3 py-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
             {isSearching ? 'No matching files' : isFiltered ? 'No matching files' : 'No markdown files found'}
@@ -621,18 +621,16 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
         )}
       </div>
 
-      {/* Drag handle for resizing */}
+      {/* Drag handle for resizing - positioned in the mr-2 gap */}
       <div
-        className="absolute top-0 right-0 w-1 h-full group"
+        className="absolute top-0 right-0 w-2 h-full group"
         style={{ cursor: 'col-resize' }}
         onMouseDown={handleDragStart}
       >
-        {/* Wider invisible hit area - only extends left into sidebar, not right into content */}
-        <div className="absolute inset-y-0 -left-2 right-0" />
-        {/* Visual indicator on hover */}
+        {/* Visual indicator on hover - thin line on the right edge */}
         <div
-          className="absolute inset-y-0 left-0 right-0 transition-colors group-hover:bg-[var(--accent)]"
-          style={{ backgroundColor: 'transparent' }}
+          className="absolute inset-y-0 right-0 w-0.5 transition-colors group-hover:bg-[var(--accent)]"
+          style={{ backgroundColor: 'var(--border)' }}
         />
       </div>
     </aside>

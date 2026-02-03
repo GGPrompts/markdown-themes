@@ -135,8 +135,8 @@ export function Toolbar({
         }}
       >
         <div className="flex items-center gap-4">
-          {/* Connection indicator - only show when disconnected */}
-          {!connected && (
+          {/* Connection indicator - only show when file selected but disconnected */}
+          {currentFile && !connected && (
             <div
               className="flex items-center gap-1.5 text-xs px-2 py-1 rounded"
               style={{

@@ -29,6 +29,7 @@ const jsonExtensions = new Set(['json', 'jsonc', 'json5']);
 const audioExtensions = new Set(['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac', 'wma']);
 const videoExtensions = new Set(['mp4', 'webm', 'mov', 'ogg', 'mkv', 'm4v', 'avi']);
 const svgExtensions = new Set(['svg']);
+const pdfExtensions = new Set(['pdf']);
 
 function getViewerType(filePath: string): ViewerType {
   const fileName = filePath.split('/').pop() || '';
@@ -61,6 +62,10 @@ function getViewerType(filePath: string): ViewerType {
 
   if (videoExtensions.has(ext)) {
     return 'video';
+  }
+
+  if (pdfExtensions.has(ext)) {
+    return 'pdf';
   }
 
   if (isPromptyFile(filePath)) {
@@ -108,6 +113,9 @@ export function ViewerContainer({
 
     case 'svg':
       return <SvgViewer filePath={filePath} content={content} fontSize={fontSize} />;
+
+    case 'pdf':
+      return <PdfViewer filePath={filePath} fontSize={fontSize} />;
 
     case 'prompty':
       return (

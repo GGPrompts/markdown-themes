@@ -707,6 +707,24 @@
   --git-deleted-color: #a52a2a;      /* Dark red */
 }
 
+/* Source Control action buttons (Fetch/Pull/Push) - ensure white text on glossy blue bubbles */
+/* These buttons have inline color styles, so we need !important */
+.theme-retro-futurism main button[title*="Fetch"],
+.theme-retro-futurism main button[title*="Pull"],
+.theme-retro-futurism main button[title*="Push"],
+.theme-retro-futurism main button[title*="push"] {
+  color: white !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Their icons should also be white */
+.theme-retro-futurism main button[title*="Fetch"] svg,
+.theme-retro-futurism main button[title*="Pull"] svg,
+.theme-retro-futurism main button[title*="Push"] svg,
+.theme-retro-futurism main button[title*="push"] svg {
+  color: white !important;
+}
+
 /* Default: all button SVGs should be white (for glossy blue buttons) */
 .theme-retro-futurism button svg[class] {
   color: white !important;
@@ -722,11 +740,24 @@
   color: var(--text-dark) !important;
 }
 
-/* Preserve accent button styling (like "Open File") */
+/* Preserve accent button styling (like "Open File") - needs high specificity to override header button resets */
+.theme-retro-futurism header button.btn-accent,
 .theme-retro-futurism .btn-accent {
   background: linear-gradient(180deg, var(--sunrise-orange-light) 0%, var(--burnt-orange) 100%) !important;
   color: white !important;
   border: 1px solid #a04000 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.3) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.1) inset,
+    0 4px 12px rgba(204, 85, 0, 0.4) !important;
+}
+
+.theme-retro-futurism header button.btn-accent:hover,
+.theme-retro-futurism .btn-accent:hover {
+  background: linear-gradient(180deg, var(--sunrise-orange-light) 10%, #e04a00 100%) !important;
+  color: white !important;
+  border-color: #903800 !important;
 }
 
 /* Search icon (not in a button) should be dark */

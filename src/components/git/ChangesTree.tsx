@@ -71,10 +71,10 @@ function FileList({
   if (files.length === 0) return null;
 
   return (
-    <div className="mb-3">
+    <div className="mb-4">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-2 text-xs font-medium mb-1 px-1 py-0.5 rounded w-full text-left group"
+        className="flex items-center gap-2 text-sm font-medium mb-2 px-2 py-1.5 rounded w-full text-left group"
         style={{
           backgroundColor: 'transparent',
         }}
@@ -82,14 +82,14 @@ function FileList({
         onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
       >
         {expanded ? (
-          <ChevronDown className="w-3 h-3" style={{ color: 'var(--text-secondary)' }} />
+          <ChevronDown className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
         ) : (
-          <ChevronRight className="w-3 h-3" style={{ color: 'var(--text-secondary)' }} />
+          <ChevronRight className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
         )}
         <span style={{ color: titleColor }}>{title}</span>
         <span style={{ color: 'var(--text-secondary)' }}>({files.length})</span>
 
-        <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="ml-auto flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           {/* Discard all button */}
           {showDiscard && onDiscardAll && (
             <button
@@ -98,11 +98,21 @@ function FileList({
                 onDiscardAll();
               }}
               disabled={discardLoading}
-              className="p-1 rounded disabled:opacity-50"
-              style={{ color: '#f87171' }}
+              className="flex items-center gap-1 px-2 py-1 rounded text-xs disabled:opacity-50 transition-colors"
+              style={{
+                color: '#f87171',
+                backgroundColor: 'color-mix(in srgb, #f87171 10%, transparent)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'color-mix(in srgb, #f87171 20%, transparent)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'color-mix(in srgb, #f87171 10%, transparent)';
+              }}
               title="Discard all changes"
             >
               <Undo2 className="w-3 h-3" />
+              <span>Discard</span>
             </button>
           )}
 
@@ -114,22 +124,32 @@ function FileList({
                 onAction(files.map((f) => f.path));
               }}
               disabled={loading}
-              className="p-1 rounded disabled:opacity-50"
-              style={{ color: 'var(--text-secondary)' }}
+              className="flex items-center gap-1 px-2 py-1 rounded text-xs disabled:opacity-50 transition-colors"
+              style={{
+                color: 'var(--text-secondary)',
+                backgroundColor: 'var(--bg-secondary)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--bg-secondary) 80%, var(--bg-primary))';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+              }}
               title={actionLabel}
             >
               <ActionIcon className="w-3 h-3" />
+              <span>{actionLabel}</span>
             </button>
           )}
         </div>
       </button>
 
       {expanded && (
-        <div className="ml-4 space-y-0.5">
+        <div className="ml-2 space-y-1">
           {files.map((file) => (
             <div
               key={file.path}
-              className="flex items-center gap-2 text-xs py-0.5 px-1 rounded group"
+              className="flex items-center gap-3 text-sm py-2 px-3 rounded-lg group"
               style={{ backgroundColor: 'transparent' }}
               onMouseEnter={(e) =>
                 (e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--bg-secondary) 50%, transparent)')
@@ -138,23 +158,33 @@ function FileList({
             >
               <FileIcon status={file.status} />
               <span
-                className="font-mono truncate flex-1"
+                className="font-mono truncate flex-1 text-sm"
                 style={{ color: 'var(--text-primary)' }}
               >
                 {file.path}
               </span>
 
-              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 {/* Individual discard */}
                 {showDiscard && onDiscard && (
                   <button
                     onClick={() => onDiscard([file.path])}
                     disabled={discardLoading}
-                    className="p-0.5 rounded disabled:opacity-50"
-                    style={{ color: '#f87171' }}
+                    className="flex items-center gap-1 px-2 py-1 rounded text-xs disabled:opacity-50 transition-colors"
+                    style={{
+                      color: '#f87171',
+                      backgroundColor: 'transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'color-mix(in srgb, #f87171 15%, transparent)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                     title="Discard changes"
                   >
-                    <Undo2 className="w-3 h-3" />
+                    <Undo2 className="w-3.5 h-3.5" />
+                    <span>Discard</span>
                   </button>
                 )}
 
@@ -163,11 +193,21 @@ function FileList({
                   <button
                     onClick={() => onAction([file.path])}
                     disabled={loading}
-                    className="p-0.5 rounded disabled:opacity-50"
-                    style={{ color: 'var(--text-secondary)' }}
+                    className="flex items-center gap-1 px-2 py-1 rounded text-xs disabled:opacity-50 transition-colors"
+                    style={{
+                      color: 'var(--text-secondary)',
+                      backgroundColor: 'transparent',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
                     title={actionLabel}
                   >
-                    <ActionIcon className="w-3 h-3" />
+                    <ActionIcon className="w-3.5 h-3.5" />
+                    <span>{actionLabel}</span>
                   </button>
                 )}
               </div>

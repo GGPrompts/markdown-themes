@@ -13,6 +13,7 @@ import type { GitRepo } from '../../hooks/useGitRepos';
 import { useGitOperations } from '../../hooks/useGitOperations';
 import { StatusBadge } from './StatusBadge';
 import { ChangesTree } from './ChangesTree';
+import { CommitForm } from './CommitForm';
 
 interface RepoCardProps {
   repo: GitRepo;
@@ -49,7 +50,7 @@ export function RepoCard({
     }
   }, [isFocused]);
 
-  const { loading, error, stageFiles, unstageFiles, push, pull, fetch, discardFiles, discardAll, clearError } =
+  const { loading, error, stageFiles, unstageFiles, commit, push, pull, fetch, discardFiles, discardAll, generateMessage, clearError } =
     useGitOperations(repo.name, projectsDir);
 
   // Handlers that refresh after operation
@@ -86,6 +87,20 @@ export function RepoCard({
   const handleDiscardAll = async () => {
     await discardAll();
     onRefresh();
+  };
+
+  const handleCommit = async (message: string) => {
+    await commit(message);
+    onRefresh();
+  };
+
+  const handleStageAll = async () => {
+    await stageFiles(['.']);
+    onRefresh();
+  };
+
+  const handleGenerateMessage = async (): Promise<string> => {
+    return await generateMessage();
   };
 
   return (
@@ -256,6 +271,20 @@ export function RepoCard({
               loading={loading}
             />
           </div>
+
+          {/* Commit form */}
+          {hasChanges && (
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+              <CommitForm
+                onCommit={handleCommit}
+                onStageAll={handleStageAll}
+                onGenerateMessage={handleGenerateMessage}
+                hasUnstaged={repo.unstaged.length > 0 || repo.untracked.length > 0}
+                hasStaged={repo.staged.length > 0}
+                loading={loading}
+              />
+            </div>
+          )}
 
           {/* Path info */}
           <div

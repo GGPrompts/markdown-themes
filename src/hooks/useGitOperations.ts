@@ -168,6 +168,21 @@ export function useGitOperations(repoName: string, projectsDir?: string) {
     }
   }, [repoName, projectsDir]);
 
+  const generateMessage = useCallback(async (): Promise<string> => {
+    setLoading('generate');
+    setError(null);
+    try {
+      const result = await gitOperation(repoName, 'generate-message', {}, projectsDir);
+      if (!result.success) throw new Error(result.error);
+      return result.message || '';
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Generate message failed');
+      throw err;
+    } finally {
+      setLoading(null);
+    }
+  }, [repoName, projectsDir]);
+
   return {
     loading,
     error,
@@ -179,6 +194,7 @@ export function useGitOperations(repoName: string, projectsDir?: string) {
     fetch: gitFetch,
     discardFiles,
     discardAll,
+    generateMessage,
     clearError: () => setError(null),
   };
 }

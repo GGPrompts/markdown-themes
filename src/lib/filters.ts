@@ -11,6 +11,7 @@ import type { FileTreeNode } from '../context/WorkspaceContext';
  */
 export const CLAUDE_CODE_PATTERNS = [
   '.claude/',         // Claude config directory (includes hooks/, settings.json)
+  '.claude.json',     // User-level config (conversation history, etc.)
   'CLAUDE.md',        // Project instructions
   '.mcp.json',        // MCP server config
   '.claudeignore',    // Ignore patterns
@@ -55,7 +56,7 @@ export const FILTERS: FilterDefinition[] = [
     name: 'Claude Code',
     patterns: CLAUDE_CODE_PATTERNS,
     homePaths: {
-      relativePaths: ['.claude'],  // ~/.claude
+      relativePaths: ['.claude', '.claude.json'],  // ~/.claude, ~/.claude.json
     },
   },
   {

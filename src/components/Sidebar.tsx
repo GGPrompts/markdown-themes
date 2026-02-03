@@ -166,7 +166,7 @@ export function Sidebar({ fileTree, currentFile, workspacePath, isSplit, onFileS
 
   return (
     <aside
-      className="w-[250px] min-w-[250px] flex flex-col h-full overflow-hidden"
+      className="w-[250px] min-w-[250px] flex flex-col h-full overflow-hidden relative z-10"
       style={{
         backgroundColor: 'var(--bg-secondary)',
         borderRight: '1px solid var(--border)',

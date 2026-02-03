@@ -1,6 +1,4 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { save } from '@tauri-apps/plugin-dialog';
-import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { themes, type ThemeId } from './themes';
 import { useFileWatcher } from './hooks/useFileWatcher';
 import { useWorkspace } from './hooks/useWorkspace';
@@ -11,11 +9,14 @@ import { MetadataBar } from './components/MetadataBar';
 import { Sidebar } from './components/Sidebar';
 import { parseFrontmatter } from './utils/frontmatter';
 import { generateHtml } from './utils/exportHtml';
+import { isTauri } from './utils/platform';
 import './index.css';
 
 function App() {
   const [currentFile, setCurrentFile] = useState<string | null>(null);
+  const [browserContent, setBrowserContent] = useState<string | null>(null); // For browser mode
   const markdownViewerRef = useRef<MarkdownViewerHandle>(null);
+  const isTauriEnv = isTauri();
 
   const {
     state: appState,
@@ -25,7 +26,14 @@ function App() {
     saveLastWorkspace,
   } = useAppStore();
 
-  const { content, error, loading, isStreaming } = useFileWatcher({ path: currentFile });
+  // Only use file watcher in Tauri mode
+  const { content: watchedContent, error, loading, isStreaming } = useFileWatcher({
+    path: isTauriEnv ? currentFile : null
+  });
+
+  // Use browser content or watched content
+  const content = isTauriEnv ? watchedContent : (browserContent ?? '');
+
   const { workspacePath, fileTree, openWorkspace, closeWorkspace } = useWorkspace();
 
   const themeClass = themes.find(t => t.id === appState.theme)?.className ?? '';
@@ -36,12 +44,12 @@ function App() {
     [content]
   );
 
-  // Restore last workspace on mount
+  // Restore last workspace on mount (Tauri only)
   useEffect(() => {
-    if (!storeLoading && appState.lastWorkspace && !workspacePath) {
+    if (isTauriEnv && !storeLoading && appState.lastWorkspace && !workspacePath) {
       openWorkspace(appState.lastWorkspace);
     }
-  }, [storeLoading, appState.lastWorkspace, workspacePath, openWorkspace]);
+  }, [isTauriEnv, storeLoading, appState.lastWorkspace, workspacePath, openWorkspace]);
 
   // Handle theme change with persistence
   const handleThemeChange = useCallback((theme: ThemeId) => {
@@ -53,6 +61,11 @@ function App() {
     setCurrentFile(path);
     addRecentFile(path);
   }, [addRecentFile]);
+
+  // Handle browser file content (when using File System Access API)
+  const handleFileContent = useCallback((content: string) => {
+    setBrowserContent(content);
+  }, []);
 
   // Handle folder selection with workspace persistence
   const handleFolderSelect = useCallback((path: string) => {
@@ -66,39 +79,46 @@ function App() {
     saveLastWorkspace(null);
   }, [closeWorkspace, saveLastWorkspace]);
 
-  // Handle export to HTML
+  // Handle export to HTML (Tauri only)
   const handleExport = useCallback(async () => {
-    if (!markdownViewerRef.current || !currentFile) return;
+    if (!isTauriEnv || !markdownViewerRef.current || !currentFile) return;
 
-    const renderedHtml = markdownViewerRef.current.getHtml();
-    if (!renderedHtml) return;
+    try {
+      const { save } = await import('@tauri-apps/plugin-dialog');
+      const { writeTextFile } = await import('@tauri-apps/plugin-fs');
 
-    // Get filename without extension for default save name
-    const fileName = currentFile.split('/').pop() ?? currentFile.split('\\').pop() ?? 'document';
-    const baseName = fileName.replace(/\.(md|markdown|txt)$/i, '');
+      const renderedHtml = markdownViewerRef.current.getHtml();
+      if (!renderedHtml) return;
 
-    // Show save dialog
-    const savePath = await save({
-      defaultPath: `${baseName}.html`,
-      filters: [{ name: 'HTML', extensions: ['html'] }],
-      title: 'Export as HTML',
-    });
+      const fileName = currentFile.split('/').pop() ?? currentFile.split('\\').pop() ?? 'document';
+      const baseName = fileName.replace(/\.(md|markdown|txt)$/i, '');
 
-    if (!savePath) return;
+      const savePath = await save({
+        defaultPath: `${baseName}.html`,
+        filters: [{ name: 'HTML', extensions: ['html'] }],
+        title: 'Export as HTML',
+      });
 
-    // Generate HTML with embedded styles
-    const html = generateHtml({
-      renderedHtml,
-      themeId: appState.theme,
-      title: baseName,
-    });
+      if (!savePath) return;
 
-    // Write file
-    await writeTextFile(savePath, html);
-  }, [currentFile, appState.theme]);
+      const html = generateHtml({
+        renderedHtml,
+        themeId: appState.theme,
+        title: baseName,
+      });
+
+      await writeTextFile(savePath, html);
+    } catch (err) {
+      console.error('Export failed:', err);
+    }
+  }, [isTauriEnv, currentFile, appState.theme]);
 
   // Check if we can export (have content and not loading)
   const canExport = !loading && !error && !!markdownContent;
+
+  // Determine loading state
+  const isLoading = isTauriEnv ? loading : false;
+  const hasError = isTauriEnv ? error : null;
 
   return (
     <div className={`min-h-screen flex flex-col ${themeClass}`} style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
@@ -111,6 +131,7 @@ function App() {
         canExport={canExport}
         onThemeChange={handleThemeChange}
         onFileSelect={handleFileSelect}
+        onFileContent={handleFileContent}
         onFolderSelect={handleFolderSelect}
         onExport={handleExport}
       />
@@ -127,19 +148,19 @@ function App() {
         )}
 
         <main className="flex-1 flex flex-col overflow-hidden">
-          {loading && (
+          {isLoading && (
             <div className="flex items-center justify-center h-full">
               <p style={{ color: 'var(--text-secondary)' }}>Loading...</p>
             </div>
           )}
 
-          {error && (
+          {hasError && (
             <div className="flex items-center justify-center h-full">
-              <p className="text-red-500">{error}</p>
+              <p className="text-red-500">{hasError}</p>
             </div>
           )}
 
-          {!loading && !error && (
+          {!isLoading && !hasError && (
             <>
               {frontmatter && <MetadataBar frontmatter={frontmatter} />}
               <div className="flex-1 overflow-auto">

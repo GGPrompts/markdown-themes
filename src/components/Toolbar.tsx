@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { open } from '@tauri-apps/plugin-dialog';
 import { ThemeSelector } from './ThemeSelector';
 import type { ThemeId } from '../themes';
+import { isTauri, browserOpenFile } from '../utils/platform';
 
 interface ToolbarProps {
   currentFile: string | null;
@@ -12,13 +12,27 @@ interface ToolbarProps {
   canExport?: boolean;
   onThemeChange: (theme: ThemeId) => void;
   onFileSelect: (path: string) => void;
+  onFileContent?: (content: string) => void; // For browser mode
   onFolderSelect?: (path: string) => void;
   onExport?: () => void;
 }
 
-export function Toolbar({ currentFile, currentTheme, isStreaming, hasWorkspace, recentFiles = [], canExport = false, onThemeChange, onFileSelect, onFolderSelect, onExport }: ToolbarProps) {
+export function Toolbar({
+  currentFile,
+  currentTheme,
+  isStreaming,
+  hasWorkspace,
+  recentFiles = [],
+  canExport = false,
+  onThemeChange,
+  onFileSelect,
+  onFileContent,
+  onFolderSelect,
+  onExport
+}: ToolbarProps) {
   const [showRecentFiles, setShowRecentFiles] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const isTauriEnv = isTauri();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -33,13 +47,24 @@ export function Toolbar({ currentFile, currentTheme, isStreaming, hasWorkspace, 
 
   const handleOpenFile = async () => {
     try {
-      const selected = await open({
-        multiple: false,
-        filters: [{ name: 'Markdown', extensions: ['md', 'markdown', 'txt'] }],
-      });
+      if (isTauriEnv) {
+        // Use Tauri dialog
+        const { open } = await import('@tauri-apps/plugin-dialog');
+        const selected = await open({
+          multiple: false,
+          filters: [{ name: 'Markdown', extensions: ['md', 'markdown', 'txt'] }],
+        });
 
-      if (selected && typeof selected === 'string') {
-        onFileSelect(selected);
+        if (selected && typeof selected === 'string') {
+          onFileSelect(selected);
+        }
+      } else {
+        // Use browser File System Access API
+        const result = await browserOpenFile();
+        if (result) {
+          onFileSelect(result.path);
+          onFileContent?.(result.content);
+        }
       }
     } catch (err) {
       console.error('Failed to open file dialog:', err);
@@ -47,7 +72,14 @@ export function Toolbar({ currentFile, currentTheme, isStreaming, hasWorkspace, 
   };
 
   const handleOpenFolder = async () => {
+    if (!isTauriEnv) {
+      // Folder browsing not fully supported in browser
+      alert('Folder browsing is only available in the desktop app. Use "Open File" to select individual files.');
+      return;
+    }
+
     try {
+      const { open } = await import('@tauri-apps/plugin-dialog');
       const selected = await open({
         directory: true,
         title: 'Select Workspace Folder',
@@ -141,7 +173,7 @@ export function Toolbar({ currentFile, currentTheme, isStreaming, hasWorkspace, 
           )}
         </div>
 
-        {!hasWorkspace && (
+        {!hasWorkspace && isTauriEnv && (
           <button
             type="button"
             onClick={handleOpenFolder}
@@ -158,7 +190,7 @@ export function Toolbar({ currentFile, currentTheme, isStreaming, hasWorkspace, 
           </span>
         )}
 
-        {canExport && (
+        {canExport && isTauriEnv && (
           <button
             type="button"
             onClick={onExport}

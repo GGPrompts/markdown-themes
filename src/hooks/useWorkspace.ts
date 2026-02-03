@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { readDir } from '@tauri-apps/plugin-fs';
+import { isTauri } from '../utils/platform';
 
 export interface FileTreeNode {
   name: string;
@@ -24,6 +24,7 @@ function isMarkdownFile(name: string): boolean {
 }
 
 async function buildFileTree(dirPath: string): Promise<FileTreeNode[]> {
+  const { readDir } = await import('@tauri-apps/plugin-fs');
   const entries = await readDir(dirPath);
   const nodes: FileTreeNode[] = [];
 
@@ -71,8 +72,14 @@ export function useWorkspace(): UseWorkspaceResult {
   const [fileTree, setFileTree] = useState<FileTreeNode[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isTauriEnv = isTauri();
 
   const loadWorkspace = useCallback(async (path: string) => {
+    if (!isTauriEnv) {
+      setError('Workspace feature is only available in the desktop app');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -86,7 +93,7 @@ export function useWorkspace(): UseWorkspaceResult {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isTauriEnv]);
 
   const openWorkspace = useCallback(async (path: string) => {
     await loadWorkspace(path);

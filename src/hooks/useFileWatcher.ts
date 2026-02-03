@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { readTextFile, watchImmediate } from '@tauri-apps/plugin-fs';
+import { isTauri } from '../utils/platform';
 
 interface UseFileWatcherOptions {
   path: string | null;
@@ -14,9 +14,10 @@ export function useFileWatcher({ path, streamingTimeout = 1500 }: UseFileWatcher
 
   const streamingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastChangeRef = useRef<number>(0);
+  const isTauriEnv = isTauri();
 
   const loadFile = useCallback(async () => {
-    if (!path) {
+    if (!path || !isTauriEnv) {
       setContent('');
       return;
     }
@@ -25,6 +26,7 @@ export function useFileWatcher({ path, streamingTimeout = 1500 }: UseFileWatcher
     setError(null);
 
     try {
+      const { readTextFile } = await import('@tauri-apps/plugin-fs');
       const text = await readTextFile(path);
       setContent(text);
     } catch (err) {
@@ -33,17 +35,23 @@ export function useFileWatcher({ path, streamingTimeout = 1500 }: UseFileWatcher
     } finally {
       setLoading(false);
     }
-  }, [path]);
+  }, [path, isTauriEnv]);
 
   useEffect(() => {
-    loadFile();
+    if (!isTauriEnv || !path) {
+      setContent('');
+      setLoading(false);
+      setError(null);
+      return;
+    }
 
-    if (!path) return;
+    loadFile();
 
     let unwatch: (() => void) | undefined;
 
     const setupWatcher = async () => {
       try {
+        const { watchImmediate } = await import('@tauri-apps/plugin-fs');
         unwatch = await watchImmediate(path, (event) => {
           const eventType = event.type;
           const isModify = typeof eventType === 'object' && 'modify' in eventType;
@@ -84,7 +92,7 @@ export function useFileWatcher({ path, streamingTimeout = 1500 }: UseFileWatcher
         clearTimeout(streamingTimerRef.current);
       }
     };
-  }, [path, loadFile, streamingTimeout]);
+  }, [path, loadFile, streamingTimeout, isTauriEnv]);
 
   return { content, error, loading, isStreaming, reload: loadFile };
 }

@@ -1,0 +1,416 @@
+/* Verdant Grove Theme
+ * Nature-forward design with soft greens, calm spacing, and organic feel
+ * Inspired by forest, moss, fern, and morning mist
+ */
+
+.theme-verdant-grove {
+  /* Nature Color Palette */
+  --forest: #123526;
+  --moss: #315c45;
+  --fern: #4f8a6e;
+  --sage: #a6c1ae;
+  --mist: #eff6ef;
+  --river: #6fa7a4;
+  --sun: #f0d8a8;
+  --bark: #4a3f35;
+
+  /* Neutral Tones */
+  --ink: #1f2a24;
+  --ink-soft: #3c4a41;
+  --muted: #6f7f74;
+  --surface: #ffffff;
+  --surface-alt: #f4f8f3;
+  --line: rgba(31, 42, 36, 0.14);
+
+  /* Theme Variables */
+  --bg-primary: var(--surface-alt);
+  --bg-secondary: var(--mist);
+  --text-primary: var(--ink);
+  --text-secondary: var(--muted);
+  --accent: var(--fern);
+  --accent-hover: var(--moss);
+  --border: var(--line);
+
+  /* Typography */
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-body: 'Karla', 'Inter', sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Consolas', monospace;
+
+  /* Organic Curves */
+  --radius: 10px;
+  --radius-lg: 18px;
+
+  /* Base styling with soft gradient background */
+  background:
+    radial-gradient(900px 600px at -10% 0%, rgba(111, 167, 164, 0.12), transparent 60%),
+    radial-gradient(800px 500px at 110% 10%, rgba(79, 138, 110, 0.1), transparent 60%),
+    linear-gradient(180deg, #f4fbf4 0%, #eef5ee 55%, #e8f0e8 100%);
+}
+
+/* Ensure content is above background */
+.theme-verdant-grove > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Header needs highest z-index for dropdowns */
+.theme-verdant-grove > header:first-of-type {
+  z-index: 100;
+}
+
+/* Toolbar header */
+.theme-verdant-grove > header:nth-of-type(2) {
+  z-index: 50;
+}
+
+/* Body Typography */
+.theme-verdant-grove .prose {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Headings - Elegant Serif */
+.theme-verdant-grove .prose h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--forest);
+}
+
+.theme-verdant-grove .prose h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--moss);
+}
+
+.theme-verdant-grove .prose h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--fern);
+}
+
+.theme-verdant-grove .prose h4,
+.theme-verdant-grove .prose h5,
+.theme-verdant-grove .prose h6 {
+  font-family: var(--font-body);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* Blockquotes - Soft Panel */
+.theme-verdant-grove .prose blockquote {
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  font-style: normal;
+  line-height: 1.7;
+  padding: 1.5rem 2rem;
+  margin: 1.5rem 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--fern);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  color: var(--ink-soft);
+  box-shadow: 0 4px 16px rgba(18, 53, 38, 0.08);
+}
+
+.theme-verdant-grove .prose blockquote p {
+  margin: 0;
+}
+
+/* Links */
+.theme-verdant-grove .prose a {
+  color: var(--fern);
+  text-decoration: underline;
+  text-decoration-color: var(--sage);
+  text-underline-offset: 2px;
+  transition: all 0.16s ease;
+}
+
+.theme-verdant-grove .prose a:hover {
+  color: var(--moss);
+  text-decoration-color: var(--fern);
+}
+
+/* Horizontal Rules */
+.theme-verdant-grove .prose hr {
+  border: none;
+  height: 1px;
+  margin: 2.5rem 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--sage) 20%,
+    var(--sage) 80%,
+    transparent
+  );
+}
+
+/* Code Blocks */
+.theme-verdant-grove .prose pre {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  box-shadow: 0 4px 16px rgba(18, 53, 38, 0.08);
+}
+
+.theme-verdant-grove .prose pre code {
+  font-family: var(--font-mono);
+  color: var(--ink);
+  background: transparent;
+}
+
+/* Inline Code */
+.theme-verdant-grove .prose :not(pre) > code {
+  background: var(--mist);
+  color: var(--moss);
+  padding: 0.2em 0.5em;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  border: 1px solid var(--line);
+}
+
+/* Lists */
+.theme-verdant-grove .prose ul,
+.theme-verdant-grove .prose ol {
+  color: var(--text-primary);
+}
+
+.theme-verdant-grove .prose li::marker {
+  color: var(--fern);
+}
+
+/* Tables */
+.theme-verdant-grove .prose table {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(18, 53, 38, 0.08);
+}
+
+.theme-verdant-grove .prose th {
+  font-family: var(--font-body);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.7rem;
+  color: var(--muted);
+  background: rgba(18, 53, 38, 0.05);
+  border-bottom: 1px solid var(--line);
+  padding: 0.875rem 1rem;
+}
+
+.theme-verdant-grove .prose td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.75rem 1rem;
+}
+
+.theme-verdant-grove .prose tr:hover {
+  background: rgba(166, 193, 174, 0.15);
+}
+
+/* Strong/Bold */
+.theme-verdant-grove .prose strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Emphasis/Italic */
+.theme-verdant-grove .prose em {
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+/* Images */
+.theme-verdant-grove .prose img {
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 24px rgba(18, 53, 38, 0.12);
+  transition: all 0.3s ease;
+}
+
+.theme-verdant-grove .prose img:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(18, 53, 38, 0.16);
+}
+
+/* Shiki Syntax Highlighting */
+.theme-verdant-grove {
+  --shiki-foreground: var(--ink);
+  --shiki-background: transparent;
+  --shiki-token-constant: var(--river);
+  --shiki-token-string: var(--fern);
+  --shiki-token-comment: var(--muted);
+  --shiki-token-keyword: var(--moss);
+  --shiki-token-parameter: var(--ink-soft);
+  --shiki-token-function: #8b6c5c;
+  --shiki-token-string-expression: var(--fern);
+  --shiki-token-punctuation: var(--muted);
+  --shiki-token-link: var(--river);
+}
+
+.theme-verdant-grove .streamdown-content pre.shiki {
+  background: var(--surface) !important;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+
+/* Streamdown caret */
+.theme-verdant-grove .streamdown-content [data-caret] {
+  background-color: var(--fern);
+  box-shadow: 0 0 8px rgba(79, 138, 110, 0.5);
+}
+
+/* Buttons - Soft rounded pill style */
+.theme-verdant-grove button,
+.theme-verdant-grove .btn {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  transition: all 0.16s ease;
+  box-shadow: 0 2px 0 rgba(18, 53, 38, 0.08);
+}
+
+.theme-verdant-grove button:hover,
+.theme-verdant-grove .btn:hover {
+  background: var(--mist);
+  border-color: var(--sage);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(18, 53, 38, 0.12);
+}
+
+/* Accent buttons */
+.theme-verdant-grove .btn-accent {
+  background: var(--fern) !important;
+  border-color: var(--fern) !important;
+  color: white !important;
+}
+
+.theme-verdant-grove .btn-accent:hover {
+  background: var(--moss) !important;
+  border-color: var(--moss) !important;
+}
+
+/* Header styling */
+.theme-verdant-grove header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.theme-verdant-grove header button,
+.theme-verdant-grove header select {
+  background: var(--surface-alt);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--ink);
+}
+
+.theme-verdant-grove header button:hover,
+.theme-verdant-grove header select:hover {
+  background: var(--mist);
+  border-color: var(--sage);
+}
+
+/* Preserve accent button in header */
+.theme-verdant-grove header button.btn-accent {
+  background: var(--fern) !important;
+  border-color: var(--fern) !important;
+  color: white !important;
+  border-radius: var(--radius);
+}
+
+.theme-verdant-grove header button.btn-accent:hover {
+  background: var(--moss) !important;
+  border-color: var(--moss) !important;
+}
+
+/* Sidebar */
+.theme-verdant-grove aside {
+  background: var(--surface) !important;
+  border-right: 1px solid var(--line) !important;
+}
+
+.theme-verdant-grove aside button {
+  background: transparent !important;
+  border: none !important;
+  border-radius: var(--radius) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+
+.theme-verdant-grove aside button:hover {
+  background: var(--mist) !important;
+  color: var(--moss) !important;
+}
+
+/* Selected file */
+.theme-verdant-grove aside button[style*="color-mix"] {
+  background: rgba(79, 138, 110, 0.12) !important;
+  color: var(--fern) !important;
+}
+
+/* Scrollbar */
+.theme-verdant-grove ::-webkit-scrollbar {
+  width: 10px;
+}
+
+.theme-verdant-grove ::-webkit-scrollbar-track {
+  background: var(--surface-alt);
+}
+
+.theme-verdant-grove ::-webkit-scrollbar-thumb {
+  background: var(--sage);
+  border-radius: 999px;
+  border: 2px solid var(--surface-alt);
+}
+
+.theme-verdant-grove ::-webkit-scrollbar-thumb:hover {
+  background: var(--fern);
+}
+
+/* Metadata bar */
+.theme-verdant-grove .metadata-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.theme-verdant-grove .metadata-tag {
+  background: rgba(79, 138, 110, 0.15);
+  color: var(--moss);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Source Control buttons */
+.theme-verdant-grove button[title*="Fetch"],
+.theme-verdant-grove button[title*="Pull"],
+.theme-verdant-grove button[title*="Push"],
+.theme-verdant-grove button[title*="push"] {
+  background: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius) !important;
+  color: var(--ink) !important;
+  box-shadow: none !important;
+}
+
+.theme-verdant-grove button[title*="Fetch"]:hover,
+.theme-verdant-grove button[title*="Pull"]:hover,
+.theme-verdant-grove button[title*="Push"]:hover,
+.theme-verdant-grove button[title*="push"]:hover {
+  background: var(--mist) !important;
+  border-color: var(--sage) !important;
+}

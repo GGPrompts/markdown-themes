@@ -6,6 +6,7 @@ import './noir.css';
 import './nordic.css';
 import './glassmorphism.css';
 import './film-grain.css';
+import './verdant-grove.css';
 import './art-deco.css';
 import './knolling.css';
 import './industrial.css';
@@ -22,6 +23,7 @@ export const themes = [
   { id: 'nordic', name: 'Nordic', className: 'theme-nordic' },
   { id: 'glassmorphism', name: 'Glassmorphism', className: 'theme-glassmorphism' },
   { id: 'film-grain', name: 'Film Grain', className: 'theme-film-grain' },
+  { id: 'verdant-grove', name: 'Verdant Grove', className: 'theme-verdant-grove' },
   { id: 'art-deco', name: 'Art Deco', className: 'theme-art-deco' },
   { id: 'knolling', name: 'Knolling', className: 'theme-knolling' },
   { id: 'industrial', name: 'Industrial', className: 'theme-industrial' },

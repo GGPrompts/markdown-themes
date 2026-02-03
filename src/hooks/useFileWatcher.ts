@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { isTauri } from '../utils/platform';
 
 interface UseFileWatcherOptions {
   path: string | null;
-  streamingTimeout?: number; // ms to wait before considering streaming stopped
+  streamingTimeout?: number;
 }
 
 export function useFileWatcher({ path, streamingTimeout = 1500 }: UseFileWatcherOptions) {
@@ -16,83 +16,110 @@ export function useFileWatcher({ path, streamingTimeout = 1500 }: UseFileWatcher
   const lastChangeRef = useRef<number>(0);
   const isTauriEnv = isTauri();
 
-  const loadFile = useCallback(async () => {
-    if (!path || !isTauriEnv) {
-      setContent('');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const { readTextFile } = await import('@tauri-apps/plugin-fs');
-      const text = await readTextFile(path);
-      setContent(text);
-    } catch (err) {
-      setError(`Failed to read file: ${err}`);
-      setContent('');
-    } finally {
-      setLoading(false);
-    }
-  }, [path, isTauriEnv]);
-
   useEffect(() => {
     if (!isTauriEnv || !path) {
       setContent('');
       setLoading(false);
       setError(null);
+      setIsStreaming(false);
       return;
     }
 
-    loadFile();
-
+    let mounted = true;
     let unwatch: (() => void) | undefined;
+
+    const loadFile = async () => {
+      if (!mounted) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const { readTextFile } = await import('@tauri-apps/plugin-fs');
+        const text = await readTextFile(path);
+        if (mounted) {
+          setContent(text);
+        }
+      } catch (err) {
+        if (mounted) {
+          setError(`Failed to read file: ${err}`);
+          setContent('');
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
 
     const setupWatcher = async () => {
       try {
+        // Initial load
+        await loadFile();
+
         const { watchImmediate } = await import('@tauri-apps/plugin-fs');
-        unwatch = await watchImmediate(path, (event) => {
+        unwatch = await watchImmediate(path, async (event) => {
+          if (!mounted) return;
+
           const eventType = event.type;
           const isModify = typeof eventType === 'object' && 'modify' in eventType;
           const isCreate = typeof eventType === 'object' && 'create' in eventType;
+
           if (isModify || isCreate) {
             const now = Date.now();
             const timeSinceLastChange = now - lastChangeRef.current;
             lastChangeRef.current = now;
 
-            // If changes are happening rapidly, we're streaming
             if (timeSinceLastChange < streamingTimeout) {
               setIsStreaming(true);
             }
 
-            // Clear existing timer
             if (streamingTimerRef.current) {
               clearTimeout(streamingTimerRef.current);
             }
 
-            // Set timer to stop streaming state after timeout
             streamingTimerRef.current = setTimeout(() => {
-              setIsStreaming(false);
+              if (mounted) {
+                setIsStreaming(false);
+              }
             }, streamingTimeout);
 
-            loadFile();
+            await loadFile();
           }
         });
       } catch (err) {
-        console.error('Failed to watch file:', err);
+        console.error('Failed to setup file watcher:', err);
+        if (mounted) {
+          setError(`Failed to watch file: ${err}`);
+        }
       }
     };
 
     setupWatcher();
 
     return () => {
+      mounted = false;
       unwatch?.();
       if (streamingTimerRef.current) {
         clearTimeout(streamingTimerRef.current);
       }
     };
-  }, [path, loadFile, streamingTimeout, isTauriEnv]);
+  }, [path, streamingTimeout, isTauriEnv]);
 
-  return { content, error, loading, isStreaming, reload: loadFile };
+  const reload = async () => {
+    if (!isTauriEnv || !path) return;
+
+    setLoading(true);
+    try {
+      const { readTextFile } = await import('@tauri-apps/plugin-fs');
+      const text = await readTextFile(path);
+      setContent(text);
+    } catch (err) {
+      setError(`Failed to read file: ${err}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { content, error, loading, isStreaming, reload };
 }

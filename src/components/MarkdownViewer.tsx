@@ -1,25 +1,44 @@
-import { useMemo, forwardRef, useImperativeHandle, useRef } from 'react';
+import { useMemo, forwardRef, useImperativeHandle, useRef, useState, useEffect, Component, ReactNode } from 'react';
 import { Streamdown } from 'streamdown';
-import { createCodePlugin } from '@streamdown/code';
 import type { BundledTheme } from 'shiki';
 
 // Theme to Shiki theme mapping
-// Each app theme maps to appropriate light/dark Shiki themes
-// The tuple is [light, dark] - we use the same theme for both since
-// each app theme has a consistent light/dark mode
 const themeToShikiThemes: Record<string, [BundledTheme, BundledTheme]> = {
   'default': ['github-light', 'github-dark'],
-  '': ['github-light', 'github-dark'], // fallback for empty className
+  '': ['github-light', 'github-dark'],
   'theme-dark-academia': ['rose-pine-moon', 'rose-pine-moon'],
   'theme-cyberpunk': ['synthwave-84', 'synthwave-84'],
   'theme-parchment': ['github-light', 'github-light'],
   'theme-cosmic': ['tokyo-night', 'tokyo-night'],
   'theme-noir': ['min-dark', 'min-dark'],
-  'theme-nordic': ['github-light', 'github-light'], // Light theme - soft minimal
-  'theme-glassmorphism': ['poimandres', 'poimandres'], // Purple/blue tones
-  'theme-retro-futurism': ['snazzy-light', 'snazzy-light'], // Colorful light theme
-  'theme-art-deco': ['vitesse-dark', 'vitesse-dark'], // Gold tones on dark
+  'theme-nordic': ['github-light', 'github-light'],
+  'theme-glassmorphism': ['poimandres', 'poimandres'],
+  'theme-retro-futurism': ['snazzy-light', 'snazzy-light'],
+  'theme-art-deco': ['vitesse-dark', 'vitesse-dark'],
 };
+
+// Error boundary to catch rendering errors
+class ErrorBoundary extends Component<{ children: ReactNode; fallback: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode; fallback: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, info: { componentStack: string }) {
+    console.error('MarkdownViewer error:', error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback;
+    }
+    return this.props.children;
+  }
+}
 
 interface MarkdownViewerProps {
   content: string;
@@ -28,31 +47,53 @@ interface MarkdownViewerProps {
 }
 
 export interface MarkdownViewerHandle {
-  /** Get the rendered HTML content */
   getHtml: () => string;
 }
 
 export const MarkdownViewer = forwardRef<MarkdownViewerHandle, MarkdownViewerProps>(function MarkdownViewer({ content, isStreaming = false, themeClassName = '' }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [codePlugin, setCodePlugin] = useState<unknown>(null);
+  const [pluginError, setPluginError] = useState(false);
+
+  // Get the appropriate Shiki themes
+  const shikiThemes = themeToShikiThemes[themeClassName] || themeToShikiThemes['default'];
+
+  // Lazy load the code plugin
+  useEffect(() => {
+    let mounted = true;
+
+    const loadPlugin = async () => {
+      try {
+        const { createCodePlugin } = await import('@streamdown/code');
+        if (mounted) {
+          const plugin = createCodePlugin({ themes: shikiThemes });
+          setCodePlugin(plugin);
+        }
+      } catch (err) {
+        console.error('Failed to load code plugin:', err);
+        if (mounted) {
+          setPluginError(true);
+        }
+      }
+    };
+
+    loadPlugin();
+
+    return () => {
+      mounted = false;
+    };
+  }, [shikiThemes[0], shikiThemes[1]]);
 
   // Expose getHtml method via ref
   useImperativeHandle(ref, () => ({
     getHtml: () => {
       if (containerRef.current) {
-        // Get the inner content of the streamdown wrapper
         const streamdownContent = containerRef.current.querySelector('.streamdown-content');
         return streamdownContent?.innerHTML ?? containerRef.current.innerHTML;
       }
       return '';
     },
   }), []);
-  // Get the appropriate Shiki themes based on current app theme
-  const shikiThemes = themeToShikiThemes[themeClassName] || themeToShikiThemes['default'];
-
-  // Create code plugin with theme-specific configuration, memoized to avoid recreation
-  const codePlugin = useMemo(() => createCodePlugin({
-    themes: shikiThemes,
-  }), [shikiThemes[0], shikiThemes[1]]);
 
   if (!content) {
     return (
@@ -62,18 +103,32 @@ export const MarkdownViewer = forwardRef<MarkdownViewerHandle, MarkdownViewerPro
     );
   }
 
-  return (
+  const fallback = (
     <article ref={containerRef} className="prose prose-lg max-w-none p-8">
-      <Streamdown
-        plugins={{ code: codePlugin }}
-        isAnimating={isStreaming}
-        caret={isStreaming ? 'block' : undefined}
-        parseIncompleteMarkdown={true}
-        className="streamdown-content"
-        shikiTheme={shikiThemes}
-      >
-        {content}
-      </Streamdown>
+      <div style={{ color: 'var(--text-secondary)' }}>
+        <p>Error rendering markdown. Raw content:</p>
+        <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.875rem' }}>{content}</pre>
+      </div>
     </article>
+  );
+
+  // Build plugins object only if code plugin loaded successfully
+  const plugins = codePlugin && !pluginError ? { code: codePlugin } : undefined;
+
+  return (
+    <ErrorBoundary fallback={fallback}>
+      <article ref={containerRef} className="prose prose-lg max-w-none p-8">
+        <Streamdown
+          plugins={plugins}
+          isAnimating={isStreaming}
+          caret={isStreaming ? 'block' : undefined}
+          parseIncompleteMarkdown={true}
+          className="streamdown-content"
+          shikiTheme={plugins ? shikiThemes : undefined}
+        >
+          {content}
+        </Streamdown>
+      </article>
+    </ErrorBoundary>
   );
 });

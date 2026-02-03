@@ -20,6 +20,7 @@ import {
   type PromptyFrontmatter,
 } from '../utils/promptyUtils';
 import { InlineField } from './InlineField';
+import { FilePickerModal } from './FilePickerModal';
 
 interface PromptNotebookProps {
   content: string;
@@ -36,6 +37,9 @@ const cssVarsTheme = createCssVariablesTheme({
   fontStyle: true,
 });
 
+// Default home path for file picker
+const DEFAULT_HOME_PATH = '/home/marci';
+
 export function PromptNotebook({
   content,
   path: _path,  // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -46,6 +50,13 @@ export function PromptNotebook({
   const [activeFieldIndex, setActiveFieldIndex] = useState<number | null>(null);
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
   const [showFrontmatter, setShowFrontmatter] = useState(true);
+
+  // File picker modal state
+  const [filePickerState, setFilePickerState] = useState<{
+    isOpen: boolean;
+    mode: 'file' | 'folder';
+    callback: ((path: string) => void) | null;
+  }>({ isOpen: false, mode: 'file', callback: null });
 
   // Parse the prompty file
   const parsed = useMemo(() => parsePrompty(content), [content]);
@@ -76,6 +87,22 @@ export function PromptNotebook({
 
   const handleFieldChange = useCallback((fieldId: string, value: string) => {
     setVariableValues((prev) => ({ ...prev, [fieldId]: value }));
+  }, []);
+
+  // File picker handlers
+  const handleOpenFilePicker = useCallback((mode: 'file' | 'folder', callback: (path: string) => void) => {
+    setFilePickerState({ isOpen: true, mode, callback });
+  }, []);
+
+  const handleFilePickerSelect = useCallback((path: string) => {
+    if (filePickerState.callback) {
+      filePickerState.callback(path);
+    }
+    setFilePickerState({ isOpen: false, mode: 'file', callback: null });
+  }, [filePickerState.callback]);
+
+  const handleFilePickerCancel = useCallback(() => {
+    setFilePickerState({ isOpen: false, mode: 'file', callback: null });
   }, []);
 
   // Tab navigation between fields
@@ -140,6 +167,7 @@ export function PromptNotebook({
             onChange={handleFieldChange}
             onNavigate={(direction) => handleNavigate(fieldName, direction)}
             isActive={activeFieldIndex === fieldIdx}
+            onOpenFilePicker={handleOpenFilePicker}
           />
         );
 
@@ -152,7 +180,7 @@ export function PromptNotebook({
 
       return parts.length === 0 ? text : parts.length === 1 ? parts[0] : <>{parts}</>;
     },
-    [fieldOrder, variableValues, handleFieldChange, handleNavigate, activeFieldIndex, variableMap]
+    [fieldOrder, variableValues, handleFieldChange, handleNavigate, activeFieldIndex, variableMap, handleOpenFilePicker]
   );
 
   // Recursively process children to find and replace template fields
@@ -288,6 +316,17 @@ export function PromptNotebook({
           </Streamdown>
         </article>
       </div>
+
+      {/* File Picker Modal */}
+      {filePickerState.isOpen && (
+        <FilePickerModal
+          mode={filePickerState.mode === 'folder' ? 'folder' : 'file'}
+          onSelect={handleFilePickerSelect}
+          onCancel={handleFilePickerCancel}
+          initialPath={DEFAULT_HOME_PATH}
+          title={filePickerState.mode === 'folder' ? 'Select Folder' : 'Select File'}
+        />
+      )}
     </div>
   );
 }

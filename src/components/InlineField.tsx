@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, FolderOpen } from 'lucide-react';
 
 interface InlineFieldProps {
   fieldId: string;
@@ -10,6 +10,31 @@ interface InlineFieldProps {
   onChange: (fieldId: string, value: string) => void;
   onNavigate?: (direction: 'next' | 'prev') => void;
   isActive?: boolean;
+  onOpenFilePicker?: (mode: 'file' | 'folder', callback: (path: string) => void) => void;
+}
+
+// Detect if field should have a file/folder picker
+function getPickerMode(fieldId: string, hint?: string): 'file' | 'folder' | null {
+  const lower = fieldId.toLowerCase();
+  const hintLower = hint?.toLowerCase() || '';
+
+  // Check hint first for explicit indicators
+  if (hintLower.includes('folder') || hintLower.includes('directory') || hintLower.includes('dir')) {
+    return 'folder';
+  }
+  if (hintLower.includes('file') || hintLower.includes('path')) {
+    return 'file';
+  }
+
+  // Then check field name
+  if (lower.includes('folder') || lower.includes('directory') || lower === 'dir' || lower === 'project' || lower === 'workspace') {
+    return 'folder';
+  }
+  if (lower.includes('file') || lower.includes('path')) {
+    return 'file';
+  }
+
+  return null;
 }
 
 export function InlineField({
@@ -20,6 +45,7 @@ export function InlineField({
   onChange,
   onNavigate,
   isActive,
+  onOpenFilePicker,
 }: InlineFieldProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
@@ -30,6 +56,8 @@ export function InlineField({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const isSelect = options && options.length > 0;
+  const pickerMode = getPickerMode(fieldId, hint);
+  const hasFilePicker = pickerMode !== null && onOpenFilePicker;
 
   // Sync editValue when value prop changes
   useEffect(() => {
@@ -109,6 +137,16 @@ export function InlineField({
       e.preventDefault();
       handleSave();
       onNavigate?.(e.shiftKey ? 'prev' : 'next');
+    }
+  };
+
+  const handleOpenPicker = () => {
+    if (hasFilePicker && pickerMode) {
+      onOpenFilePicker(pickerMode, (selectedPath) => {
+        onChange(fieldId, selectedPath);
+        setEditValue(selectedPath);
+        setIsEditing(false);
+      });
     }
   };
 
@@ -271,49 +309,83 @@ export function InlineField({
   // Text input field
   if (isEditing) {
     return (
-      <input
-        ref={inputRef}
-        type="text"
-        value={editValue}
-        onChange={(e) => setEditValue(e.target.value)}
-        onBlur={handleSave}
-        onKeyDown={handleKeyDown}
-        placeholder={hint || fieldId}
-        className="inline-block align-baseline px-2 py-0.5 mx-0.5 text-sm rounded focus:outline-none focus:ring-2"
-        style={{
-          width: `${getWidth()}px`,
-          fontFamily: 'inherit',
-          fontSize: 'inherit',
-          lineHeight: 'inherit',
-          backgroundColor: 'color-mix(in srgb, var(--accent) 20%, transparent)',
-          border: '1px solid color-mix(in srgb, var(--accent) 50%, transparent)',
-          color: 'var(--text-primary)',
-        }}
-      />
+      <span className="inline-flex items-center gap-1 align-baseline mx-0.5">
+        <input
+          ref={inputRef}
+          type="text"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onBlur={handleSave}
+          onKeyDown={handleKeyDown}
+          placeholder={hint || fieldId}
+          className="inline-block align-baseline px-2 py-0.5 text-sm rounded focus:outline-none focus:ring-2"
+          style={{
+            width: `${getWidth()}px`,
+            fontFamily: 'inherit',
+            fontSize: 'inherit',
+            lineHeight: 'inherit',
+            backgroundColor: 'color-mix(in srgb, var(--accent) 20%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--accent) 50%, transparent)',
+            color: 'var(--text-primary)',
+          }}
+        />
+        {hasFilePicker && (
+          <button
+            type="button"
+            onClick={handleOpenPicker}
+            className="p-1 rounded transition-colors"
+            style={{
+              color: 'var(--accent)',
+              backgroundColor: 'color-mix(in srgb, var(--accent) 10%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
+            }}
+            title={`Browse for ${pickerMode}`}
+          >
+            <FolderOpen size={14} />
+          </button>
+        )}
+      </span>
     );
   }
 
   return (
-    <span
-      onClick={handleClick}
-      className={`inline-block align-baseline px-2 py-0.5 mx-0.5 text-sm rounded cursor-pointer transition-all ${
-        isEmpty ? 'border-dashed' : ''
-      }`}
-      style={{
-        fontFamily: 'inherit',
-        fontSize: 'inherit',
-        lineHeight: 'inherit',
-        backgroundColor: isEmpty
-          ? 'color-mix(in srgb, var(--accent) 10%, transparent)'
-          : 'color-mix(in srgb, var(--accent) 20%, transparent)',
-        color: isEmpty ? 'var(--accent)' : 'var(--text-primary)',
-        border: isEmpty
-          ? '1px dashed color-mix(in srgb, var(--accent) 40%, transparent)'
-          : '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
-      }}
-      title={`Click to edit: ${fieldId}`}
-    >
-      {displayText}
+    <span className="inline-flex items-center gap-1 align-baseline mx-0.5">
+      <span
+        onClick={handleClick}
+        className={`inline-block align-baseline px-2 py-0.5 text-sm rounded cursor-pointer transition-all ${
+          isEmpty ? 'border-dashed' : ''
+        }`}
+        style={{
+          fontFamily: 'inherit',
+          fontSize: 'inherit',
+          lineHeight: 'inherit',
+          backgroundColor: isEmpty
+            ? 'color-mix(in srgb, var(--accent) 10%, transparent)'
+            : 'color-mix(in srgb, var(--accent) 20%, transparent)',
+          color: isEmpty ? 'var(--accent)' : 'var(--text-primary)',
+          border: isEmpty
+            ? '1px dashed color-mix(in srgb, var(--accent) 40%, transparent)'
+            : '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
+        }}
+        title={`Click to edit: ${fieldId}`}
+      >
+        {displayText}
+      </span>
+      {hasFilePicker && (
+        <button
+          type="button"
+          onClick={handleOpenPicker}
+          className="p-1 rounded transition-colors"
+          style={{
+            color: 'var(--accent)',
+            backgroundColor: 'color-mix(in srgb, var(--accent) 10%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
+          }}
+          title={`Browse for ${pickerMode}`}
+        >
+          <FolderOpen size={14} />
+        </button>
+      )}
     </span>
   );
 }

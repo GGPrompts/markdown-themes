@@ -1,26 +1,400 @@
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { useFileWatcher } from '../hooks/useFileWatcher';
+import { useWorkspace } from '../hooks/useWorkspace';
+import { useAppStore } from '../hooks/useAppStore';
+import { Sidebar } from '../components/Sidebar';
+import { ThemeSelector } from '../components/ThemeSelector';
+import { PromptNotebook } from '../components/PromptNotebook';
+import { isPromptyFile } from '../utils/promptyUtils';
+import { type ThemeId } from '../themes';
+import { ArrowLeft, FolderOpen, FileText } from 'lucide-react';
 
 export function Prompts() {
+  const [currentFile, setCurrentFile] = useState<string | null>(null);
+  const [showPathInput, setShowPathInput] = useState(false);
+  const [pathInputValue, setPathInputValue] = useState('');
+  const [pathInputMode, setPathInputMode] = useState<'file' | 'folder'>('file');
+  const pathInputRef = useRef<HTMLInputElement>(null);
+
+  const {
+    state: appState,
+    isLoading: storeLoading,
+    saveTheme,
+    addRecentFile,
+    addRecentFolder,
+    saveLastWorkspace,
+    saveFontSize,
+  } = useAppStore();
+
+  // Use file watcher to get content and streaming state
+  const { content, error, loading, isStreaming, connected } = useFileWatcher({
+    path: currentFile,
+  });
+
+  const { workspacePath, fileTree, openWorkspace, closeWorkspace } = useWorkspace();
+
+  // Restore last workspace on mount
+  useEffect(() => {
+    if (!storeLoading && appState.lastWorkspace && !workspacePath) {
+      openWorkspace(appState.lastWorkspace).then((success) => {
+        if (!success) {
+          saveLastWorkspace(null);
+        }
+      });
+    }
+  }, [storeLoading, appState.lastWorkspace, workspacePath, openWorkspace, saveLastWorkspace]);
+
+  // Focus input when modal opens
+  useEffect(() => {
+    if (showPathInput && pathInputRef.current) {
+      pathInputRef.current.focus();
+    }
+  }, [showPathInput]);
+
+  const handleThemeChange = useCallback(
+    (theme: ThemeId) => {
+      saveTheme(theme);
+    },
+    [saveTheme]
+  );
+
+  const handleFontSizeChange = useCallback(
+    (size: number) => {
+      saveFontSize(size);
+    },
+    [saveFontSize]
+  );
+
+  const handleFileSelect = useCallback(
+    (path: string) => {
+      // Only allow .prompty files
+      if (!isPromptyFile(path)) {
+        // Could show a toast/alert here
+        console.warn('Only .prompty files are supported in Prompt Notebook');
+        return;
+      }
+      setCurrentFile(path);
+      addRecentFile(path);
+    },
+    [addRecentFile]
+  );
+
+  const handleFolderSelect = useCallback(
+    (path: string) => {
+      openWorkspace(path);
+      saveLastWorkspace(path);
+      addRecentFolder(path);
+    },
+    [openWorkspace, saveLastWorkspace, addRecentFolder]
+  );
+
+  const handleCloseWorkspace = useCallback(() => {
+    closeWorkspace();
+    setCurrentFile(null);
+    saveLastWorkspace(null);
+  }, [closeWorkspace, saveLastWorkspace]);
+
+  const handleOpenFile = () => {
+    setPathInputMode('file');
+    setPathInputValue('');
+    setShowPathInput(true);
+  };
+
+  const handleOpenFolder = () => {
+    setPathInputMode('folder');
+    setPathInputValue('');
+    setShowPathInput(true);
+  };
+
+  const handlePathSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pathInputValue.trim()) return;
+
+    if (pathInputMode === 'file') {
+      handleFileSelect(pathInputValue.trim());
+    } else {
+      handleFolderSelect(pathInputValue.trim());
+    }
+    setShowPathInput(false);
+    setPathInputValue('');
+  };
+
+  // Filter file tree to only show .prompty files
+  const filteredFileTree = fileTree
+    ? fileTree.filter((item) => {
+        if (item.isDirectory) return true;
+        return isPromptyFile(item.name);
+      })
+    : [];
+
   return (
-    <div className="flex items-center justify-center h-full">
-      <div className="text-center">
-        <h2
-          className="text-xl font-medium mb-2"
-          style={{ color: 'var(--text-primary)' }}
-        >
-          Prompt Notebook
-        </h2>
-        <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
-          Coming soon - Organize and manage your AI prompts
-        </p>
-        <Link
-          to="/"
-          className="text-sm underline"
-          style={{ color: 'var(--accent)' }}
-        >
-          Back to Home
-        </Link>
+    <>
+      {/* Header */}
+      <header
+        className="flex items-center justify-between px-4 py-3 select-none relative z-20"
+        style={{
+          backgroundColor: 'var(--bg-secondary)',
+          borderBottom: '1px solid var(--border)',
+        }}
+      >
+        <div className="flex items-center gap-4">
+          <Link
+            to="/"
+            className="flex items-center gap-1.5 text-sm transition-colors"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            <ArrowLeft size={16} />
+            Back
+          </Link>
+
+          <h1 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>
+            Prompt Notebook
+          </h1>
+
+          {/* Connection indicator */}
+          {!connected && currentFile && (
+            <div
+              className="flex items-center gap-1.5 text-xs px-2 py-1 rounded"
+              style={{
+                backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                color: 'rgb(239, 68, 68)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+              }}
+            >
+              <span
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: 'rgb(239, 68, 68)' }}
+              />
+              Disconnected
+            </div>
+          )}
+
+          {isStreaming && (
+            <span className="flex items-center gap-2 text-sm" style={{ color: 'var(--accent)' }}>
+              <span className="relative flex h-2 w-2">
+                <span
+                  className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                  style={{ backgroundColor: 'var(--accent)' }}
+                ></span>
+                <span
+                  className="relative inline-flex rounded-full h-2 w-2"
+                  style={{ backgroundColor: 'var(--accent)' }}
+                ></span>
+              </span>
+              Updating...
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-4">
+          {/* Open buttons */}
+          <button
+            type="button"
+            onClick={handleOpenFile}
+            className="btn-accent px-3 py-1.5 text-sm flex items-center gap-1.5"
+            style={{ borderRadius: 'var(--radius)' }}
+          >
+            <FileText size={16} />
+            Open .prompty
+          </button>
+
+          {!workspacePath && (
+            <button
+              type="button"
+              onClick={handleOpenFolder}
+              className="btn-secondary px-3 py-1.5 text-sm flex items-center gap-1.5"
+              style={{ borderRadius: 'var(--radius)' }}
+            >
+              <FolderOpen size={16} />
+              Open Folder
+            </button>
+          )}
+
+          {/* Font size controls */}
+          <div className="flex items-center gap-1">
+            <span className="text-sm mr-1" style={{ color: 'var(--text-secondary)' }}>
+              Size:
+            </span>
+            <button
+              type="button"
+              onClick={() => handleFontSizeChange(Math.max(50, appState.fontSize - 10))}
+              className="w-7 h-7 flex items-center justify-center text-sm font-medium transition-colors"
+              style={{
+                borderRadius: 'var(--radius) 0 0 var(--radius)',
+                backgroundColor: 'var(--bg-primary)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border)',
+              }}
+              title="Decrease font size"
+            >
+              -
+            </button>
+            <span
+              className="w-12 h-7 flex items-center justify-center text-xs"
+              style={{
+                backgroundColor: 'var(--bg-primary)',
+                color: 'var(--text-secondary)',
+                borderTop: '1px solid var(--border)',
+                borderBottom: '1px solid var(--border)',
+              }}
+            >
+              {appState.fontSize}%
+            </span>
+            <button
+              type="button"
+              onClick={() => handleFontSizeChange(Math.min(200, appState.fontSize + 10))}
+              className="w-7 h-7 flex items-center justify-center text-sm font-medium transition-colors"
+              style={{
+                borderRadius: '0 var(--radius) var(--radius) 0',
+                backgroundColor: 'var(--bg-primary)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border)',
+              }}
+              title="Increase font size"
+            >
+              +
+            </button>
+          </div>
+
+          <ThemeSelector currentTheme={appState.theme} onThemeChange={handleThemeChange} />
+        </div>
+      </header>
+
+      {/* Main content */}
+      <div className="flex-1 flex overflow-hidden">
+        {workspacePath && (
+          <Sidebar
+            fileTree={filteredFileTree}
+            currentFile={currentFile}
+            workspacePath={workspacePath}
+            onFileSelect={handleFileSelect}
+            onClose={handleCloseWorkspace}
+          />
+        )}
+
+        <main className="flex-1 flex flex-col overflow-hidden">
+          {loading && (
+            <div className="flex items-center justify-center h-full">
+              <p style={{ color: 'var(--text-secondary)' }}>Loading...</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <p className="text-red-500 mb-2">{error}</p>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  Make sure TabzChrome backend is running on port 8129
+                </p>
+              </div>
+            </div>
+          )}
+
+          {!loading && !error && !currentFile && (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center max-w-md">
+                <h2 className="text-xl font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+                  Prompt Notebook
+                </h2>
+                <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>
+                  Open a .prompty file to get started. Prompty files are markdown documents with
+                  YAML frontmatter and fillable {'{{variable}}'} placeholders.
+                </p>
+                <div className="flex justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleOpenFile}
+                    className="btn-accent px-4 py-2 text-sm flex items-center gap-2"
+                    style={{ borderRadius: 'var(--radius)' }}
+                  >
+                    <FileText size={18} />
+                    Open .prompty File
+                  </button>
+                </div>
+                <p className="text-xs mt-6" style={{ color: 'var(--text-secondary)' }}>
+                  Supports: {'{{variable}}'}, {'{{variable:hint}}'}, and{' '}
+                  {'{{variable:opt1|opt2|opt3}}'} for dropdowns
+                </p>
+              </div>
+            </div>
+          )}
+
+          {!loading && !error && currentFile && content && (
+            <PromptNotebook
+              content={content}
+              path={currentFile}
+              fontSize={appState.fontSize}
+              isStreaming={isStreaming}
+            />
+          )}
+        </main>
       </div>
-    </div>
+
+      {/* Path Input Modal */}
+      {showPathInput && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+          onClick={() => setShowPathInput(false)}
+        >
+          <div
+            className="w-full max-w-lg p-6 shadow-xl"
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-lg font-medium mb-4" style={{ color: 'var(--text-primary)' }}>
+              {pathInputMode === 'file' ? 'Open Prompty File' : 'Open Folder'}
+            </h2>
+            <form onSubmit={handlePathSubmit}>
+              <input
+                ref={pathInputRef}
+                type="text"
+                value={pathInputValue}
+                onChange={(e) => setPathInputValue(e.target.value)}
+                placeholder={
+                  pathInputMode === 'file' ? '/path/to/prompt.prompty' : '/path/to/folder'
+                }
+                className="w-full px-3 py-2 text-sm outline-none"
+                style={{
+                  backgroundColor: 'var(--bg-primary)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius)',
+                  color: 'var(--text-primary)',
+                }}
+              />
+              <div className="flex justify-end gap-2 mt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowPathInput(false)}
+                  className="btn-secondary px-4 py-1.5 text-sm"
+                  style={{ borderRadius: 'var(--radius)' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-accent px-4 py-1.5 text-sm"
+                  style={{ borderRadius: 'var(--radius)' }}
+                >
+                  Open
+                </button>
+              </div>
+            </form>
+            <p className="text-xs mt-3" style={{ color: 'var(--text-secondary)' }}>
+              Enter the full path to a{' '}
+              {pathInputMode === 'file' ? '.prompty file' : 'folder containing .prompty files'} in
+              WSL.
+              <br />
+              Example: /home/user/prompts{pathInputMode === 'file' ? '/my-prompt.prompty' : ''}
+            </p>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

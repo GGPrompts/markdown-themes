@@ -487,11 +487,16 @@
 
 .theme-parchment aside {
   background: var(--parchment-dark) !important;
+  /* Override variables for better contrast in sidebar */
+  --text-primary: var(--ink-black);
+  --text-secondary: #3a2a1f;  /* Darker than ink-brown for sidebar contrast */
+  --bg-primary: var(--parchment);
 }
 
 .theme-parchment aside button,
 .theme-parchment aside span {
   color: var(--ink-black) !important;
+  font-weight: 600 !important;
 }
 
 .theme-parchment aside button:hover {
@@ -518,4 +523,26 @@
   --shiki-token-string-expression: var(--forest);
   --shiki-token-punctuation: var(--ink-brown);    /* Brown for punctuation */
   --shiki-token-link: var(--vermillion);
+}
+
+/* ========================================
+   SCROLLBAR STYLING
+   ======================================== */
+
+.theme-parchment ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.theme-parchment ::-webkit-scrollbar-track {
+  background: var(--parchment-dark);
+}
+
+.theme-parchment ::-webkit-scrollbar-thumb {
+  background: var(--ink-light);
+  border-radius: 0;
+}
+
+.theme-parchment ::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-faded);
 }

@@ -72,9 +72,18 @@
   background: radial-gradient(ellipse at center, transparent 0%, rgba(26, 16, 10, 0.4) 100%);
 }
 
-/* Content container positioning */
+/* Content container positioning - lift above texture/vignette pseudo-elements */
 .theme-dark-academia > * {
   position: relative;
+}
+
+/* Header needs higher z-index for dropdowns */
+.theme-dark-academia > header {
+  z-index: 50;
+}
+
+/* Main content area above pseudo-elements */
+.theme-dark-academia > div {
   z-index: 1;
 }
 
@@ -275,14 +284,36 @@
   --shiki-foreground: var(--parchment);
   --shiki-background: transparent;
 
-  /* Shiki token colors - scholarly manuscript palette */
-  --shiki-token-constant: #6a9a6a;                /* Forest green for constants */
-  --shiki-token-string: var(--sepia-light);       /* Sepia for strings */
+  /* Shiki token colors - brighter scholarly palette for readability */
+  --shiki-token-constant: #8fc98f;                /* Bright sage green for constants */
+  --shiki-token-string: #d4a574;                  /* Warm tan for strings */
   --shiki-token-comment: #a89880;                 /* Muted warm gray for comments */
-  --shiki-token-keyword: var(--burgundy);         /* Burgundy for keywords */
+  --shiki-token-keyword: #d4878f;                 /* Soft rose for keywords */
   --shiki-token-parameter: var(--cream);          /* Cream for parameters */
-  --shiki-token-function: var(--gold-antique);    /* Antique gold for functions */
-  --shiki-token-string-expression: var(--sepia-light);
-  --shiki-token-punctuation: var(--parchment-dark); /* Parchment for punctuation */
+  --shiki-token-function: #e8c36a;                /* Bright gold for functions */
+  --shiki-token-string-expression: #d4a574;
+  --shiki-token-punctuation: #c8c0b0;             /* Light warm gray for punctuation */
   --shiki-token-link: var(--gold-antique);
+}
+
+/* ========================================
+   SCROLLBAR STYLING
+   ======================================== */
+
+.theme-dark-academia ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.theme-dark-academia ::-webkit-scrollbar-track {
+  background: var(--brown-deep);
+}
+
+.theme-dark-academia ::-webkit-scrollbar-thumb {
+  background: var(--gold-muted);
+  border-radius: 0;
+}
+
+.theme-dark-academia ::-webkit-scrollbar-thumb:hover {
+  background: var(--gold-antique);
 }

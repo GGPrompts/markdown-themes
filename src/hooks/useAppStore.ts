@@ -2,11 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import type { ThemeId } from '../themes';
 
 const MAX_RECENT_FILES = 10;
+const MAX_RECENT_FOLDERS = 5;
 const STORAGE_KEY = 'markdown-themes-settings';
 
 export interface AppState {
   theme: ThemeId;
   recentFiles: string[];
+  recentFolders: string[];
   lastWorkspace?: string;
   fontSize: number;
 }
@@ -14,6 +16,7 @@ export interface AppState {
 const DEFAULT_STATE: AppState = {
   theme: 'dark-academia',
   recentFiles: [],
+  recentFolders: [],
   lastWorkspace: undefined,
   fontSize: 100,
 };
@@ -23,6 +26,7 @@ interface UseAppStoreResult {
   isLoading: boolean;
   saveTheme: (theme: ThemeId) => void;
   addRecentFile: (filePath: string) => void;
+  addRecentFolder: (folderPath: string) => void;
   saveLastWorkspace: (workspacePath: string | null) => void;
   saveFontSize: (fontSize: number) => void;
   clearRecentFiles: () => void;
@@ -37,6 +41,7 @@ function loadFromStorage(): AppState {
     return {
       theme: parsed.theme ?? DEFAULT_STATE.theme,
       recentFiles: parsed.recentFiles ?? DEFAULT_STATE.recentFiles,
+      recentFolders: parsed.recentFolders ?? DEFAULT_STATE.recentFolders,
       lastWorkspace: parsed.lastWorkspace ?? DEFAULT_STATE.lastWorkspace,
       fontSize: parsed.fontSize ?? DEFAULT_STATE.fontSize,
     };
@@ -84,6 +89,17 @@ export function useAppStore(): UseAppStoreResult {
     });
   }, []);
 
+  const addRecentFolder = useCallback((folderPath: string) => {
+    setState((prev) => {
+      const filtered = prev.recentFolders.filter((f) => f !== folderPath);
+      const newRecentFolders = [folderPath, ...filtered].slice(0, MAX_RECENT_FOLDERS);
+
+      const next = { ...prev, recentFolders: newRecentFolders };
+      saveToStorage(next);
+      return next;
+    });
+  }, []);
+
   const saveLastWorkspace = useCallback((workspacePath: string | null) => {
     setState((prev) => {
       const next = { ...prev, lastWorkspace: workspacePath ?? undefined };
@@ -113,6 +129,7 @@ export function useAppStore(): UseAppStoreResult {
     isLoading,
     saveTheme,
     addRecentFile,
+    addRecentFolder,
     saveLastWorkspace,
     saveFontSize,
     clearRecentFiles,

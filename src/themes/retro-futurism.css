@@ -121,9 +121,18 @@
   background-position: 0 0;
 }
 
-/* Content container positioning */
+/* Content container positioning - lift above background pseudo-elements */
 .theme-retro-futurism > * {
   position: relative;
+}
+
+/* Header needs higher z-index for dropdowns */
+.theme-retro-futurism > header {
+  z-index: 50;
+}
+
+/* Main content area above pseudo-elements */
+.theme-retro-futurism > div {
   z-index: 1;
 }
 

@@ -19,6 +19,7 @@ function App() {
     isLoading: storeLoading,
     saveTheme,
     addRecentFile,
+    addRecentFolder,
     saveLastWorkspace,
     saveFontSize,
   } = useAppStore();
@@ -86,8 +87,9 @@ function App() {
     (path: string) => {
       openWorkspace(path);
       saveLastWorkspace(path);
+      addRecentFolder(path);
     },
-    [openWorkspace, saveLastWorkspace]
+    [openWorkspace, saveLastWorkspace, addRecentFolder]
   );
 
   const handleCloseWorkspace = useCallback(() => {
@@ -98,7 +100,7 @@ function App() {
 
   return (
     <div
-      className={`min-h-screen flex flex-col ${themeClass}`}
+      className={`h-screen flex flex-col overflow-hidden ${themeClass}`}
       style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
     >
       <Toolbar
@@ -108,6 +110,7 @@ function App() {
         connected={connected}
         hasWorkspace={!!workspacePath}
         recentFiles={appState.recentFiles}
+        recentFolders={appState.recentFolders}
         fontSize={appState.fontSize}
         onThemeChange={handleThemeChange}
         onFileSelect={handleFileSelect}

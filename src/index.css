@@ -78,6 +78,25 @@ body {
   transition: background-color 0.3s, color 0.3s;
 }
 
+/* Default scrollbar styling - uses theme variables, can be overridden */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: var(--radius);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
 /* Prose overrides for themed markdown */
 .prose {
   --tw-prose-body: var(--text-primary);
@@ -116,18 +135,25 @@ body {
   border: none !important;
   background-color: var(--bg-secondary);
   border-radius: var(--radius);
+  overflow: hidden;
 }
 
 .streamdown-content [data-streamdown="code-block-header"] {
   background-color: var(--bg-secondary) !important;
   color: var(--text-secondary) !important;
   border-bottom: 1px solid var(--border) !important;
+  border-top-left-radius: var(--radius);
+  border-top-right-radius: var(--radius);
+  padding-left: calc(var(--radius) * 0.5 + 0.5rem) !important;
+  padding-right: calc(var(--radius) * 0.5 + 0.5rem) !important;
 }
 
 .streamdown-content [data-streamdown="code-block-body"] {
   background-color: var(--bg-secondary) !important;
   border: none !important;
   border-top: none !important;
+  border-bottom-left-radius: var(--radius);
+  border-bottom-right-radius: var(--radius);
 }
 
 .streamdown-content [data-streamdown="code-block-copy-button"],

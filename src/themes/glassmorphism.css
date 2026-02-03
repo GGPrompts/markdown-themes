@@ -398,6 +398,17 @@
 }
 
 /* ========================================
+   TOOLBAR DROPDOWNS
+   Need solid background for readability
+   ======================================== */
+
+.theme-glassmorphism header [class*="absolute"] {
+  background: rgba(15, 12, 41, 0.95) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* ========================================
    SHIKI CSS VARIABLES THEME
    Syntax highlighting colors for Glassmorphism
    ======================================== */
@@ -407,14 +418,14 @@
   --shiki-foreground: var(--text-primary);
   --shiki-background: var(--glass-bg);
 
-  /* Shiki token colors - glass/aurora palette */
+  /* Shiki token colors - bright aurora palette for glass readability */
   --shiki-token-constant: #fcd34d;                /* Warm gold for constants */
-  --shiki-token-string: #7dd3fc;                  /* Sky blue for strings */
-  --shiki-token-comment: #a8a0c8;                 /* Soft purple for comments */
-  --shiki-token-keyword: var(--accent);           /* Blue-purple for keywords */
-  --shiki-token-parameter: #ddd6fe;               /* Light lavender for parameters */
-  --shiki-token-function: var(--accent-3);        /* Pink for functions */
-  --shiki-token-string-expression: #7dd3fc;
-  --shiki-token-punctuation: #c8c0e8;             /* Light purple for punctuation */
-  --shiki-token-link: var(--accent);
+  --shiki-token-string: #a5f3fc;                  /* Bright cyan for strings */
+  --shiki-token-comment: #c4b5fd;                 /* Brighter lavender for comments */
+  --shiki-token-keyword: #a5b4fc;                 /* Bright periwinkle for keywords */
+  --shiki-token-parameter: #e9d5ff;               /* Light orchid for parameters */
+  --shiki-token-function: #f5a9f2;                /* Bright pink for functions */
+  --shiki-token-string-expression: #a5f3fc;
+  --shiki-token-punctuation: #e0d4fc;             /* Bright lavender for punctuation */
+  --shiki-token-link: #a5b4fc;
 }

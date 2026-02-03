@@ -19,6 +19,7 @@ interface TabItemProps {
 
 function TabItem({ tab, isActive, onSelect, onClose, onPin }: TabItemProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const fileName = tab.path.split('/').pop() ?? tab.path.split('\\').pop() ?? tab.path;
 
   const handleDoubleClick = () => {
@@ -32,11 +33,24 @@ function TabItem({ tab, isActive, onSelect, onClose, onPin }: TabItemProps) {
     onClose();
   };
 
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('text/plain', tab.path);
+    e.dataTransfer.effectAllowed = 'move';
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+  };
+
   // Show close button: always for pinned tabs, on hover for preview tabs
   const showCloseButton = tab.isPinned || isHovered;
 
   return (
     <div
+      draggable
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       className="group flex items-center gap-1 px-3 py-1.5 text-sm cursor-pointer select-none min-w-0 max-w-[180px] transition-colors"
       style={{
         backgroundColor: isActive
@@ -46,6 +60,7 @@ function TabItem({ tab, isActive, onSelect, onClose, onPin }: TabItemProps) {
             : 'transparent',
         borderBottom: isActive ? '2px solid var(--accent)' : '2px solid transparent',
         color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+        opacity: isDragging ? 0.5 : 1,
       }}
       onClick={onSelect}
       onDoubleClick={handleDoubleClick}

@@ -144,6 +144,22 @@ export function Files() {
     [setRightFile, addRecentFile]
   );
 
+  // Handle drop to right pane (drag-and-drop from tabs)
+  const handleDropToRight = useCallback(
+    (path: string) => {
+      // Don't do anything if dropping the same file
+      if (path === rightFile) return;
+      setRightFile(path);
+      addRecentFile(path);
+    },
+    [rightFile, setRightFile, addRecentFile]
+  );
+
+  // Handle closing the right pane file
+  const handleCloseRight = useCallback(() => {
+    setRightFile(null);
+  }, [setRightFile]);
+
   // Handle folder selection with workspace persistence
   const handleFolderSelect = useCallback(
     (path: string) => {
@@ -198,6 +214,10 @@ export function Files() {
           isSplit={isSplit}
           splitRatio={splitRatio}
           onSplitRatioChange={setSplitRatio}
+          onDropToRight={handleDropToRight}
+          rightFile={rightFile}
+          onCloseRight={handleCloseRight}
+          rightIsStreaming={rightIsStreaming}
           leftPane={
             <div className="flex-1 flex flex-col overflow-hidden">
               <TabBar
@@ -259,49 +279,6 @@ export function Files() {
           }
           rightPane={
             <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Right pane header with file selector */}
-              <div
-                className="flex items-center gap-2 px-3 py-2 border-b"
-                style={{
-                  backgroundColor: 'var(--bg-secondary)',
-                  borderColor: 'var(--border)',
-                }}
-              >
-                <select
-                  value={rightFile ?? ''}
-                  onChange={(e) => handleRightFileSelect(e.target.value)}
-                  className="flex-1 text-sm px-2 py-1 outline-none"
-                  style={{
-                    backgroundColor: 'var(--bg-primary)',
-                    color: 'var(--text-primary)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 'var(--radius)',
-                  }}
-                >
-                  <option value="">Select a file...</option>
-                  {appState.recentFiles.map((path) => (
-                    <option key={path} value={path}>
-                      {path.split('/').pop()}
-                    </option>
-                  ))}
-                </select>
-                {rightIsStreaming && (
-                  <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--accent)' }}>
-                    <span className="relative flex h-2 w-2">
-                      <span
-                        className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
-                        style={{ backgroundColor: 'var(--accent)' }}
-                      />
-                      <span
-                        className="relative inline-flex rounded-full h-2 w-2"
-                        style={{ backgroundColor: 'var(--accent)' }}
-                      />
-                    </span>
-                    AI writing...
-                  </span>
-                )}
-              </div>
-
               {rightLoading && (
                 <div className="flex items-center justify-center h-full">
                   <p style={{ color: 'var(--text-secondary)' }}>Loading...</p>
@@ -320,7 +297,7 @@ export function Files() {
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <p style={{ color: 'var(--text-secondary)' }}>
-                      Select a file to view in split pane
+                      Drag a tab here to view in split pane
                     </p>
                   </div>
                 </div>

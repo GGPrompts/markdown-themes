@@ -126,8 +126,13 @@
   position: relative;
 }
 
-/* Header needs higher z-index for dropdowns */
-.theme-retro-futurism > header {
+/* Nav header needs highest z-index for dropdowns */
+.theme-retro-futurism > header:first-of-type {
+  z-index: 100;
+}
+
+/* Toolbar header (second header) needs lower z-index */
+.theme-retro-futurism > header:nth-of-type(2) {
   z-index: 50;
 }
 

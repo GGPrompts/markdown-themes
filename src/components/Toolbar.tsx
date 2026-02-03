@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { Columns } from 'lucide-react';
 import { ThemeSelector } from './ThemeSelector';
 import type { ThemeId } from '../themes';
 
@@ -11,10 +12,12 @@ interface ToolbarProps {
   recentFiles?: string[];
   recentFolders?: string[];
   fontSize?: number;
+  isSplit?: boolean;
   onThemeChange: (theme: ThemeId) => void;
   onFileSelect: (path: string) => void;
   onFolderSelect?: (path: string) => void;
   onFontSizeChange?: (size: number) => void;
+  onSplitToggle?: () => void;
 }
 
 export function Toolbar({
@@ -26,10 +29,12 @@ export function Toolbar({
   recentFiles = [],
   recentFolders = [],
   fontSize = 100,
+  isSplit = false,
   onThemeChange,
   onFileSelect,
   onFolderSelect,
   onFontSizeChange,
+  onSplitToggle,
 }: ToolbarProps) {
   const [showRecentFiles, setShowRecentFiles] = useState(false);
   const [showRecentFolders, setShowRecentFolders] = useState(false);
@@ -301,6 +306,22 @@ export function Toolbar({
         </div>
 
         <div className="flex items-center gap-4">
+          {/* Split view toggle */}
+          <button
+            type="button"
+            onClick={onSplitToggle}
+            className="w-8 h-8 flex items-center justify-center transition-colors"
+            style={{
+              borderRadius: 'var(--radius)',
+              backgroundColor: isSplit ? 'var(--accent)' : 'var(--bg-primary)',
+              color: isSplit ? 'var(--bg-primary)' : 'var(--text-primary)',
+              border: '1px solid var(--border)',
+            }}
+            title={isSplit ? 'Close split view' : 'Open split view'}
+          >
+            <Columns className="w-4 h-4" />
+          </button>
+
           {/* Font size controls */}
           <div className="flex items-center gap-1">
             <span className="text-sm mr-1" style={{ color: 'var(--text-secondary)' }}>

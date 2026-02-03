@@ -121,7 +121,6 @@
 .theme-parchment .prose {
   line-height: 1.7;
   font-size: 1.125rem;
-  max-width: 60ch;
   text-align: justify;
   hyphens: auto;
   -webkit-hyphens: auto;

@@ -88,7 +88,6 @@
 /* Typography - Generous Breathing Whitespace */
 .theme-nordic .prose {
   line-height: 1.7;
-  max-width: 60ch;
 }
 
 .theme-nordic .prose p {

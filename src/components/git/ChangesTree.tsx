@@ -89,7 +89,7 @@ function FileList({
         <span style={{ color: titleColor }}>{title}</span>
         <span style={{ color: 'var(--text-secondary)' }}>({files.length})</span>
 
-        <div className="ml-auto flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="ml-4 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           {/* Discard all button */}
           {showDiscard && onDiscardAll && (
             <button

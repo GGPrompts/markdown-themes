@@ -9,14 +9,16 @@ interface SvgViewerProps {
 
 type ViewMode = 'render' | 'source';
 
-const API_BASE = 'http://localhost:8129';
-
 export function SvgViewer({ filePath, content, fontSize = 100 }: SvgViewerProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('render');
-  const [error, setError] = useState<string | null>(null);
 
-  const imageUrl = `${API_BASE}/api/files/content?path=${encodeURIComponent(filePath)}&raw=true`;
   const fileName = filePath.split('/').pop() || 'SVG file';
+
+  // Create a data URL from the SVG content for inline rendering
+  const svgDataUrl = useMemo(() => {
+    const encoded = encodeURIComponent(content);
+    return `data:image/svg+xml,${encoded}`;
+  }, [content]);
 
   // Extract SVG dimensions from content if available
   const svgInfo = useMemo(() => {
@@ -45,30 +47,6 @@ export function SvgViewer({ filePath, content, fontSize = 100 }: SvgViewerProps)
 
     return { width, height, viewBox: viewBoxMatch?.[1] || null };
   }, [content]);
-
-  const handleImageError = () => {
-    setError('Failed to load SVG');
-  };
-
-  if (error && viewMode === 'render') {
-    return (
-      <div className="svg-viewer h-full flex flex-col">
-        {/* Toolbar */}
-        <ViewerToolbar
-          viewMode={viewMode}
-          setViewMode={setViewMode}
-          svgInfo={svgInfo}
-        />
-
-        <div
-          className="flex-1 flex items-center justify-center"
-          style={{ color: 'var(--text-secondary)' }}
-        >
-          <p>{error}</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="svg-viewer h-full flex flex-col">
@@ -107,9 +85,8 @@ export function SvgViewer({ filePath, content, fontSize = 100 }: SvgViewerProps)
             }}
           >
             <img
-              src={imageUrl}
+              src={svgDataUrl}
               alt={fileName}
-              onError={handleImageError}
               style={{
                 maxWidth: '100%',
                 maxHeight: 'calc(100vh - 200px)',

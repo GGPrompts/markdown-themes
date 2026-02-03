@@ -45,6 +45,10 @@ const excludedNames = new Set([
 ]);
 
 function shouldInclude(name: string): boolean {
+  // Allow .prompts folder specifically (the root we're scanning)
+  if (name === '.prompts') {
+    return true;
+  }
   if (name.startsWith('.') && !name.startsWith('.env')) {
     return false;
   }

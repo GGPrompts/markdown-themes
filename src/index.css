@@ -169,6 +169,39 @@ body {
   font-family: var(--font-mono);
 }
 
+/* Streamdown external link modal */
+.link-safety-modal,
+[data-streamdown*="link-safety"],
+[class*="link-safety"] {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+}
+
+.link-safety-modal *,
+[data-streamdown*="link-safety"] *,
+[class*="link-safety"] * {
+  color: inherit !important;
+}
+
+.link-safety-modal button,
+[data-streamdown*="link-safety"] button,
+[class*="link-safety"] button {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius) !important;
+  padding: 0.5rem 1rem !important;
+  cursor: pointer;
+}
+
+.link-safety-modal button:hover,
+[data-streamdown*="link-safety"] button:hover,
+[class*="link-safety"] button:hover {
+  background-color: var(--accent) !important;
+}
+
 /* Metadata Bar styles */
 .metadata-bar {
   background-color: var(--bg-secondary);

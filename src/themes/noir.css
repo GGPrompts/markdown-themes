@@ -84,7 +84,7 @@
 }
 
 /* ============================================
-   MOUSE SPOTLIGHT - Subtle illumination
+   MOUSE SPOTLIGHT - Illumination for UI
 ============================================ */
 .theme-noir .noir-spotlight {
   position: fixed;
@@ -93,13 +93,28 @@
   right: 0;
   bottom: 0;
   background: radial-gradient(
-    400px circle at var(--spotlight-x, 50%) var(--spotlight-y, 50%),
-    rgba(255, 255, 255, 0.06) 0%,
+    500px circle at var(--spotlight-x, 50%) var(--spotlight-y, 50%),
+    rgba(255, 255, 255, 0.15) 0%,
+    rgba(255, 255, 255, 0.05) 40%,
     transparent 70%
   );
   pointer-events: none;
   z-index: 999;
   transition: background 0.1s ease-out;
+}
+
+/* ============================================
+   NAVIGATION - Brighter accents for readability
+============================================ */
+.theme-noir header {
+  /* Override accent to brighter orange in header */
+  --accent: var(--cigarette-glow);
+  --text-secondary: var(--noir-silver);
+}
+
+.theme-noir header nav a:hover {
+  --accent: var(--noir-pure-white);
+  text-shadow: 0 0 8px rgba(255, 107, 53, 0.4);
 }
 
 /* ============================================

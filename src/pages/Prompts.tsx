@@ -20,7 +20,11 @@ export function Prompts() {
     state: appState,
     addRecentFile,
     saveFontSize,
+    saveSidebarWidth,
   } = useAppStore();
+
+  // Local state for sidebar width during drag (for smooth updates)
+  const [sidebarWidth, setSidebarWidth] = useState(appState.sidebarWidth);
 
   // Get workspace from global context
   const { workspacePath } = useWorkspaceContext();
@@ -78,6 +82,16 @@ export function Prompts() {
   const handleFilePickerCancel = useCallback(() => {
     setShowFilePicker(false);
   }, []);
+
+  // Handle sidebar width change during drag (real-time updates)
+  const handleSidebarWidthChange = useCallback((width: number) => {
+    setSidebarWidth(width);
+  }, []);
+
+  // Handle sidebar width change end (persist to localStorage)
+  const handleSidebarWidthChangeEnd = useCallback((width: number) => {
+    saveSidebarWidth(width);
+  }, [saveSidebarWidth]);
 
   return (
     <>
@@ -217,6 +231,9 @@ export function Prompts() {
             projectPath={workspacePath ?? undefined}
             selectedPath={currentFile ?? undefined}
             onSelectPrompt={handleFileSelect}
+            width={sidebarWidth}
+            onWidthChange={handleSidebarWidthChange}
+            onWidthChangeEnd={handleSidebarWidthChangeEnd}
           />
         )}
 

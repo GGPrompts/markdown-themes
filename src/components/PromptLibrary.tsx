@@ -1,12 +1,22 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { fetchFileTree, fetchFileContent, type FileTreeNode as APIFileTreeNode } from '../lib/api';
 import { parsePrompty, type PromptyFrontmatter } from '../utils/promptyUtils';
+
+// Sidebar width constraints
+const MIN_SIDEBAR_WIDTH = 200;
+const MAX_SIDEBAR_WIDTH = 400;
 
 interface PromptLibraryProps {
   homePath?: string;       // e.g., "/home/marci" - for ~/.prompts
   projectPath?: string;    // e.g., "/home/marci/projects/markdown-themes" - for .prompts
   onSelectPrompt: (path: string) => void;
   selectedPath?: string;
+  /** Width of the sidebar in pixels (default: 280) */
+  width?: number;
+  /** Callback when sidebar width changes during drag */
+  onWidthChange?: (width: number) => void;
+  /** Callback when drag ends - use for persisting the final width */
+  onWidthChangeEnd?: (width: number) => void;
 }
 
 
@@ -434,7 +444,46 @@ function SectionHeader({ label, count, isExpanded, onToggle, isEmpty }: SectionH
   );
 }
 
-export function PromptLibrary({ homePath, projectPath, onSelectPrompt, selectedPath }: PromptLibraryProps) {
+export function PromptLibrary({ homePath, projectPath, onSelectPrompt, selectedPath, width = 280, onWidthChange, onWidthChangeEnd }: PromptLibraryProps) {
+  // Resize state
+  const isDraggingRef = useRef(false);
+  const currentWidthRef = useRef(width);
+
+  // Keep ref in sync with prop
+  useEffect(() => {
+    currentWidthRef.current = width;
+  }, [width]);
+
+  // Handle drag resize
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDraggingRef.current = true;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      if (!isDraggingRef.current) return;
+
+      // Calculate new width based on mouse position
+      const newWidth = Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, moveEvent.clientX));
+      currentWidthRef.current = newWidth;
+      onWidthChange?.(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      isDraggingRef.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      // Persist the final width
+      onWidthChangeEnd?.(currentWidthRef.current);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [onWidthChange, onWidthChangeEnd]);
+
   // State for global prompts (~/.prompts)
   const [globalTree, setGlobalTree] = useState<TreeNode[]>([]);
   const [globalLoading, setGlobalLoading] = useState(false);
@@ -573,8 +622,11 @@ export function PromptLibrary({ homePath, projectPath, onSelectPrompt, selectedP
 
   return (
     <aside
-      className="w-[280px] min-w-[280px] flex flex-col h-full overflow-hidden"
+      className="flex flex-col h-full overflow-hidden relative flex-shrink-0"
       style={{
+        width: `${width}px`,
+        minWidth: `${MIN_SIDEBAR_WIDTH}px`,
+        maxWidth: `${MAX_SIDEBAR_WIDTH}px`,
         backgroundColor: 'var(--bg-secondary)',
         borderRight: '1px solid var(--border)',
       }}
@@ -629,8 +681,8 @@ export function PromptLibrary({ homePath, projectPath, onSelectPrompt, selectedP
         </div>
       </div>
 
-      {/* File tree sections */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden">
+      {/* File tree sections - mr-2 creates space for drag handle */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden mr-2">
         {isLoading && globalLoading && projectLoading && (
           <p className="px-3 py-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
             Loading...
@@ -740,6 +792,19 @@ export function PromptLibrary({ homePath, projectPath, onSelectPrompt, selectedP
             )}
           </div>
         )}
+      </div>
+
+      {/* Drag handle for resizing - positioned in the mr-2 gap */}
+      <div
+        className="absolute top-0 right-0 w-2 h-full group"
+        style={{ cursor: 'col-resize' }}
+        onMouseDown={handleDragStart}
+      >
+        {/* Visual indicator on hover - thin line on the right edge */}
+        <div
+          className="absolute inset-y-0 right-0 w-0.5 transition-colors group-hover:bg-[var(--accent)]"
+          style={{ backgroundColor: 'var(--border)' }}
+        />
       </div>
     </aside>
   );

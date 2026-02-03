@@ -1,6 +1,6 @@
-import { useEffect, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useFileWatcher } from '../hooks/useFileWatcher';
-import { useWorkspace } from '../hooks/useWorkspace';
+import { useWorkspaceContext } from '../context/WorkspaceContext';
 import { useAppStore } from '../hooks/useAppStore';
 import { useTabManager } from '../hooks/useTabManager';
 import { useSplitView } from '../hooks/useSplitView';
@@ -29,12 +29,12 @@ export function Files() {
 
   const {
     state: appState,
-    isLoading: storeLoading,
     addRecentFile,
-    addRecentFolder,
-    saveLastWorkspace,
     saveFontSize,
   } = useAppStore();
+
+  // Get workspace from global context
+  const { workspacePath, fileTree } = useWorkspaceContext();
 
   // Split view state
   const {
@@ -67,8 +67,6 @@ export function Files() {
     path: isSplit ? rightFile : null,
   });
 
-  const { workspacePath, fileTree, openWorkspace, closeWorkspace } = useWorkspace();
-
   const themeClass = themes.find((t) => t.id === appState.theme)?.className ?? '';
 
   // Check if current file is markdown
@@ -96,18 +94,6 @@ export function Files() {
     () => (isRightMarkdownFile ? parseFrontmatter(rightContent) : { frontmatter: null, content: rightContent }),
     [rightContent, isRightMarkdownFile]
   );
-
-  // Restore last workspace on mount
-  useEffect(() => {
-    if (!storeLoading && appState.lastWorkspace && !workspacePath) {
-      openWorkspace(appState.lastWorkspace).then((success) => {
-        if (!success) {
-          // Path doesn't exist anymore, clear it from storage
-          saveLastWorkspace(null);
-        }
-      });
-    }
-  }, [storeLoading, appState.lastWorkspace, workspacePath, openWorkspace, saveLastWorkspace]);
 
   // Handle font size change with persistence
   const handleFontSizeChange = useCallback(
@@ -160,38 +146,18 @@ export function Files() {
     setRightFile(null);
   }, [setRightFile]);
 
-  // Handle folder selection with workspace persistence
-  const handleFolderSelect = useCallback(
-    (path: string) => {
-      openWorkspace(path);
-      saveLastWorkspace(path);
-      addRecentFolder(path);
-    },
-    [openWorkspace, saveLastWorkspace, addRecentFolder]
-  );
-
-  const handleCloseWorkspace = useCallback(() => {
-    closeWorkspace();
-    // Close all tabs when closing workspace
-    tabs.forEach((tab) => closeTab(tab.id));
-    saveLastWorkspace(null);
-  }, [closeWorkspace, saveLastWorkspace, tabs, closeTab]);
-
   return (
     <>
       <Toolbar
         currentFile={currentFile}
         isStreaming={isStreaming}
         connected={connected}
-        hasWorkspace={!!workspacePath}
         recentFiles={appState.recentFiles}
-        recentFolders={appState.recentFolders}
         fontSize={appState.fontSize}
         isSplit={isSplit}
         content={content}
         workspacePath={workspacePath}
         onFileSelect={handleFileSelect}
-        onFolderSelect={handleFolderSelect}
         onFontSizeChange={handleFontSizeChange}
         onSplitToggle={toggleSplit}
       />
@@ -206,7 +172,6 @@ export function Files() {
             onFileSelect={handleFileSelect}
             onFileDoubleClick={handleFileDoubleClick}
             onRightFileSelect={handleRightFileSelect}
-            onClose={handleCloseWorkspace}
           />
         )}
 

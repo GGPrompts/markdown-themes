@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { matchesFilter, filterFiles, countMatches, CLAUDE_CODE_PATTERNS } from './filters';
-import type { FileTreeNode } from '../hooks/useWorkspace';
+import type { FileTreeNode } from '../context/WorkspaceContext';
 
 // Helper to create file nodes
 function file(path: string, name?: string): FileTreeNode {

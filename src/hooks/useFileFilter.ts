@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import type { FileTreeNode } from './useWorkspace';
+import type { FileTreeNode } from '../context/WorkspaceContext';
 import { FILTERS, filterFiles, countMatches, type FilterId } from '../lib/filters';
 
 interface UseFileFilterResult {

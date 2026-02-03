@@ -2,7 +2,7 @@
  * File filter definitions and matching logic for the Sidebar.
  */
 
-import type { FileTreeNode } from '../hooks/useWorkspace';
+import type { FileTreeNode } from '../context/WorkspaceContext';
 
 /**
  * Patterns to match Claude Code configuration files.

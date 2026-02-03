@@ -5,15 +5,12 @@ interface ToolbarProps {
   currentFile: string | null;
   isStreaming?: boolean;
   connected?: boolean;
-  hasWorkspace?: boolean;
   recentFiles?: string[];
-  recentFolders?: string[];
   fontSize?: number;
   isSplit?: boolean;
   content?: string;
   workspacePath?: string | null;
   onFileSelect: (path: string) => void;
-  onFolderSelect?: (path: string) => void;
   onFontSizeChange?: (size: number) => void;
   onSplitToggle?: () => void;
 }
@@ -22,27 +19,21 @@ export function Toolbar({
   currentFile,
   isStreaming,
   connected = false,
-  hasWorkspace,
   recentFiles = [],
-  recentFolders = [],
   fontSize = 100,
   isSplit = false,
   content,
   workspacePath,
   onFileSelect,
-  onFolderSelect,
   onFontSizeChange,
   onSplitToggle,
 }: ToolbarProps) {
   const [showRecentFiles, setShowRecentFiles] = useState(false);
-  const [showRecentFolders, setShowRecentFolders] = useState(false);
   const [showPathInput, setShowPathInput] = useState(false);
   const [pathInputValue, setPathInputValue] = useState('');
-  const [pathInputMode, setPathInputMode] = useState<'file' | 'folder'>('file');
   const [copiedState, setCopiedState] = useState<'content' | 'path' | null>(null);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const folderDropdownRef = useRef<HTMLDivElement>(null);
   const pathInputRef = useRef<HTMLInputElement>(null);
 
   // Close dropdowns when clicking outside
@@ -50,9 +41,6 @@ export function Toolbar({
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowRecentFiles(false);
-      }
-      if (folderDropdownRef.current && !folderDropdownRef.current.contains(event.target as Node)) {
-        setShowRecentFolders(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -67,13 +55,6 @@ export function Toolbar({
   }, [showPathInput]);
 
   const handleOpenFile = () => {
-    setPathInputMode('file');
-    setPathInputValue('');
-    setShowPathInput(true);
-  };
-
-  const handleOpenFolder = () => {
-    setPathInputMode('folder');
     setPathInputValue('');
     setShowPathInput(true);
   };
@@ -81,12 +62,7 @@ export function Toolbar({
   const handlePathSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!pathInputValue.trim()) return;
-
-    if (pathInputMode === 'file') {
-      onFileSelect(pathInputValue.trim());
-    } else {
-      onFolderSelect?.(pathInputValue.trim());
-    }
+    onFileSelect(pathInputValue.trim());
     setShowPathInput(false);
     setPathInputValue('');
   };
@@ -96,13 +72,7 @@ export function Toolbar({
     setShowRecentFiles(false);
   };
 
-  const handleRecentFolderClick = (path: string) => {
-    onFolderSelect?.(path);
-    setShowRecentFolders(false);
-  };
-
   const getFileName = (path: string) => path.split('/').pop() ?? path.split('\\').pop() ?? path;
-  const getFolderName = (path: string) => path.split('/').pop() ?? path.split('\\').pop() ?? path;
   const fileName = currentFile ? getFileName(currentFile) : null;
 
   // Get relative path for @path format
@@ -255,80 +225,6 @@ export function Toolbar({
             )}
           </div>
 
-          {!hasWorkspace && (
-            <div className="relative" ref={folderDropdownRef}>
-              <div className="flex">
-                <button
-                  type="button"
-                  onClick={handleOpenFolder}
-                  className="btn-secondary px-4 py-1.5 font-medium text-sm transition-colors"
-                  style={{
-                    borderRadius:
-                      recentFolders.length > 0 ? 'var(--radius) 0 0 var(--radius)' : 'var(--radius)',
-                  }}
-                >
-                  Open Folder
-                </button>
-                {recentFolders.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setShowRecentFolders(!showRecentFolders)}
-                    className="btn-secondary px-2 py-1.5 transition-colors"
-                    style={{
-                      borderRadius: '0 var(--radius) var(--radius) 0',
-                      borderLeft: '1px solid var(--border)',
-                    }}
-                    title="Recent folders"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </button>
-                )}
-              </div>
-
-              {showRecentFolders && recentFolders.length > 0 && (
-                <div
-                  className="absolute top-full left-0 mt-1 z-[100] min-w-[280px] max-w-[400px] py-1 overflow-hidden"
-                  style={{
-                    backgroundColor: 'var(--bg-secondary)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 'var(--radius)',
-                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -4px rgba(0, 0, 0, 0.15)',
-                  }}
-                >
-                  <div
-                    className="px-3 py-1.5 text-xs uppercase tracking-wide"
-                    style={{ color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)' }}
-                  >
-                    Recent Folders
-                  </div>
-                  <div className="max-h-[300px] overflow-y-auto">
-                    {recentFolders.map((path) => (
-                      <button
-                        type="button"
-                        key={path}
-                        onClick={() => handleRecentFolderClick(path)}
-                        className="w-full px-3 py-2 text-left text-sm transition-colors flex flex-col gap-0.5 hover:bg-[var(--bg-primary)]"
-                        style={{ color: 'var(--text-primary)' }}
-                      >
-                        <span className="font-medium truncate">{getFolderName(path)}</span>
-                        <span className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>
-                          {path}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
           {fileName && (
             <span
               className="text-sm truncate max-w-[300px]"
@@ -444,7 +340,7 @@ export function Toolbar({
               }}
               title="Decrease font size"
             >
-              −
+              -
             </button>
             <span
               className="w-12 h-7 flex items-center justify-center text-xs"
@@ -495,7 +391,7 @@ export function Toolbar({
               className="text-lg font-medium mb-4"
               style={{ color: 'var(--text-primary)' }}
             >
-              {pathInputMode === 'file' ? 'Open File' : 'Open Folder'}
+              Open File
             </h2>
             <form onSubmit={handlePathSubmit}>
               <input
@@ -503,11 +399,7 @@ export function Toolbar({
                 type="text"
                 value={pathInputValue}
                 onChange={(e) => setPathInputValue(e.target.value)}
-                placeholder={
-                  pathInputMode === 'file'
-                    ? '/path/to/file.md'
-                    : '/path/to/folder'
-                }
+                placeholder="/path/to/file.md"
                 className="w-full px-3 py-2 text-sm outline-none"
                 style={{
                   backgroundColor: 'var(--bg-primary)',
@@ -538,9 +430,9 @@ export function Toolbar({
               className="text-xs mt-3"
               style={{ color: 'var(--text-secondary)' }}
             >
-              Enter the full path to a {pathInputMode === 'file' ? 'markdown file' : 'folder'} in WSL.
+              Enter the full path to a file in WSL.
               <br />
-              Example: /home/user/projects/docs{pathInputMode === 'file' ? '/README.md' : ''}
+              Example: /home/user/projects/docs/README.md
             </p>
           </div>
         </div>

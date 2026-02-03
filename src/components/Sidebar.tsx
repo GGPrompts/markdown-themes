@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import type { FileTreeNode } from '../hooks/useWorkspace';
+import type { FileTreeNode } from '../context/WorkspaceContext';
 import { useFileFilter } from '../hooks/useFileFilter';
 import { FILTERS } from '../lib/filters';
 
@@ -11,7 +11,6 @@ interface SidebarProps {
   onFileSelect: (path: string) => void;
   onFileDoubleClick?: (path: string) => void;
   onRightFileSelect?: (path: string) => void;
-  onClose: () => void;
 }
 
 interface TreeItemProps {
@@ -142,7 +141,7 @@ function getAllDirectoryPaths(nodes: FileTreeNode[]): string[] {
   return paths;
 }
 
-export function Sidebar({ fileTree, currentFile, workspacePath, isSplit, onFileSelect, onFileDoubleClick, onRightFileSelect, onClose }: SidebarProps) {
+export function Sidebar({ fileTree, currentFile, workspacePath, isSplit, onFileSelect, onFileDoubleClick, onRightFileSelect }: SidebarProps) {
   const workspaceName = workspacePath?.split('/').pop() ?? workspacePath?.split('\\').pop() ?? 'Workspace';
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
@@ -380,24 +379,6 @@ export function Sidebar({ fileTree, currentFile, workspacePath, isSplit, onFileS
               </div>
             )}
           </div>
-
-          {/* Close button */}
-          <button
-            onClick={onClose}
-            className="w-6 h-6 flex items-center justify-center rounded transition-colors"
-            style={{ color: 'var(--text-secondary)' }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--text-primary)';
-              e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--text-secondary)';
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
-            title="Close workspace"
-          >
-            <CloseIcon />
-          </button>
         </div>
       </div>
 
@@ -481,14 +462,6 @@ function FileIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
       <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/>
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M18 6L6 18M6 6l12 12" />
     </svg>
   );
 }

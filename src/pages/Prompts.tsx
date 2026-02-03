@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useFileWatcher } from '../hooks/useFileWatcher';
 import { useAppStore } from '../hooks/useAppStore';
+import { useWorkspaceContext } from '../context/WorkspaceContext';
 import { PromptLibrary } from '../components/PromptLibrary';
 import { PromptNotebook } from '../components/PromptNotebook';
 import { isPromptyFile } from '../utils/promptyUtils';
@@ -13,31 +14,22 @@ export function Prompts() {
   const [currentFile, setCurrentFile] = useState<string | null>(null);
   const [showPathInput, setShowPathInput] = useState(false);
   const [pathInputValue, setPathInputValue] = useState('');
-  const [pathInputMode, setPathInputMode] = useState<'file' | 'folder'>('file');
-  const [projectPath, setProjectPath] = useState<string | null>(null);
   const [showLibrary, setShowLibrary] = useState(true);
   const pathInputRef = useRef<HTMLInputElement>(null);
 
   const {
     state: appState,
-    isLoading: storeLoading,
     addRecentFile,
-    addRecentFolder,
-    saveLastWorkspace,
     saveFontSize,
   } = useAppStore();
+
+  // Get workspace from global context
+  const { workspacePath } = useWorkspaceContext();
 
   // Use file watcher to get content and streaming state
   const { content, error, loading, isStreaming, connected } = useFileWatcher({
     path: currentFile,
   });
-
-  // Restore last workspace on mount
-  useEffect(() => {
-    if (!storeLoading && appState.lastWorkspace && !projectPath) {
-      setProjectPath(appState.lastWorkspace);
-    }
-  }, [storeLoading, appState.lastWorkspace, projectPath]);
 
   // Focus input when modal opens
   useEffect(() => {
@@ -67,15 +59,6 @@ export function Prompts() {
     [addRecentFile]
   );
 
-  const handleFolderSelect = useCallback(
-    (path: string) => {
-      setProjectPath(path);
-      saveLastWorkspace(path);
-      addRecentFolder(path);
-    },
-    [saveLastWorkspace, addRecentFolder]
-  );
-
   const handleCloseLibrary = useCallback(() => {
     setShowLibrary(false);
   }, []);
@@ -85,13 +68,6 @@ export function Prompts() {
   }, []);
 
   const handleOpenFile = () => {
-    setPathInputMode('file');
-    setPathInputValue('');
-    setShowPathInput(true);
-  };
-
-  const handleOpenFolder = () => {
-    setPathInputMode('folder');
     setPathInputValue('');
     setShowPathInput(true);
   };
@@ -99,12 +75,7 @@ export function Prompts() {
   const handlePathSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!pathInputValue.trim()) return;
-
-    if (pathInputMode === 'file') {
-      handleFileSelect(pathInputValue.trim());
-    } else {
-      handleFolderSelect(pathInputValue.trim());
-    }
+    handleFileSelect(pathInputValue.trim());
     setShowPathInput(false);
     setPathInputValue('');
   };
@@ -165,17 +136,6 @@ export function Prompts() {
           >
             <FileText size={16} />
             Open .prompty
-          </button>
-
-          <button
-            type="button"
-            onClick={handleOpenFolder}
-            className="btn-secondary px-3 py-1.5 text-sm flex items-center gap-1.5"
-            style={{ borderRadius: 'var(--radius)' }}
-            title="Set project folder for .prompts"
-          >
-            <FolderOpen size={16} />
-            Set Project
           </button>
 
           {showLibrary ? (
@@ -255,7 +215,7 @@ export function Prompts() {
         {showLibrary && (
           <PromptLibrary
             homePath={DEFAULT_HOME_PATH}
-            projectPath={projectPath ?? undefined}
+            projectPath={workspacePath ?? undefined}
             selectedPath={currentFile ?? undefined}
             onSelectPrompt={handleFileSelect}
           />
@@ -336,7 +296,7 @@ export function Prompts() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-medium mb-4" style={{ color: 'var(--text-primary)' }}>
-              {pathInputMode === 'file' ? 'Open Prompty File' : 'Open Folder'}
+              Open Prompty File
             </h2>
             <form onSubmit={handlePathSubmit}>
               <input
@@ -344,9 +304,7 @@ export function Prompts() {
                 type="text"
                 value={pathInputValue}
                 onChange={(e) => setPathInputValue(e.target.value)}
-                placeholder={
-                  pathInputMode === 'file' ? '/path/to/prompt.prompty' : '/path/to/folder'
-                }
+                placeholder="/path/to/prompt.prompty"
                 className="w-full px-3 py-2 text-sm outline-none"
                 style={{
                   backgroundColor: 'var(--bg-primary)',
@@ -374,21 +332,9 @@ export function Prompts() {
               </div>
             </form>
             <p className="text-xs mt-3" style={{ color: 'var(--text-secondary)' }}>
-              {pathInputMode === 'file' ? (
-                <>
-                  Enter the full path to a .prompty file in WSL.
-                  <br />
-                  Example: /home/user/prompts/my-prompt.prompty
-                </>
-              ) : (
-                <>
-                  Enter the project folder path. The library will scan for .prompts folder inside it.
-                  <br />
-                  Global prompts from ~/.prompts are always shown.
-                  <br />
-                  Example: /home/user/projects/my-project
-                </>
-              )}
+              Enter the full path to a .prompty file in WSL.
+              <br />
+              Example: /home/user/prompts/my-prompt.prompty
             </p>
           </div>
         </div>

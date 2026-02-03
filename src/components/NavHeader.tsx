@@ -1,11 +1,16 @@
 import { NavLink } from 'react-router-dom';
 import { Home, Folder, GitBranch, BookOpen } from 'lucide-react';
 import { ThemeSelector } from './ThemeSelector';
+import { ProjectSelector } from './ProjectSelector';
 import type { ThemeId } from '../themes';
 
 interface NavHeaderProps {
   currentTheme: ThemeId;
   onThemeChange: (theme: ThemeId) => void;
+  workspacePath: string | null;
+  recentFolders: string[];
+  onFolderSelect: (path: string) => void;
+  onCloseWorkspace: () => void;
 }
 
 interface NavItem {
@@ -22,7 +27,14 @@ const navItems: NavItem[] = [
   { to: '/prompts', label: 'Prompts', icon: BookOpen },
 ];
 
-export function NavHeader({ currentTheme, onThemeChange }: NavHeaderProps) {
+export function NavHeader({
+  currentTheme,
+  onThemeChange,
+  workspacePath,
+  recentFolders,
+  onFolderSelect,
+  onCloseWorkspace,
+}: NavHeaderProps) {
   return (
     <header
       className="h-12 flex items-center justify-between px-4 select-none shrink-0"
@@ -60,8 +72,16 @@ export function NavHeader({ currentTheme, onThemeChange }: NavHeaderProps) {
         })}
       </nav>
 
-      {/* Right: Theme selector */}
-      <ThemeSelector currentTheme={currentTheme} onThemeChange={onThemeChange} />
+      {/* Right: Project selector and Theme selector */}
+      <div className="flex items-center gap-3">
+        <ProjectSelector
+          currentPath={workspacePath}
+          recentFolders={recentFolders}
+          onFolderSelect={onFolderSelect}
+          onClose={onCloseWorkspace}
+        />
+        <ThemeSelector currentTheme={currentTheme} onThemeChange={onThemeChange} />
+      </div>
     </header>
   );
 }

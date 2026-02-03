@@ -345,3 +345,76 @@ body {
 .metadata-tag:hover {
   background-color: color-mix(in srgb, var(--accent) 25%, transparent);
 }
+
+/* ========================================
+   CODE VIEWER STYLES
+   ======================================== */
+
+.code-viewer {
+  background-color: var(--bg-primary);
+}
+
+.code-viewer .code-content pre {
+  margin: 0;
+  padding: 1rem;
+  padding-left: 0.5rem;
+  background: transparent !important;
+}
+
+.code-viewer .code-content code {
+  font-family: var(--font-mono);
+  font-size: 0.875rem !important;
+  line-height: 1.7 !important;
+}
+
+.code-viewer .code-content .line {
+  display: inline;
+}
+
+/* ========================================
+   CSV VIEWER STYLES
+   ======================================== */
+
+.csv-viewer {
+  background-color: var(--bg-primary);
+}
+
+.csv-viewer table {
+  background-color: var(--bg-secondary);
+}
+
+.csv-viewer th:hover {
+  background-color: color-mix(in srgb, var(--accent) 15%, var(--bg-secondary));
+}
+
+.csv-viewer tr:hover td {
+  background-color: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+/* ========================================
+   JSON VIEWER STYLES
+   ======================================== */
+
+.json-viewer {
+  background-color: var(--bg-primary);
+}
+
+.json-viewer .json-string:hover,
+.json-viewer .json-number:hover,
+.json-viewer .json-boolean:hover,
+.json-viewer .json-null:hover {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+/* ========================================
+   IMAGE VIEWER STYLES
+   ======================================== */
+
+.image-viewer {
+  background-color: var(--bg-primary);
+}
+
+.image-viewer button:hover {
+  opacity: 0.9;
+}

@@ -1,0 +1,85 @@
+import { useState, useEffect, useCallback } from 'react';
+
+const API_BASE = 'http://localhost:8129';
+
+export interface GitFile {
+  path: string;
+  status: 'M' | 'A' | 'D' | 'R' | 'C' | 'U' | '?';
+}
+
+export interface GitCommit {
+  hash: string;
+  shortHash: string;
+  message: string;
+  body: string | null;
+  author: string;
+  email: string;
+  date: string;
+  refs: string[];
+}
+
+export interface GitWorktree {
+  path: string;
+  branch?: string;
+  head?: string;
+  githubUrl?: string;
+  detached?: boolean;
+  bare?: boolean;
+}
+
+export interface GitRepo {
+  name: string;
+  path: string;
+  branch: string;
+  tracking?: string;
+  ahead: number;
+  behind: number;
+  staged: GitFile[];
+  unstaged: GitFile[];
+  untracked: GitFile[];
+  githubUrl: string | null;
+  lastActivity: string | null;
+  worktrees: GitWorktree[];
+  error?: string;
+}
+
+export interface GitReposData {
+  projectsDir: string;
+  repos: GitRepo[];
+}
+
+export function useGitRepos(projectsDir?: string) {
+  const [data, setData] = useState<GitReposData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchRepos = useCallback(async () => {
+    // Don't fetch until we have a directory
+    if (projectsDir === undefined) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const url = `${API_BASE}/api/git/repos?dir=${encodeURIComponent(projectsDir)}`;
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json.success) {
+        setData(json.data);
+      } else {
+        setError(json.error || 'Failed to fetch repos');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch repos');
+    } finally {
+      setLoading(false);
+    }
+  }, [projectsDir]);
+
+  useEffect(() => {
+    fetchRepos();
+  }, [fetchRepos]);
+
+  return { data, loading, error, refetch: fetchRepos };
+}

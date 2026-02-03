@@ -18,22 +18,48 @@ interface UseWorkspaceResult {
   refreshWorkspace: () => Promise<void>;
 }
 
-function isMarkdownFile(name: string): boolean {
-  const lower = name.toLowerCase();
-  return lower.endsWith('.md') || lower.endsWith('.markdown');
+// Files/folders to exclude from the tree
+const excludedNames = new Set([
+  'node_modules',
+  '.git',
+  '.svn',
+  '.hg',
+  '__pycache__',
+  '.DS_Store',
+  'Thumbs.db',
+  '.idea',
+  '.vscode',
+  'dist',
+  'build',
+  '.next',
+  '.nuxt',
+  'coverage',
+  '.cache',
+]);
+
+function shouldInclude(name: string): boolean {
+  // Exclude hidden files/folders (starting with .) except common config files
+  if (name.startsWith('.') && !name.startsWith('.env')) {
+    return false;
+  }
+  return !excludedNames.has(name);
 }
 
 /**
- * Convert API file tree to our format, filtering for markdown files only
+ * Convert API file tree to our format, including all viewable files
  */
 function convertTree(node: APIFileTreeNode): FileTreeNode | null {
+  if (!shouldInclude(node.name)) {
+    return null;
+  }
+
   if (node.type === 'directory') {
-    // Recursively convert children, filtering for markdown only
+    // Recursively convert children
     const children = (node.children || [])
       .map(convertTree)
       .filter((child): child is FileTreeNode => child !== null);
 
-    // Only include directories that have markdown files (directly or nested)
+    // Only include directories that have files (directly or nested)
     if (children.length > 0) {
       return {
         name: node.name,
@@ -44,15 +70,12 @@ function convertTree(node: APIFileTreeNode): FileTreeNode | null {
     }
     return null;
   } else {
-    // Only include markdown files
-    if (isMarkdownFile(node.name)) {
-      return {
-        name: node.name,
-        path: node.path,
-        isDirectory: false,
-      };
-    }
-    return null;
+    // Include all files
+    return {
+      name: node.name,
+      path: node.path,
+      isDirectory: false,
+    };
   }
 }
 
@@ -86,7 +109,7 @@ export function useWorkspace(): UseWorkspaceResult {
       // Fetch file tree from TabzChrome API
       const apiTree = await fetchFileTree(path, 5, false);
 
-      // Convert and filter for markdown files
+      // Convert API tree to our format
       const converted = convertTree(apiTree);
       const children = converted?.children || [];
 

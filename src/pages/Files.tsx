@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useFileWatcher } from '../hooks/useFileWatcher';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { useAppStore } from '../hooks/useAppStore';
 import { Toolbar } from '../components/Toolbar';
-import { MarkdownViewer, type MarkdownViewerHandle } from '../components/MarkdownViewer';
+import { ViewerContainer } from '../components/ViewerContainer';
 import { MetadataBar } from '../components/MetadataBar';
 import { Sidebar } from '../components/Sidebar';
 import { parseFrontmatter } from '../utils/frontmatter';
@@ -11,7 +11,6 @@ import { themes, type ThemeId } from '../themes';
 
 export function Files() {
   const [currentFile, setCurrentFile] = useState<string | null>(null);
-  const markdownViewerRef = useRef<MarkdownViewerHandle>(null);
 
   const {
     state: appState,
@@ -38,10 +37,17 @@ export function Files() {
 
   const themeClass = themes.find((t) => t.id === appState.theme)?.className ?? '';
 
-  // Parse frontmatter from content
+  // Check if current file is markdown
+  const isMarkdownFile = useMemo(() => {
+    if (!currentFile) return false;
+    const ext = currentFile.split('.').pop()?.toLowerCase();
+    return ext === 'md' || ext === 'markdown' || ext === 'mdx';
+  }, [currentFile]);
+
+  // Parse frontmatter from content (only for markdown files)
   const { frontmatter, content: markdownContent } = useMemo(
-    () => parseFrontmatter(content),
-    [content]
+    () => (isMarkdownFile ? parseFrontmatter(content) : { frontmatter: null, content }),
+    [content, isMarkdownFile]
   );
 
   // Restore last workspace on mount
@@ -161,10 +167,10 @@ export function Files() {
 
           {!loading && !error && currentFile && (
             <>
-              {frontmatter && <MetadataBar frontmatter={frontmatter} />}
+              {isMarkdownFile && frontmatter && <MetadataBar frontmatter={frontmatter} />}
               <div className="flex-1 overflow-auto">
-                <MarkdownViewer
-                  ref={markdownViewerRef}
+                <ViewerContainer
+                  filePath={currentFile}
                   content={markdownContent}
                   isStreaming={isStreaming}
                   themeClassName={themeClass}

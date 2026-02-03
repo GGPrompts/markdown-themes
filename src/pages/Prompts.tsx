@@ -1,20 +1,20 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useFileWatcher } from '../hooks/useFileWatcher';
-import { useWorkspace } from '../hooks/useWorkspace';
 import { useAppStore } from '../hooks/useAppStore';
-import { Sidebar } from '../components/Sidebar';
+import { PromptLibrary } from '../components/PromptLibrary';
 import { ThemeSelector } from '../components/ThemeSelector';
 import { PromptNotebook } from '../components/PromptNotebook';
 import { isPromptyFile } from '../utils/promptyUtils';
 import { type ThemeId } from '../themes';
-import { ArrowLeft, FolderOpen, FileText } from 'lucide-react';
+import { ArrowLeft, FolderOpen, FileText, X } from 'lucide-react';
 
 export function Prompts() {
   const [currentFile, setCurrentFile] = useState<string | null>(null);
   const [showPathInput, setShowPathInput] = useState(false);
   const [pathInputValue, setPathInputValue] = useState('');
   const [pathInputMode, setPathInputMode] = useState<'file' | 'folder'>('file');
+  const [libraryPath, setLibraryPath] = useState<string | null>(null);
   const pathInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -32,18 +32,12 @@ export function Prompts() {
     path: currentFile,
   });
 
-  const { workspacePath, fileTree, openWorkspace, closeWorkspace } = useWorkspace();
-
   // Restore last workspace on mount
   useEffect(() => {
-    if (!storeLoading && appState.lastWorkspace && !workspacePath) {
-      openWorkspace(appState.lastWorkspace).then((success) => {
-        if (!success) {
-          saveLastWorkspace(null);
-        }
-      });
+    if (!storeLoading && appState.lastWorkspace && !libraryPath) {
+      setLibraryPath(appState.lastWorkspace);
     }
-  }, [storeLoading, appState.lastWorkspace, workspacePath, openWorkspace, saveLastWorkspace]);
+  }, [storeLoading, appState.lastWorkspace, libraryPath]);
 
   // Focus input when modal opens
   useEffect(() => {
@@ -82,18 +76,18 @@ export function Prompts() {
 
   const handleFolderSelect = useCallback(
     (path: string) => {
-      openWorkspace(path);
+      setLibraryPath(path);
       saveLastWorkspace(path);
       addRecentFolder(path);
     },
-    [openWorkspace, saveLastWorkspace, addRecentFolder]
+    [saveLastWorkspace, addRecentFolder]
   );
 
-  const handleCloseWorkspace = useCallback(() => {
-    closeWorkspace();
+  const handleCloseLibrary = useCallback(() => {
+    setLibraryPath(null);
     setCurrentFile(null);
     saveLastWorkspace(null);
-  }, [closeWorkspace, saveLastWorkspace]);
+  }, [saveLastWorkspace]);
 
   const handleOpenFile = () => {
     setPathInputMode('file');
@@ -119,14 +113,6 @@ export function Prompts() {
     setShowPathInput(false);
     setPathInputValue('');
   };
-
-  // Filter file tree to only show .prompty files
-  const filteredFileTree = fileTree
-    ? fileTree.filter((item) => {
-        if (item.isDirectory) return true;
-        return isPromptyFile(item.name);
-      })
-    : [];
 
   return (
     <>
@@ -199,7 +185,7 @@ export function Prompts() {
             Open .prompty
           </button>
 
-          {!workspacePath && (
+          {!libraryPath && (
             <button
               type="button"
               onClick={handleOpenFolder}
@@ -207,7 +193,20 @@ export function Prompts() {
               style={{ borderRadius: 'var(--radius)' }}
             >
               <FolderOpen size={16} />
-              Open Folder
+              Open Library
+            </button>
+          )}
+
+          {libraryPath && (
+            <button
+              type="button"
+              onClick={handleCloseLibrary}
+              className="btn-secondary px-3 py-1.5 text-sm flex items-center gap-1.5"
+              style={{ borderRadius: 'var(--radius)' }}
+              title="Close prompt library"
+            >
+              <X size={16} />
+              Close Library
             </button>
           )}
 
@@ -263,13 +262,11 @@ export function Prompts() {
 
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
-        {workspacePath && (
-          <Sidebar
-            fileTree={filteredFileTree}
-            currentFile={currentFile}
-            workspacePath={workspacePath}
-            onFileSelect={handleFileSelect}
-            onClose={handleCloseWorkspace}
+        {libraryPath && (
+          <PromptLibrary
+            rootPath={libraryPath}
+            selectedPath={currentFile ?? undefined}
+            onSelectPrompt={handleFileSelect}
           />
         )}
 

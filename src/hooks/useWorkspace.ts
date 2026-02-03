@@ -37,12 +37,24 @@ const excludedNames = new Set([
   '.cache',
 ]);
 
+// Hidden files/folders that should be included (Claude Code, env files)
+const allowedHiddenNames = new Set([
+  '.env',
+  '.claude',        // Claude Code config directory
+  '.mcp.json',      // MCP server config
+  '.claudeignore',  // Claude ignore patterns
+]);
+
 function shouldInclude(name: string): boolean {
-  // Exclude hidden files/folders (starting with .) except common config files
-  if (name.startsWith('.') && !name.startsWith('.env')) {
+  // Always exclude items in the excluded list
+  if (excludedNames.has(name)) {
     return false;
   }
-  return !excludedNames.has(name);
+  // For hidden files/folders, only include if they're in the allowed list
+  if (name.startsWith('.')) {
+    return allowedHiddenNames.has(name);
+  }
+  return true;
 }
 
 /**

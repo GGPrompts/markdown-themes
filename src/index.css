@@ -124,6 +124,8 @@ body {
 
 .streamdown-content pre.shiki code {
   font-family: var(--font-mono);
+  font-size: 0.875em !important;
+  line-height: 1.7 !important;
   background: transparent !important;
   border: none !important;
   padding: 0 !important;

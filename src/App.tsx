@@ -8,15 +8,11 @@ import { MarkdownViewer, type MarkdownViewerHandle } from './components/Markdown
 import { MetadataBar } from './components/MetadataBar';
 import { Sidebar } from './components/Sidebar';
 import { parseFrontmatter } from './utils/frontmatter';
-import { generateHtml } from './utils/exportHtml';
-import { isTauri } from './utils/platform';
 import './index.css';
 
 function App() {
   const [currentFile, setCurrentFile] = useState<string | null>(null);
-  const [browserContent, setBrowserContent] = useState<string | null>(null); // For browser mode
   const markdownViewerRef = useRef<MarkdownViewerHandle>(null);
-  const isTauriEnv = isTauri();
 
   const {
     state: appState,
@@ -26,17 +22,20 @@ function App() {
     saveLastWorkspace,
   } = useAppStore();
 
-  // Only use file watcher in Tauri mode
-  const { content: watchedContent, error, loading, isStreaming } = useFileWatcher({
-    path: isTauriEnv ? currentFile : null
+  // Use file watcher to get content and streaming state
+  const {
+    content,
+    error,
+    loading,
+    isStreaming,
+    connected,
+  } = useFileWatcher({
+    path: currentFile,
   });
-
-  // Use browser content or watched content
-  const content = isTauriEnv ? watchedContent : (browserContent ?? '');
 
   const { workspacePath, fileTree, openWorkspace, closeWorkspace } = useWorkspace();
 
-  const themeClass = themes.find(t => t.id === appState.theme)?.className ?? '';
+  const themeClass = themes.find((t) => t.id === appState.theme)?.className ?? '';
 
   // Parse frontmatter from content
   const { frontmatter, content: markdownContent } = useMemo(
@@ -44,34 +43,43 @@ function App() {
     [content]
   );
 
-  // Restore last workspace on mount (Tauri only)
+  // Restore last workspace on mount
   useEffect(() => {
-    if (isTauriEnv && !storeLoading && appState.lastWorkspace && !workspacePath) {
-      openWorkspace(appState.lastWorkspace);
+    if (!storeLoading && appState.lastWorkspace && !workspacePath) {
+      openWorkspace(appState.lastWorkspace).then((success) => {
+        if (!success) {
+          // Path doesn't exist anymore, clear it from storage
+          saveLastWorkspace(null);
+        }
+      });
     }
-  }, [isTauriEnv, storeLoading, appState.lastWorkspace, workspacePath, openWorkspace]);
+  }, [storeLoading, appState.lastWorkspace, workspacePath, openWorkspace, saveLastWorkspace]);
 
   // Handle theme change with persistence
-  const handleThemeChange = useCallback((theme: ThemeId) => {
-    saveTheme(theme);
-  }, [saveTheme]);
+  const handleThemeChange = useCallback(
+    (theme: ThemeId) => {
+      saveTheme(theme);
+    },
+    [saveTheme]
+  );
 
   // Handle file selection with recent files tracking
-  const handleFileSelect = useCallback((path: string) => {
-    setCurrentFile(path);
-    addRecentFile(path);
-  }, [addRecentFile]);
-
-  // Handle browser file content (when using File System Access API)
-  const handleFileContent = useCallback((content: string) => {
-    setBrowserContent(content);
-  }, []);
+  const handleFileSelect = useCallback(
+    (path: string) => {
+      setCurrentFile(path);
+      addRecentFile(path);
+    },
+    [addRecentFile]
+  );
 
   // Handle folder selection with workspace persistence
-  const handleFolderSelect = useCallback((path: string) => {
-    openWorkspace(path);
-    saveLastWorkspace(path);
-  }, [openWorkspace, saveLastWorkspace]);
+  const handleFolderSelect = useCallback(
+    (path: string) => {
+      openWorkspace(path);
+      saveLastWorkspace(path);
+    },
+    [openWorkspace, saveLastWorkspace]
+  );
 
   const handleCloseWorkspace = useCallback(() => {
     closeWorkspace();
@@ -79,61 +87,21 @@ function App() {
     saveLastWorkspace(null);
   }, [closeWorkspace, saveLastWorkspace]);
 
-  // Handle export to HTML (Tauri only)
-  const handleExport = useCallback(async () => {
-    if (!isTauriEnv || !markdownViewerRef.current || !currentFile) return;
-
-    try {
-      const { save } = await import('@tauri-apps/plugin-dialog');
-      const { writeTextFile } = await import('@tauri-apps/plugin-fs');
-
-      const renderedHtml = markdownViewerRef.current.getHtml();
-      if (!renderedHtml) return;
-
-      const fileName = currentFile.split('/').pop() ?? currentFile.split('\\').pop() ?? 'document';
-      const baseName = fileName.replace(/\.(md|markdown|txt)$/i, '');
-
-      const savePath = await save({
-        defaultPath: `${baseName}.html`,
-        filters: [{ name: 'HTML', extensions: ['html'] }],
-        title: 'Export as HTML',
-      });
-
-      if (!savePath) return;
-
-      const html = generateHtml({
-        renderedHtml,
-        themeId: appState.theme,
-        title: baseName,
-      });
-
-      await writeTextFile(savePath, html);
-    } catch (err) {
-      console.error('Export failed:', err);
-    }
-  }, [isTauriEnv, currentFile, appState.theme]);
-
-  // Check if we can export (have content and not loading)
-  const canExport = !loading && !error && !!markdownContent;
-
-  // Determine loading state
-  const isLoading = isTauriEnv ? loading : false;
-  const hasError = isTauriEnv ? error : null;
-
   return (
-    <div className={`min-h-screen flex flex-col ${themeClass}`} style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+    <div
+      className={`min-h-screen flex flex-col ${themeClass}`}
+      style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+    >
       <Toolbar
         currentFile={currentFile}
         currentTheme={appState.theme}
         isStreaming={isStreaming}
+        connected={connected}
         hasWorkspace={!!workspacePath}
         recentFiles={appState.recentFiles}
-        canExport={canExport}
         onThemeChange={handleThemeChange}
         onFileSelect={handleFileSelect}
-        onFileContent={handleFileContent}
         onFolderSelect={handleFolderSelect}
-        onExport={handleExport}
       />
 
       <div className="flex-1 flex overflow-hidden">
@@ -148,23 +116,49 @@ function App() {
         )}
 
         <main className="flex-1 flex flex-col overflow-hidden">
-          {isLoading && (
+          {loading && (
             <div className="flex items-center justify-center h-full">
               <p style={{ color: 'var(--text-secondary)' }}>Loading...</p>
             </div>
           )}
 
-          {hasError && (
+          {error && (
             <div className="flex items-center justify-center h-full">
-              <p className="text-red-500">{hasError}</p>
+              <div className="text-center">
+                <p className="text-red-500 mb-2">{error}</p>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  Make sure TabzChrome backend is running on port 8129
+                </p>
+              </div>
             </div>
           )}
 
-          {!isLoading && !hasError && (
+          {!loading && !error && !currentFile && (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <h2
+                  className="text-xl font-medium mb-2"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  Welcome to Markdown Themes
+                </h2>
+                <p style={{ color: 'var(--text-secondary)' }}>
+                  Open a file or folder to get started
+                </p>
+              </div>
+            </div>
+          )}
+
+          {!loading && !error && currentFile && (
             <>
               {frontmatter && <MetadataBar frontmatter={frontmatter} />}
               <div className="flex-1 overflow-auto">
-                <MarkdownViewer ref={markdownViewerRef} content={markdownContent} isStreaming={isStreaming} themeClassName={themeClass} />
+                <MarkdownViewer
+                  ref={markdownViewerRef}
+                  content={markdownContent}
+                  isStreaming={isStreaming}
+                  themeClassName={themeClass}
+                />
               </div>
             </>
           )}

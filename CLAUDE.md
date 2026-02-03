@@ -4,11 +4,24 @@ A themed markdown viewer for AI-assisted writing. Watch Claude edit files in rea
 
 ## Stack
 
-- **Tauri 2** - Desktop app framework (Rust backend)
+- **TabzChrome Backend** - File watching via WebSocket (port 8129)
 - **React 19** - UI
 - **Tailwind v4** - CSS-based config with `@theme` directive
 - **Streamdown** - Vercel's react-markdown replacement for AI streaming
 - **Shiki** - Syntax highlighting (via @streamdown/code)
+
+## Architecture
+
+```
+WSL (TabzChrome backend @ 8129)     Browser (Chrome)
+┌───────────────────────────────┐   ┌─────────────────────┐
+│  /api/files/tree              │   │  markdown-themes    │
+│  /api/files/content           │◄─►│  - Streamdown       │
+│  WebSocket file-watch msgs    │   │  - Themes (CSS)     │
+└───────────────────────────────┘   └─────────────────────┘
+```
+
+**Requires**: TabzChrome backend running on port 8129
 
 ## Project Structure
 
@@ -16,25 +29,36 @@ A themed markdown viewer for AI-assisted writing. Watch Claude edit files in rea
 src/
 ├── App.tsx                    # Main app, theme state
 ├── index.css                  # Tailwind + CSS variables
+├── lib/
+│   └── api.ts                 # TabzChrome API client + WebSocket
 ├── components/
 │   ├── MarkdownViewer.tsx     # Streamdown renderer
 │   ├── ThemeSelector.tsx      # Theme dropdown
-│   └── Toolbar.tsx            # File open, streaming indicator
+│   ├── Toolbar.tsx            # Path input, streaming indicator
+│   ├── Sidebar.tsx            # File tree navigation
+│   └── MetadataBar.tsx        # Frontmatter display
 ├── hooks/
-│   └── useFileWatcher.ts      # Tauri fs watch + streaming detection
+│   ├── useFileWatcher.ts      # WebSocket file watching + streaming detection
+│   ├── useWorkspace.ts        # File tree via TabzChrome API
+│   └── useAppStore.ts         # localStorage persistence
+├── utils/
+│   └── frontmatter.ts         # YAML frontmatter parser
 └── themes/
-    ├── index.ts               # Theme registry
-    ├── dark-academia.css
-    ├── cyberpunk.css
-    ├── parchment.css
-    └── cosmic.css
+    ├── index.ts               # Theme registry (9 themes)
+    └── *.css                  # Theme CSS files
 ```
 
 ## Key Concepts
 
+### File Watching (WebSocket)
+`useFileWatcher` connects to TabzChrome's WebSocket and subscribes to file changes:
+- Sends `{ type: 'file-watch', path }` to subscribe
+- Receives `{ type: 'file-change', content, timeSinceLastChange }` on changes
+- Streaming detection: `timeSinceLastChange < 1500ms` triggers streaming UI
+
 ### Streaming Detection
-`useFileWatcher` detects rapid file changes (< 1.5s apart) and sets `isStreaming: true`. This triggers:
-- Streamdown's `caret="block"` for typing cursor
+When rapid file changes are detected (< 1.5s apart):
+- Streamdown's `caret="block"` shows typing cursor
 - "AI writing..." indicator in toolbar
 - `parseIncompleteMarkdown` for mid-stream rendering
 
@@ -51,42 +75,36 @@ Themes use CSS custom properties. Each theme file sets variables like:
 
 Tailwind's `@theme` directive maps these to utility classes.
 
-## Documentation (use /docs-seeker)
+## Commands
 
-Context7 library IDs for this project's stack:
+```bash
+npm run dev          # Vite dev server (localhost:5173)
+npm run build        # Production build
+npm run preview      # Preview production build
+```
+
+## Prerequisites
+
+1. TabzChrome backend must be running:
+   ```bash
+   cd ~/projects/TabzChrome && node backend/server.js
+   ```
+
+2. Open http://localhost:5173 in browser
+
+## Documentation (use /docs-seeker)
 
 | Library | Context7 ID | Use for |
 |---------|-------------|---------|
-| Tauri v2 | `/websites/v2_tauri_app` | Core Tauri docs |
-| Tauri Plugins | `/tauri-apps/plugins-workspace` | fs, dialog, store plugins |
 | Streamdown | `/vercel/streamdown` | AI streaming markdown |
 | Shiki | `/shikijs/shiki` | Syntax highlighting, CSS themes |
 | Tailwind v4 | `/websites/tailwindcss` | Utility classes, @theme |
 
-Example queries:
-- `tauri fs plugin watch files`
-- `streamdown caret animation plugins`
-- `shiki css variables theme`
+## Themes
 
-## Commands
+Available themes (from htmlstyleguides):
+- dark-academia, cyberpunk, parchment, cosmic
+- noir, nordic, glassmorphism
+- art-deco, editorial
 
-```bash
-npm run dev          # Vite dev server only
-npm run tauri dev    # Full Tauri app (requires system deps)
-npm run build        # Production build
-```
-
-## Tauri Prerequisites (Ubuntu/Debian)
-
-```bash
-sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf
-```
-
-## Themes from htmlstyleguides
-
-Port themes from `~/projects/htmlstyleguides/styles/`. Priority candidates:
-- noir, nordic, glassmorphism (dark modes)
-- retro-futurism, art-deco, art-nouveau (stylized)
-- editorial, letterpress (typography-focused)
-
-Convert to CSS variables format matching existing themes.
+Port more from `~/projects/htmlstyleguides/styles/`.

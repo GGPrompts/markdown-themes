@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { isTauri } from '../utils/platform';
+import { fetchFileTree, type FileTreeNode as APIFileTreeNode } from '../lib/api';
 
 export interface FileTreeNode {
   name: string;
@@ -13,7 +13,7 @@ interface UseWorkspaceResult {
   fileTree: FileTreeNode[];
   loading: boolean;
   error: string | null;
-  openWorkspace: (path: string) => Promise<void>;
+  openWorkspace: (path: string) => Promise<boolean>;
   closeWorkspace: () => void;
   refreshWorkspace: () => Promise<void>;
 }
@@ -23,48 +23,53 @@ function isMarkdownFile(name: string): boolean {
   return lower.endsWith('.md') || lower.endsWith('.markdown');
 }
 
-async function buildFileTree(dirPath: string): Promise<FileTreeNode[]> {
-  const { readDir } = await import('@tauri-apps/plugin-fs');
-  const entries = await readDir(dirPath);
-  const nodes: FileTreeNode[] = [];
+/**
+ * Convert API file tree to our format, filtering for markdown files only
+ */
+function convertTree(node: APIFileTreeNode): FileTreeNode | null {
+  if (node.type === 'directory') {
+    // Recursively convert children, filtering for markdown only
+    const children = (node.children || [])
+      .map(convertTree)
+      .filter((child): child is FileTreeNode => child !== null);
 
-  for (const entry of entries) {
-    // Skip hidden files/folders
-    if (entry.name.startsWith('.')) {
-      continue;
+    // Only include directories that have markdown files (directly or nested)
+    if (children.length > 0) {
+      return {
+        name: node.name,
+        path: node.path,
+        isDirectory: true,
+        children,
+      };
     }
-
-    const fullPath = `${dirPath}/${entry.name}`;
-
-    if (entry.isDirectory) {
-      // Recursively read subdirectories
-      const children = await buildFileTree(fullPath);
-      // Only include directories that contain markdown files (directly or nested)
-      if (children.length > 0) {
-        nodes.push({
-          name: entry.name,
-          path: fullPath,
-          isDirectory: true,
-          children,
-        });
-      }
-    } else if (isMarkdownFile(entry.name)) {
-      nodes.push({
-        name: entry.name,
-        path: fullPath,
+    return null;
+  } else {
+    // Only include markdown files
+    if (isMarkdownFile(node.name)) {
+      return {
+        name: node.name,
+        path: node.path,
         isDirectory: false,
-      });
+      };
     }
+    return null;
   }
+}
 
-  // Sort: directories first, then files, both alphabetically
-  nodes.sort((a, b) => {
-    if (a.isDirectory && !b.isDirectory) return -1;
-    if (!a.isDirectory && b.isDirectory) return 1;
-    return a.name.localeCompare(b.name);
-  });
-
-  return nodes;
+/**
+ * Sort nodes: directories first, then files, both alphabetically
+ */
+function sortTree(nodes: FileTreeNode[]): FileTreeNode[] {
+  return nodes
+    .map((node) => ({
+      ...node,
+      children: node.children ? sortTree(node.children) : undefined,
+    }))
+    .sort((a, b) => {
+      if (a.isDirectory && !b.isDirectory) return -1;
+      if (!a.isDirectory && b.isDirectory) return 1;
+      return a.name.localeCompare(b.name);
+    });
 }
 
 export function useWorkspace(): UseWorkspaceResult {
@@ -72,32 +77,42 @@ export function useWorkspace(): UseWorkspaceResult {
   const [fileTree, setFileTree] = useState<FileTreeNode[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const isTauriEnv = isTauri();
 
-  const loadWorkspace = useCallback(async (path: string) => {
-    if (!isTauriEnv) {
-      setError('Workspace feature is only available in the desktop app');
-      return;
-    }
-
+  const loadWorkspace = useCallback(async (path: string): Promise<boolean> => {
     setLoading(true);
     setError(null);
 
     try {
-      const tree = await buildFileTree(path);
-      setFileTree(tree);
+      // Fetch file tree from TabzChrome API
+      const apiTree = await fetchFileTree(path, 5, false);
+
+      // Convert and filter for markdown files
+      const converted = convertTree(apiTree);
+      const children = converted?.children || [];
+
+      // Sort the tree
+      const sorted = sortTree(children);
+
+      setFileTree(sorted);
       setWorkspacePath(path);
+      return true;
     } catch (err) {
-      setError(`Failed to read workspace: ${err}`);
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Failed to read workspace: ${message}`);
       setFileTree([]);
+      setWorkspacePath(null);
+      return false;
     } finally {
       setLoading(false);
     }
-  }, [isTauriEnv]);
+  }, []);
 
-  const openWorkspace = useCallback(async (path: string) => {
-    await loadWorkspace(path);
-  }, [loadWorkspace]);
+  const openWorkspace = useCallback(
+    async (path: string): Promise<boolean> => {
+      return await loadWorkspace(path);
+    },
+    [loadWorkspace]
+  );
 
   const closeWorkspace = useCallback(() => {
     setWorkspacePath(null);

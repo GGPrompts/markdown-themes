@@ -581,6 +581,62 @@
 }
 
 /* ========================================
+   HEADER - Clean, readable without glossy buttons
+   ======================================== */
+
+.theme-retro-futurism header {
+  --text-primary: #1a2f3d;
+  --text-secondary: #3a5a6a;
+  --bg-primary: rgba(255, 255, 255, 0.7);
+  --accent: var(--burnt-orange);
+}
+
+/* Remove glossy button styling from header */
+.theme-retro-futurism header button,
+.theme-retro-futurism header select {
+  background: rgba(255, 255, 255, 0.7) !important;
+  border: 1px solid var(--brass) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  color: var(--text-primary) !important;
+}
+
+.theme-retro-futurism header button::before {
+  display: none !important;
+}
+
+.theme-retro-futurism header button:hover,
+.theme-retro-futurism header select:hover {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: var(--burnt-orange) !important;
+}
+
+/* Header dropdown menus */
+.theme-retro-futurism header [class*="absolute"] {
+  background: var(--off-white) !important;
+  border: 1px solid var(--brass) !important;
+}
+
+.theme-retro-futurism header [class*="absolute"] button {
+  background: transparent !important;
+  border: none !important;
+}
+
+.theme-retro-futurism header [class*="absolute"] button:hover {
+  background: rgba(212, 175, 55, 0.15) !important;
+}
+
+/* Nav links in header */
+.theme-retro-futurism header nav a {
+  color: var(--text-primary) !important;
+}
+
+.theme-retro-futurism header nav a:hover {
+  color: var(--burnt-orange) !important;
+  background: rgba(212, 175, 55, 0.15) !important;
+}
+
+/* ========================================
    SIDEBAR FILE TREE
    Clean, readable sidebar without glossy buttons
    ======================================== */

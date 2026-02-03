@@ -98,10 +98,20 @@ body {
   50% { opacity: 0; }
 }
 
-/* Streamdown code blocks */
+/* Streamdown code blocks - aggressive border reset */
+.streamdown-content pre,
+.streamdown-content pre *,
+.streamdown-content .code-block,
+.streamdown-content .code-block *,
+.streamdown-content [class*="shiki"],
+.streamdown-content [class*="shiki"] * {
+  border-color: transparent !important;
+  outline: none !important;
+}
+
 .streamdown-content pre {
   background-color: var(--bg-secondary);
-  border: none;
+  border: none !important;
   border-radius: var(--radius);
   overflow-x: auto;
   padding: 1rem;

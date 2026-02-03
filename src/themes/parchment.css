@@ -479,3 +479,43 @@
   color: var(--ink-faded);
   font-style: italic;
 }
+
+/* ========================================
+   SIDEBAR FILE TREE
+   Ensure readable text in sidebar
+   ======================================== */
+
+.theme-parchment aside {
+  background: var(--parchment-dark) !important;
+}
+
+.theme-parchment aside button,
+.theme-parchment aside span {
+  color: var(--ink-black) !important;
+}
+
+.theme-parchment aside button:hover {
+  color: var(--vermillion) !important;
+}
+
+/* ========================================
+   SHIKI CSS VARIABLES THEME
+   Syntax highlighting colors for Parchment
+   ======================================== */
+
+.theme-parchment {
+  /* Shiki base colors */
+  --shiki-foreground: var(--ink-brown);
+  --shiki-background: transparent;
+
+  /* Shiki token colors - medieval manuscript palette */
+  --shiki-token-constant: var(--royal-blue);      /* Royal blue for constants */
+  --shiki-token-string: var(--forest);            /* Forest green for strings */
+  --shiki-token-comment: var(--ink-faded);        /* Faded ink for comments */
+  --shiki-token-keyword: var(--vermillion);       /* Vermillion red for keywords */
+  --shiki-token-parameter: var(--ink-sepia);      /* Sepia for parameters */
+  --shiki-token-function: var(--burgundy);        /* Burgundy for functions */
+  --shiki-token-string-expression: var(--forest);
+  --shiki-token-punctuation: var(--ink-brown);    /* Brown for punctuation */
+  --shiki-token-link: var(--vermillion);
+}

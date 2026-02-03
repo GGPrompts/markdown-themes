@@ -18,6 +18,19 @@
   --font-heading: system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
   --radius: 0.5rem;
+
+  /* Shiki CSS Variables - Default theme (light) */
+  --shiki-foreground: #1a1a2e;
+  --shiki-background: #f8f9fa;
+  --shiki-token-constant: #0550ae;
+  --shiki-token-string: #0a6640;
+  --shiki-token-comment: #6e7781;
+  --shiki-token-keyword: #cf222e;
+  --shiki-token-parameter: #1a1a2e;
+  --shiki-token-function: #8250df;
+  --shiki-token-string-expression: #0a6640;
+  --shiki-token-punctuation: #4a4a68;
+  --shiki-token-link: #6366f1;
 }
 
 /* Dark mode base */

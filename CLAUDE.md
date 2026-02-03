@@ -138,28 +138,58 @@ To port a theme from `~/projects/htmlstyleguides/styles/`:
 
    // Add to themes array
    { id: '{theme-name}', name: 'Theme Name', className: 'theme-{theme-name}' }
-
-   // Add to ThemeId type
-
-   // Add Shiki mapping in shikiThemeMap
-   '{theme-name}': ['light-theme', 'dark-theme'],
    ```
 
-3. **Add fonts** to `src/index.css` Google Fonts import URL
+3. **Add Shiki CSS variables** for syntax highlighting (in the theme CSS file):
+   ```css
+   .theme-{theme-name} {
+     /* Shiki base colors */
+     --shiki-foreground: var(--text-primary);
+     --shiki-background: var(--bg-secondary);
 
-4. **Reference**: Study the HTML file at `~/projects/htmlstyleguides/styles/{theme}.html`
+     /* Shiki token colors - customize to match theme aesthetic */
+     --shiki-token-constant: #...;      /* Constants, numbers */
+     --shiki-token-string: #...;        /* String literals */
+     --shiki-token-comment: #...;       /* Comments (ensure readable!) */
+     --shiki-token-keyword: #...;       /* Keywords (if, const, etc.) */
+     --shiki-token-parameter: #...;     /* Function parameters */
+     --shiki-token-function: #...;      /* Function names */
+     --shiki-token-string-expression: #...;  /* Template literals */
+     --shiki-token-punctuation: #...;   /* Brackets, semicolons */
+     --shiki-token-link: #...;          /* URLs in code */
+   }
+   ```
+
+4. **Add fonts** to `src/index.css` Google Fonts import URL
+
+5. **Reference**: Study the HTML file at `~/projects/htmlstyleguides/styles/{theme}.html`
    - Extract color palette from CSS variables
    - Note fonts used (check @import or link tags)
    - Copy texture/pattern techniques (gradients, SVG noise, etc.)
    - Match typography (font sizes, line-height, letter-spacing)
 
-### Shiki Theme Mapping
+### Shiki CSS Variables
 
-Pick Shiki themes that match the aesthetic. Browse: https://shiki.style/themes
+Syntax highlighting uses CSS variables via `createCssVariablesTheme()` from Shiki. Each theme defines its own `--shiki-*` variables to control code colors.
 
-Common mappings:
-- Warm/sepia → `rose-pine`, `monokai-pro`
-- Neon/cyber → `synthwave-84`, `tokyo-night`
-- Minimal/clean → `github-light`, `github-dark`
-- Purple/cosmic → `dracula`
-- Blue/cold → `nord`
+**Tips for choosing colors:**
+- `--shiki-token-comment` must have good contrast - comments are often too dark
+- For dark themes: use lighter/brighter colors
+- For light themes: use darker/saturated colors
+- Match the theme's accent colors (e.g., use gold for Art Deco keywords)
+- Test with code blocks containing comments, strings, keywords, and functions
+
+**Available token variables:**
+| Variable | Used for |
+|----------|----------|
+| `--shiki-foreground` | Default text color |
+| `--shiki-background` | Code block background |
+| `--shiki-token-keyword` | `const`, `if`, `return`, etc. |
+| `--shiki-token-string` | `"hello"`, `'world'` |
+| `--shiki-token-comment` | `// comment`, `/* block */` |
+| `--shiki-token-function` | Function names |
+| `--shiki-token-constant` | Numbers, booleans, constants |
+| `--shiki-token-parameter` | Function parameters |
+| `--shiki-token-punctuation` | `{}`, `()`, `;`, `:` |
+| `--shiki-token-string-expression` | Template literals |
+| `--shiki-token-link` | URLs in comments/strings |

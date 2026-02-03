@@ -264,3 +264,25 @@
 .theme-dark-academia .streamdown-content [data-caret] {
   background-color: var(--gold-antique);
 }
+
+/* ========================================
+   SHIKI CSS VARIABLES THEME
+   Syntax highlighting colors for Dark Academia
+   ======================================== */
+
+.theme-dark-academia {
+  /* Shiki base colors */
+  --shiki-foreground: var(--parchment);
+  --shiki-background: transparent;
+
+  /* Shiki token colors - scholarly manuscript palette */
+  --shiki-token-constant: #6a9a6a;                /* Forest green for constants */
+  --shiki-token-string: var(--sepia-light);       /* Sepia for strings */
+  --shiki-token-comment: #a89880;                 /* Muted warm gray for comments */
+  --shiki-token-keyword: var(--burgundy);         /* Burgundy for keywords */
+  --shiki-token-parameter: var(--cream);          /* Cream for parameters */
+  --shiki-token-function: var(--gold-antique);    /* Antique gold for functions */
+  --shiki-token-string-expression: var(--sepia-light);
+  --shiki-token-punctuation: var(--parchment-dark); /* Parchment for punctuation */
+  --shiki-token-link: var(--gold-antique);
+}

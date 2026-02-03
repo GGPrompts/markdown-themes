@@ -494,3 +494,25 @@
   background: rgba(212, 175, 55, 0.3);
   color: var(--cream);
 }
+
+/* ========================================
+   SHIKI CSS VARIABLES THEME
+   Syntax highlighting colors for Art Deco
+   ======================================== */
+
+.theme-art-deco {
+  /* Shiki base colors */
+  --shiki-foreground: var(--cream);
+  --shiki-background: var(--bg-secondary);
+
+  /* Shiki token colors - warm gold palette */
+  --shiki-token-constant: #d4a5a5;       /* Soft rose for constants */
+  --shiki-token-string: #e5a84b;         /* Warm amber for strings */
+  --shiki-token-comment: #8a8070;        /* Muted warm gray for comments */
+  --shiki-token-keyword: var(--gold);    /* Gold for keywords */
+  --shiki-token-parameter: #e8dcc4;      /* Light cream for parameters */
+  --shiki-token-function: #f0e6c8;       /* Bright cream for functions */
+  --shiki-token-string-expression: #e5a84b;
+  --shiki-token-punctuation: #b8a98c;    /* Visible warm gray */
+  --shiki-token-link: var(--gold);
+}

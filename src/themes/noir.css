@@ -495,3 +495,25 @@
 .theme-noir .metadata-tag:hover {
   background: rgba(139, 0, 0, 0.3);
 }
+
+/* ========================================
+   SHIKI CSS VARIABLES THEME
+   Syntax highlighting colors for Noir
+   ======================================== */
+
+.theme-noir {
+  /* Shiki base colors */
+  --shiki-foreground: var(--noir-white);
+  --shiki-background: var(--bg-secondary);
+
+  /* Shiki token colors - film noir palette */
+  --shiki-token-constant: var(--gold-badge);      /* Gold for constants */
+  --shiki-token-string: var(--cigarette-glow);    /* Warm orange for strings */
+  --shiki-token-comment: var(--noir-pale);        /* Visible gray for comments */
+  --shiki-token-keyword: var(--blood-bright);     /* Blood red for keywords */
+  --shiki-token-parameter: var(--noir-silver);    /* Silver for parameters */
+  --shiki-token-function: var(--whiskey-amber);   /* Amber for functions */
+  --shiki-token-string-expression: var(--cigarette-glow);
+  --shiki-token-punctuation: var(--noir-light);   /* Light gray for punctuation */
+  --shiki-token-link: var(--blood-bright);
+}

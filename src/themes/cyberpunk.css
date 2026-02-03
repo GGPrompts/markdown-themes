@@ -518,3 +518,25 @@
   color: var(--text-primary);
   text-shadow: 0 0 10px var(--neon-cyan-glow);
 }
+
+/* ========================================
+   SHIKI CSS VARIABLES THEME
+   Syntax highlighting colors for Cyberpunk
+   ======================================== */
+
+.theme-cyberpunk {
+  /* Shiki base colors */
+  --shiki-foreground: var(--text-primary);
+  --shiki-background: var(--bg-secondary);
+
+  /* Shiki token colors - neon cyberpunk palette */
+  --shiki-token-constant: var(--neon-yellow);     /* Neon yellow for constants */
+  --shiki-token-string: var(--neon-green);        /* Neon green for strings */
+  --shiki-token-comment: var(--text-muted);       /* Muted for comments */
+  --shiki-token-keyword: var(--neon-pink);        /* Neon pink for keywords */
+  --shiki-token-parameter: var(--text-secondary); /* Secondary text for parameters */
+  --shiki-token-function: var(--neon-cyan);       /* Neon cyan for functions */
+  --shiki-token-string-expression: var(--neon-green);
+  --shiki-token-punctuation: var(--text-secondary); /* Secondary for punctuation */
+  --shiki-token-link: var(--neon-cyan);
+}

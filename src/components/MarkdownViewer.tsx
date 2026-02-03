@@ -1,13 +1,12 @@
 import { forwardRef, useImperativeHandle, useRef, useMemo } from 'react';
 import { Streamdown } from 'streamdown';
 import { createCodePlugin } from '@streamdown/code';
-import { getShikiThemes, type ThemeId } from '../themes';
+import { createCssVariablesTheme } from 'shiki';
 
 interface MarkdownViewerProps {
   content: string;
   isStreaming?: boolean;
   themeClassName?: string;
-  themeId?: ThemeId;
   fontSize?: number;
 }
 
@@ -15,16 +14,24 @@ export interface MarkdownViewerHandle {
   getHtml: () => string;
 }
 
-export const MarkdownViewer = forwardRef<MarkdownViewerHandle, MarkdownViewerProps>(function MarkdownViewer({ content, isStreaming = false, themeId = 'default', fontSize = 100 }, ref) {
+// Create a single CSS variables theme - colors defined in each theme's CSS
+const cssVarsTheme = createCssVariablesTheme({
+  name: 'css-variables',
+  variablePrefix: '--shiki-',
+  variableDefaults: {},
+  fontStyle: true,
+});
+
+export const MarkdownViewer = forwardRef<MarkdownViewerHandle, MarkdownViewerProps>(function MarkdownViewer({ content, isStreaming = false, fontSize = 100 }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Create code plugin with theme-specific Shiki configuration
+  // Create code plugin with CSS variables theme (colors controlled by CSS)
   const codePlugin = useMemo(() => {
-    const [lightTheme, darkTheme] = getShikiThemes(themeId);
     return createCodePlugin({
-      themes: [lightTheme, darkTheme],
+      // @ts-expect-error - cssVarsTheme is ThemeRegistration, plugin expects BundledTheme but accepts custom themes
+      themes: [cssVarsTheme, cssVarsTheme], // Same theme for light/dark - CSS controls colors
     });
-  }, [themeId]);
+  }, []);
 
   useImperativeHandle(ref, () => ({
     getHtml: () => {

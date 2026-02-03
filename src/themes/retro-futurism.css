@@ -570,3 +570,44 @@
 .theme-retro-futurism .boomerang-decoration::after {
   transform: scaleX(-1);
 }
+
+/* ========================================
+   SIDEBAR FILE TREE
+   Ensure readable text in sidebar
+   ======================================== */
+
+.theme-retro-futurism aside {
+  background: var(--off-white) !important;
+  border-right: 2px solid var(--brass) !important;
+}
+
+.theme-retro-futurism aside button,
+.theme-retro-futurism aside span {
+  color: var(--text-dark) !important;
+}
+
+.theme-retro-futurism aside button:hover {
+  color: var(--burnt-orange) !important;
+}
+
+/* ========================================
+   SHIKI CSS VARIABLES THEME
+   Syntax highlighting colors for Retro Futurism
+   ======================================== */
+
+.theme-retro-futurism {
+  /* Shiki base colors */
+  --shiki-foreground: var(--text-dark);
+  --shiki-background: transparent;
+
+  /* Shiki token colors - retro optimistic palette */
+  --shiki-token-constant: var(--mustard);           /* Mustard for constants */
+  --shiki-token-string: var(--grass-green);         /* Grass green for strings */
+  --shiki-token-comment: var(--text-medium);        /* Medium text for comments */
+  --shiki-token-keyword: var(--sky-blue-dark);      /* Sky blue for keywords */
+  --shiki-token-parameter: var(--text-dark);        /* Dark text for parameters */
+  --shiki-token-function: var(--burnt-orange);      /* Burnt orange for functions */
+  --shiki-token-string-expression: var(--grass-green);
+  --shiki-token-punctuation: var(--text-medium);    /* Medium for punctuation */
+  --shiki-token-link: var(--sky-blue);
+}

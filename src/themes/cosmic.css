@@ -508,3 +508,25 @@
   background: linear-gradient(135deg, var(--cosmic-pink), var(--aurora-teal));
   box-shadow: var(--glow-pink);
 }
+
+/* ========================================
+   SHIKI CSS VARIABLES THEME
+   Syntax highlighting colors for Cosmic
+   ======================================== */
+
+.theme-cosmic {
+  /* Shiki base colors */
+  --shiki-foreground: var(--text-primary);
+  --shiki-background: var(--deep-space);
+
+  /* Shiki token colors - cosmic space palette */
+  --shiki-token-constant: var(--stellar-gold);    /* Gold for constants */
+  --shiki-token-string: var(--star-warm);         /* Warm white for strings */
+  --shiki-token-comment: #8b7cb8;                 /* Soft purple for comments */
+  --shiki-token-keyword: var(--cosmic-pink);      /* Pink for keywords */
+  --shiki-token-parameter: #d4c4f0;               /* Light lavender for parameters */
+  --shiki-token-function: var(--aurora-teal);     /* Teal for functions */
+  --shiki-token-string-expression: var(--star-warm);
+  --shiki-token-punctuation: #c8c8d8;             /* Soft white for punctuation */
+  --shiki-token-link: var(--cosmic-pink);
+}

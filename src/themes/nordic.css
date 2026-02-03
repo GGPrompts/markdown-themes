@@ -404,3 +404,25 @@
 .theme-nordic .prose sup a:hover {
   text-decoration: underline;
 }
+
+/* ========================================
+   SHIKI CSS VARIABLES THEME
+   Syntax highlighting colors for Nordic
+   ======================================== */
+
+.theme-nordic {
+  /* Shiki base colors */
+  --shiki-foreground: var(--text-primary);
+  --shiki-background: var(--frost);
+
+  /* Shiki token colors - natural Nordic palette */
+  --shiki-token-constant: var(--fjord);           /* Fjord blue for constants */
+  --shiki-token-string: var(--forest);            /* Forest green for strings */
+  --shiki-token-comment: var(--slate);            /* Slate gray for comments */
+  --shiki-token-keyword: var(--terracotta);       /* Terracotta for keywords */
+  --shiki-token-parameter: var(--charcoal);       /* Charcoal for parameters */
+  --shiki-token-function: var(--teak);            /* Teak wood for functions */
+  --shiki-token-string-expression: var(--forest);
+  --shiki-token-punctuation: var(--charcoal);     /* Charcoal for punctuation */
+  --shiki-token-link: var(--terracotta);
+}

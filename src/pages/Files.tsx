@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { Clock, ChevronLeft, GitCommit, FileDiff, Loader2 } from 'lucide-react';
 import { useFileWatcher } from '../hooks/useFileWatcher';
 import { useWorkspaceStreaming } from '../hooks/useWorkspaceStreaming';
+import { useDiffAutoScroll } from '../hooks/useDiffAutoScroll';
 import { useWorkspaceContext } from '../context/WorkspaceContext';
 import { usePageState } from '../context/PageStateContext';
 import { useAppStore } from '../hooks/useAppStore';
@@ -195,6 +196,7 @@ export function Files() {
   const [sidebarWidth, setSidebarWidth] = useState(appState.sidebarWidth);
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const leftScrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Get workspace from global context
   const { workspacePath, fileTree } = useWorkspaceContext();
@@ -316,6 +318,14 @@ export function Files() {
     () => (isRightMarkdownFile ? parseFrontmatter(rightContent) : { frontmatter: null, content: rightContent }),
     [rightContent, isRightMarkdownFile]
   );
+
+  // Auto-scroll to changes when streaming (left pane)
+  useDiffAutoScroll({
+    content: markdownContent,
+    isStreaming,
+    scrollContainerRef: leftScrollContainerRef,
+    enabled: isStreaming && isMarkdownFile,
+  });
 
   // Get recent files for empty state (limit to 6)
   const recentFilesForEmptyState = useMemo(() => {
@@ -624,7 +634,7 @@ export function Files() {
               {!loading && !error && currentFile && (
                 <>
                   {isMarkdownFile && frontmatter && <MetadataBar frontmatter={frontmatter} />}
-                  <div className="flex-1 overflow-auto">
+                  <div className="flex-1 overflow-auto" ref={leftScrollContainerRef}>
                     <ViewerContainer
                       filePath={currentFile}
                       content={markdownContent}

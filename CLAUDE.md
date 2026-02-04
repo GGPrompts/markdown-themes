@@ -51,6 +51,7 @@ src/
 ├── hooks/
 │   ├── useFileWatcher.ts      # WebSocket file watching + streaming detection
 │   ├── useWorkspaceStreaming.ts # Workspace-wide streaming detection (Follow AI Edits)
+│   ├── useDiffAutoScroll.ts   # Auto-scroll to changes during streaming
 │   ├── useWorkspace.ts        # File tree via TabzChrome API
 │   ├── useTabManager.ts       # Tab state management for Files page
 │   ├── useSplitView.ts        # Split view state for Files page
@@ -58,6 +59,7 @@ src/
 │   └── useGitRepos.ts         # Git repository scanning
 ├── utils/
 │   ├── frontmatter.ts         # YAML frontmatter parser
+│   ├── markdownDiff.ts        # Block-level diffing for auto-scroll
 │   └── promptyUtils.ts        # Prompty parsing + variable handling
 └── themes/
     ├── index.ts               # Theme registry (15 themes)
@@ -94,6 +96,24 @@ The toolbar has a "Follow AI Edits" button that auto-opens files as Claude write
 - `{ type: 'workspace-file-change', path, isStreaming }` - File being edited
 
 **Ignored directories:** `node_modules`, `.git`, `dist`, `build`, `.next`, etc.
+
+### Auto-Scroll to Changes
+When streaming is detected, the viewer auto-scrolls to show where Claude is editing:
+
+**How it works:**
+1. `useDiffAutoScroll` hook tracks previous content in a ref
+2. On content change during streaming, diffs old vs new at block level
+3. Finds the first changed paragraph/heading/code block
+4. Scrolls smoothly to that position in the viewport
+
+**Block-level diffing** (`src/utils/markdownDiff.ts`):
+- Splits markdown by double newlines (paragraphs)
+- Preserves code blocks as single units
+- Returns scroll percentage based on changed block position
+
+**User interruption:**
+- If user manually scrolls during streaming, auto-scroll pauses
+- Resumes when streaming stops or user resets
 
 ### Theming
 Themes use CSS custom properties. Each theme file sets variables like:
@@ -214,6 +234,7 @@ Tests use Vitest + React Testing Library. Run `npm run test:run` before committi
 **Test coverage:**
 - `src/utils/frontmatter.test.ts` - YAML frontmatter parsing
 - `src/utils/promptyUtils.test.ts` - Prompty variable detection/substitution
+- `src/utils/markdownDiff.test.ts` - Block-level diffing for auto-scroll
 - `src/lib/filters.test.ts` - File tree filtering
 - `src/lib/graphLayout.test.ts` - Git graph layout algorithm
 - `src/context/AppStoreContext.test.tsx` - localStorage persistence

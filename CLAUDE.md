@@ -168,6 +168,27 @@ The Files page toolbar has a git graph button that shows commit history in the r
 - `GET /api/git/commit/:hash?path=...` - Commit details with files
 - `GET /api/git/diff?path=...&base=hash&file=path` - File diff for a commit
 
+## Keyboard Shortcuts
+
+### Files Page
+| Shortcut | Action |
+|----------|--------|
+| `/` | Focus sidebar search |
+| `Ctrl+B` | Toggle sidebar |
+| `Ctrl+\` | Toggle split view |
+| `Ctrl+G` | Toggle git graph |
+| `Ctrl+Click` | Open file in right pane (when split) |
+| `Escape` | Clear focus |
+
+### SourceControl Page
+| Shortcut | Action |
+|----------|--------|
+| `/` | Focus search |
+| `j` / `k` | Navigate repos (vim-style) |
+| `Enter` | Toggle expand focused repo |
+| `r` | Refresh repos |
+| `Escape` | Clear search / collapse all |
+
 ## Commands
 
 ```bash

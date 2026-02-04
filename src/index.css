@@ -465,6 +465,30 @@ body {
 }
 
 /* ========================================
+   DIFF VIEWER STYLES
+   ======================================== */
+
+.diff-viewer {
+  background-color: var(--bg-primary);
+}
+
+.diff-viewer pre {
+  margin: 0;
+  background: transparent;
+  font-family: var(--font-mono);
+}
+
+/* Line highlight on hover */
+.diff-viewer .diff-line:hover {
+  filter: brightness(1.05);
+}
+
+/* Selection styling for diff content */
+.diff-viewer ::selection {
+  background-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+/* ========================================
    DROPDOWN MENU STYLES
    Consistent z-index handling for all dropdowns
    ======================================== */

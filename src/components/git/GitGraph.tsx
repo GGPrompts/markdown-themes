@@ -51,7 +51,8 @@ export function GitGraph({ repoPath, onCommitSelect, className = '' }: GitGraphP
       }
 
       const data = await response.json();
-      const newCommits: Commit[] = data.commits || [];
+      const newCommits: Commit[] = data.data?.commits || [];
+      const hasMoreFromApi = data.data?.hasMore ?? false;
 
       setState((prev) => {
         const allCommits = append ? [...prev.commits, ...newCommits] : newCommits;
@@ -64,7 +65,7 @@ export function GitGraph({ repoPath, onCommitSelect, className = '' }: GitGraphP
           loading: false,
           loadingMore: false,
           error: null,
-          hasMore: newCommits.length === PAGE_SIZE,
+          hasMore: hasMoreFromApi,
           skip: skip + newCommits.length,
         };
       });

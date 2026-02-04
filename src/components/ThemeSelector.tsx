@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react';
 import { themes, type ThemeId } from '../themes';
 
 interface ThemeSelectorProps {
@@ -6,29 +7,184 @@ interface ThemeSelectorProps {
 }
 
 export function ThemeSelector({ currentTheme, onThemeChange }: ThemeSelectorProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  const currentThemeData = themes.find((t) => t.id === currentTheme) ?? themes[0];
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+        setFocusedIndex(-1);
+      }
+    }
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
+
+  // Handle keyboard navigation
+  function handleKeyDown(event: React.KeyboardEvent) {
+    if (!isOpen) {
+      if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        setIsOpen(true);
+        setFocusedIndex(themes.findIndex((t) => t.id === currentTheme));
+      }
+      return;
+    }
+
+    switch (event.key) {
+      case 'Escape':
+        event.preventDefault();
+        setIsOpen(false);
+        setFocusedIndex(-1);
+        buttonRef.current?.focus();
+        break;
+      case 'ArrowDown':
+        event.preventDefault();
+        setFocusedIndex((prev) => (prev + 1) % themes.length);
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        setFocusedIndex((prev) => (prev - 1 + themes.length) % themes.length);
+        break;
+      case 'Enter':
+      case ' ':
+        event.preventDefault();
+        if (focusedIndex >= 0) {
+          onThemeChange(themes[focusedIndex].id);
+          setIsOpen(false);
+          setFocusedIndex(-1);
+          buttonRef.current?.focus();
+        }
+        break;
+      case 'Home':
+        event.preventDefault();
+        setFocusedIndex(0);
+        break;
+      case 'End':
+        event.preventDefault();
+        setFocusedIndex(themes.length - 1);
+        break;
+    }
+  }
+
+  function handleThemeSelect(themeId: ThemeId) {
+    onThemeChange(themeId);
+    setIsOpen(false);
+    setFocusedIndex(-1);
+  }
+
   return (
-    <div className="flex items-center gap-2">
-      <label htmlFor="theme-select" className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+    <div className="flex items-center gap-2" ref={dropdownRef}>
+      <label className="text-sm" style={{ color: 'var(--text-secondary)' }}>
         Theme:
       </label>
-      <select
-        id="theme-select"
-        value={currentTheme}
-        onChange={(e) => onThemeChange(e.target.value as ThemeId)}
-        className="px-3 py-1.5 cursor-pointer focus:outline-none"
-        style={{
-          borderRadius: 'var(--radius)',
-          backgroundColor: 'var(--bg-secondary)',
-          color: 'var(--text-primary)',
-          border: '1px solid var(--border)',
-        }}
-      >
-        {themes.map((theme) => (
-          <option key={theme.id} value={theme.id}>
-            {theme.name}
-          </option>
-        ))}
-      </select>
+      <div className="relative">
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          onKeyDown={handleKeyDown}
+          aria-haspopup="listbox"
+          aria-expanded={isOpen}
+          aria-label={`Theme: ${currentThemeData.name}`}
+          className="px-3 py-1.5 cursor-pointer focus:outline-none flex items-center gap-2 min-w-[180px] justify-between"
+          style={{
+            borderRadius: 'var(--radius)',
+            backgroundColor: 'var(--bg-secondary)',
+            color: 'var(--text-primary)',
+            border: '1px solid var(--border)',
+          }}
+        >
+          <span
+            style={{
+              color: currentThemeData.accent,
+              fontFamily: currentThemeData.font,
+              fontWeight: 500,
+            }}
+          >
+            {currentThemeData.name}
+          </span>
+          <svg
+            className="w-4 h-4 transition-transform"
+            style={{
+              color: 'var(--text-secondary)',
+              transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+            }}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {isOpen && (
+          <ul
+            role="listbox"
+            aria-activedescendant={focusedIndex >= 0 ? `theme-option-${themes[focusedIndex].id}` : undefined}
+            className="absolute top-full left-0 mt-1 w-full max-h-[320px] overflow-y-auto z-50"
+            style={{
+              borderRadius: 'var(--radius)',
+              backgroundColor: 'var(--bg-secondary)',
+              border: '1px solid var(--border)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            }}
+          >
+            {themes.map((theme, index) => {
+              const isSelected = theme.id === currentTheme;
+              const isFocused = index === focusedIndex;
+
+              return (
+                <li
+                  key={theme.id}
+                  id={`theme-option-${theme.id}`}
+                  role="option"
+                  aria-selected={isSelected}
+                  onClick={() => handleThemeSelect(theme.id)}
+                  onMouseEnter={() => setFocusedIndex(index)}
+                  className="px-3 py-2 cursor-pointer flex items-center justify-between transition-colors"
+                  style={{
+                    backgroundColor: isFocused ? 'var(--bg-primary)' : 'transparent',
+                  }}
+                >
+                  <span
+                    style={{
+                      color: theme.accent,
+                      fontFamily: theme.font,
+                      fontWeight: 500,
+                      fontSize: theme.id === 'pixel-art' ? '0.75rem' : '1rem',
+                    }}
+                  >
+                    {theme.name}
+                  </span>
+                  {isSelected && (
+                    <svg
+                      className="w-4 h-4"
+                      style={{ color: theme.accent }}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

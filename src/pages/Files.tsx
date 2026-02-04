@@ -29,9 +29,10 @@ interface DiffPaneProps {
   head?: string;
   file?: string;
   fontSize?: number;
+  onBack?: () => void;
 }
 
-function DiffPane({ repoPath, base, head, file, fontSize = 100 }: DiffPaneProps) {
+function DiffPane({ repoPath, base, head, file, fontSize = 100, onBack }: DiffPaneProps) {
   const [diff, setDiff] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +108,38 @@ function DiffPane({ repoPath, base, head, file, fontSize = 100 }: DiffPaneProps)
     );
   }
 
-  return <DiffViewer diff={diff} fontSize={fontSize} />;
+  const fileName = file?.split('/').pop() || 'Diff';
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Header with back button */}
+      <div
+        className="flex items-center gap-2 px-3 py-2 border-b shrink-0"
+        style={{ borderColor: 'var(--border)', backgroundColor: 'var(--bg-secondary)' }}
+      >
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1 px-2 py-1 rounded text-sm hover:opacity-80"
+            style={{ color: 'var(--text-secondary)' }}
+            title="Back to Git Graph"
+          >
+            <ChevronLeft size={16} />
+            <span>Back</span>
+          </button>
+        )}
+        <span className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>
+          {fileName}
+        </span>
+        <span className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
+          {base.substring(0, 7)}
+        </span>
+      </div>
+      <div className="flex-1 overflow-auto">
+        <DiffViewer diff={diff} fontSize={fontSize} />
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -693,6 +725,7 @@ export function Files() {
                   head={rightPaneContent.head}
                   file={rightPaneContent.file}
                   fontSize={appState.fontSize}
+                  onBack={setRightPaneGitGraph}
                 />
               )}
 

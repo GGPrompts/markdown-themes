@@ -25,7 +25,43 @@ export const PROMPTS_PATTERNS = [
   '.prompty',         // Prompty file extension (suffix match)
 ];
 
-export type FilterId = 'claude-code' | 'prompts';
+/**
+ * Patterns to match markdown files.
+ */
+export const MARKDOWN_PATTERNS = [
+  '.md',              // Markdown files
+  '.mdx',             // MDX files (Markdown with JSX)
+];
+
+/**
+ * Patterns to match media files (images, video, audio).
+ */
+export const MEDIA_PATTERNS = [
+  '.png',             // PNG images
+  '.jpg',             // JPEG images
+  '.gif',             // GIF images
+  '.webp',            // WebP images
+  '.svg',             // SVG images
+  '.mp4',             // MP4 video
+  '.webm',            // WebM video
+  '.mov',             // MOV video
+  '.mp3',             // MP3 audio
+  '.wav',             // WAV audio
+  '.ogg',             // OGG audio
+];
+
+/**
+ * Patterns to match config files.
+ */
+export const CONFIG_PATTERNS = [
+  '.json',            // JSON config
+  '.yaml',            // YAML config
+  '.yml',             // YAML config (alt extension)
+  '.toml',            // TOML config
+  '.env',             // Environment variables
+];
+
+export type FilterId = 'claude-code' | 'prompts' | 'markdown' | 'media' | 'config';
 
 /**
  * Scope for merged file tree display
@@ -78,6 +114,21 @@ export const FILTERS: FilterDefinition[] = [
     homePaths: {
       relativePaths: ['.prompts'],  // ~/.prompts
     },
+  },
+  {
+    id: 'markdown',
+    name: 'Markdown',
+    patterns: MARKDOWN_PATTERNS,
+  },
+  {
+    id: 'media',
+    name: 'Media',
+    patterns: MEDIA_PATTERNS,
+  },
+  {
+    id: 'config',
+    name: 'Config',
+    patterns: CONFIG_PATTERNS,
   },
 ];
 

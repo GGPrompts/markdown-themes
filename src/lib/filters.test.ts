@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { matchesFilter, filterFiles, countMatches, CLAUDE_CODE_PATTERNS, PROMPTS_PATTERNS } from './filters';
+import { matchesFilter, filterFiles, countMatches, CLAUDE_CODE_PATTERNS, PROMPTS_PATTERNS, MARKDOWN_PATTERNS, MEDIA_PATTERNS, CONFIG_PATTERNS } from './filters';
 import type { FileTreeNode } from '../context/WorkspaceContext';
 
 // Helper to create file nodes
@@ -258,5 +258,95 @@ describe('PROMPTS_PATTERNS', () => {
   it('matches .prompts directory and its contents', () => {
     expect(matchesFilter('/project/.prompts', PROMPTS_PATTERNS)).toBe(true);
     expect(matchesFilter('/project/.prompts/readme.md', PROMPTS_PATTERNS)).toBe(true);
+  });
+});
+
+describe('MARKDOWN_PATTERNS', () => {
+  it('matches markdown files', () => {
+    const testCases = [
+      { path: '/project/README.md', expected: true },
+      { path: '/project/docs/guide.md', expected: true },
+      { path: '/project/components/Button.mdx', expected: true },
+      { path: '/project/CLAUDE.md', expected: true },
+      { path: '/project/src/index.ts', expected: false },
+      { path: '/project/readme.txt', expected: false },
+      { path: '/project/markdown.js', expected: false },
+    ];
+
+    for (const { path, expected } of testCases) {
+      expect(matchesFilter(path, MARKDOWN_PATTERNS)).toBe(expected);
+    }
+  });
+});
+
+describe('MEDIA_PATTERNS', () => {
+  it('matches image files', () => {
+    const testCases = [
+      { path: '/project/logo.png', expected: true },
+      { path: '/project/assets/photo.jpg', expected: true },
+      { path: '/project/images/animation.gif', expected: true },
+      { path: '/project/icons/icon.webp', expected: true },
+      { path: '/project/icons/icon.svg', expected: true },
+    ];
+
+    for (const { path, expected } of testCases) {
+      expect(matchesFilter(path, MEDIA_PATTERNS)).toBe(expected);
+    }
+  });
+
+  it('matches video files', () => {
+    const testCases = [
+      { path: '/project/video.mp4', expected: true },
+      { path: '/project/media/clip.webm', expected: true },
+      { path: '/project/videos/recording.mov', expected: true },
+    ];
+
+    for (const { path, expected } of testCases) {
+      expect(matchesFilter(path, MEDIA_PATTERNS)).toBe(expected);
+    }
+  });
+
+  it('matches audio files', () => {
+    const testCases = [
+      { path: '/project/audio.mp3', expected: true },
+      { path: '/project/sounds/effect.wav', expected: true },
+      { path: '/project/music/track.ogg', expected: true },
+    ];
+
+    for (const { path, expected } of testCases) {
+      expect(matchesFilter(path, MEDIA_PATTERNS)).toBe(expected);
+    }
+  });
+
+  it('does not match non-media files', () => {
+    const testCases = [
+      { path: '/project/src/index.ts', expected: false },
+      { path: '/project/readme.md', expected: false },
+      { path: '/project/config.json', expected: false },
+    ];
+
+    for (const { path, expected } of testCases) {
+      expect(matchesFilter(path, MEDIA_PATTERNS)).toBe(expected);
+    }
+  });
+});
+
+describe('CONFIG_PATTERNS', () => {
+  it('matches config files', () => {
+    const testCases = [
+      { path: '/project/package.json', expected: true },
+      { path: '/project/tsconfig.json', expected: true },
+      { path: '/project/config.yaml', expected: true },
+      { path: '/project/docker-compose.yml', expected: true },
+      { path: '/project/Cargo.toml', expected: true },
+      { path: '/project/.env', expected: true },
+      { path: '/project/.env.local', expected: false }, // .env.local has two dots, treated as exact match
+      { path: '/project/src/index.ts', expected: false },
+      { path: '/project/readme.md', expected: false },
+    ];
+
+    for (const { path, expected } of testCases) {
+      expect(matchesFilter(path, CONFIG_PATTERNS)).toBe(expected);
+    }
   });
 });

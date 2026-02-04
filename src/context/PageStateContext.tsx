@@ -1,6 +1,8 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import type { Tab } from '../hooks/useTabManager';
 import type { RightPaneContent } from '../hooks/useSplitView';
+
+const STORAGE_KEY = 'markdown-themes-page-state';
 
 interface FilesPageState {
   tabs: Tab[];
@@ -58,30 +60,84 @@ const defaultState: PageState = {
   },
 };
 
+function loadPageState(): PageState {
+  try {
+    const data = sessionStorage.getItem(STORAGE_KEY);
+    if (!data) return defaultState;
+
+    const parsed = JSON.parse(data);
+    return {
+      files: {
+        tabs: parsed.files?.tabs ?? defaultState.files.tabs,
+        activeTabId: parsed.files?.activeTabId ?? defaultState.files.activeTabId,
+        isSplit: parsed.files?.isSplit ?? defaultState.files.isSplit,
+        splitRatio: parsed.files?.splitRatio ?? defaultState.files.splitRatio,
+        rightPaneContent: parsed.files?.rightPaneContent ?? defaultState.files.rightPaneContent,
+      },
+      prompts: {
+        currentFile: parsed.prompts?.currentFile ?? defaultState.prompts.currentFile,
+        showLibrary: parsed.prompts?.showLibrary ?? defaultState.prompts.showLibrary,
+      },
+      sourceControl: {
+        expandedRepos: parsed.sourceControl?.expandedRepos ?? defaultState.sourceControl.expandedRepos,
+        searchQuery: parsed.sourceControl?.searchQuery ?? defaultState.sourceControl.searchQuery,
+      },
+    };
+  } catch {
+    return defaultState;
+  }
+}
+
+function savePageState(state: PageState): void {
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (err) {
+    console.error('Failed to save to sessionStorage:', err);
+  }
+}
+
 const PageStateContext = createContext<PageStateContextValue | null>(null);
 
 export function PageStateProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<PageState>(defaultState);
 
+  // Load state from sessionStorage on mount
+  useEffect(() => {
+    const loaded = loadPageState();
+    setState(loaded);
+  }, []);
+
   const setFilesState = useCallback((partial: Partial<FilesPageState>) => {
-    setState((prev) => ({
-      ...prev,
-      files: { ...prev.files, ...partial },
-    }));
+    setState((prev) => {
+      const next = {
+        ...prev,
+        files: { ...prev.files, ...partial },
+      };
+      savePageState(next);
+      return next;
+    });
   }, []);
 
   const setPromptsState = useCallback((partial: Partial<PromptsPageState>) => {
-    setState((prev) => ({
-      ...prev,
-      prompts: { ...prev.prompts, ...partial },
-    }));
+    setState((prev) => {
+      const next = {
+        ...prev,
+        prompts: { ...prev.prompts, ...partial },
+      };
+      savePageState(next);
+      return next;
+    });
   }, []);
 
   const setSourceControlState = useCallback((partial: Partial<SourceControlPageState>) => {
-    setState((prev) => ({
-      ...prev,
-      sourceControl: { ...prev.sourceControl, ...partial },
-    }));
+    setState((prev) => {
+      const next = {
+        ...prev,
+        sourceControl: { ...prev.sourceControl, ...partial },
+      };
+      savePageState(next);
+      return next;
+    });
   }, []);
 
   return (

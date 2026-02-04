@@ -543,30 +543,42 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
     return new Set(getAllDirectoryPaths(fileTree));
   });
 
+  // Track paths the user has explicitly collapsed (to avoid re-expanding them)
+  const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(new Set());
+
   // Update expanded paths when file tree changes (e.g., new directories added)
   // Also auto-expand scope headers and filtered home files
+  // But never re-add paths the user explicitly collapsed
   useEffect(() => {
     const allDirs = getAllDirectoryPaths(fileTree);
     const filteredDirs = getAllDirectoryPaths(filteredFiles);
     setExpandedPaths(prev => {
-      // Add any new directories that aren't in the set yet (keep them expanded by default)
+      // Add any new directories that aren't in the set yet and weren't explicitly collapsed
       const next = new Set(prev);
       [...allDirs, ...filteredDirs].forEach(path => {
-        if (!prev.has(path)) {
+        if (!prev.has(path) && !collapsedPaths.has(path)) {
           next.add(path);
         }
       });
       return next;
     });
-  }, [fileTree, filteredFiles]);
+  }, [fileTree, filteredFiles, collapsedPaths]);
 
   const toggleExpandPath = (path: string) => {
     setExpandedPaths(prev => {
       const next = new Set(prev);
       if (next.has(path)) {
         next.delete(path);
+        // Track that user explicitly collapsed this path
+        setCollapsedPaths(collapsed => new Set(collapsed).add(path));
       } else {
         next.add(path);
+        // Remove from collapsed tracking since user expanded it
+        setCollapsedPaths(collapsed => {
+          const updated = new Set(collapsed);
+          updated.delete(path);
+          return updated;
+        });
       }
       return next;
     });
@@ -574,9 +586,14 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
 
   const expandAll = () => {
     setExpandedPaths(new Set([...getAllDirectoryPaths(fileTree), ...getAllDirectoryPaths(filteredFiles)]));
+    // Clear collapsed tracking since user wants everything expanded
+    setCollapsedPaths(new Set());
   };
 
   const collapseAll = () => {
+    // Track all current directories as explicitly collapsed
+    const allDirs = [...getAllDirectoryPaths(fileTree), ...getAllDirectoryPaths(filteredFiles)];
+    setCollapsedPaths(new Set(allDirs));
     setExpandedPaths(new Set());
   };
 

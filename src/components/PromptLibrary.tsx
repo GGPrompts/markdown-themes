@@ -285,7 +285,7 @@ function TreeItem({
       style={{
         paddingLeft: paddingLeft + 20,
         backgroundColor: isSelected
-          ? 'color-mix(in srgb, var(--accent) 20%, transparent)'
+          ? 'var(--selection-bg, color-mix(in srgb, var(--accent) 20%, transparent))'
           : 'transparent',
       }}
       onMouseEnter={(e) => {
@@ -306,7 +306,7 @@ function TreeItem({
         <span
           className="truncate"
           style={{
-            color: isSelected ? 'var(--accent)' : 'var(--text-primary)',
+            color: isSelected ? 'var(--selection-text, var(--accent))' : 'var(--text-primary)',
             fontWeight: isSelected ? 500 : 400,
           }}
         >

@@ -197,8 +197,8 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
       className="group/item w-full text-left py-1.5 pr-2 flex items-center gap-1.5 text-sm transition-colors"
         style={{
           paddingLeft: paddingLeft + 20,
-          backgroundColor: isSelected ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : 'transparent',
-          color: isSelected ? 'var(--accent)' : 'var(--text-primary)',
+          backgroundColor: isSelected ? 'var(--selection-bg, color-mix(in srgb, var(--accent) 20%, transparent))' : 'transparent',
+          color: isSelected ? 'var(--selection-text, var(--accent))' : 'var(--text-primary)',
           fontWeight: isSelected ? 500 : 400,
         }}
         onMouseEnter={(e) => {
@@ -265,8 +265,8 @@ function FavoriteItem({ favorite, currentFile, isSplit, onFileSelect, onFileDoub
       className="group/fav w-full text-left py-1.5 pr-2 flex items-center gap-1.5 text-sm transition-colors"
         style={{
           paddingLeft: 32,
-          backgroundColor: isSelected ? 'color-mix(in srgb, var(--accent) 20%, transparent)' : 'transparent',
-          color: isSelected ? 'var(--accent)' : 'var(--text-primary)',
+          backgroundColor: isSelected ? 'var(--selection-bg, color-mix(in srgb, var(--accent) 20%, transparent))' : 'transparent',
+          color: isSelected ? 'var(--selection-text, var(--accent))' : 'var(--text-primary)',
           fontWeight: isSelected ? 500 : 400,
           cursor: favorite.isDirectory ? 'default' : 'pointer',
         }}

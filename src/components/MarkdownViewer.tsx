@@ -51,8 +51,21 @@ export const MarkdownViewer = forwardRef<MarkdownViewerHandle, MarkdownViewerPro
     );
   }
 
+  // Use transform: scale() instead of zoom for better font rendering
+  // zoom causes subpixel rendering issues with thin fonts like Poiret One
+  const scale = fontSize / 100;
+  const needsScaling = scale !== 1;
+
   return (
-    <article ref={containerRef} className="prose prose-lg max-w-none p-8" style={{ zoom: fontSize / 100 }}>
+    <article
+      ref={containerRef}
+      className="prose prose-lg max-w-none p-8"
+      style={needsScaling ? {
+        transform: `scale(${scale})`,
+        transformOrigin: 'top left',
+        width: `${100 / scale}%`,
+      } : undefined}
+    >
       <Streamdown
         isAnimating={isStreaming}
         caret={isStreaming ? 'block' : undefined}

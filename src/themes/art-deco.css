@@ -24,6 +24,7 @@
 
   /* Typography */
   --font-body: 'Josefin Sans', 'Helvetica Neue', sans-serif;
+  --font-display: 'Poiret One', 'Didot', cursive;
   --font-heading: 'Poiret One', 'Didot', cursive;
   --font-mono: 'Courier New', monospace;
   --radius: 0;
@@ -68,6 +69,7 @@
   letter-spacing: 0.02em;
   line-height: 1.6;
   position: relative;
+  /* Note: Removed antialiased font smoothing - it can cause rough edges on thin fonts like Poiret One */
 }
 
 /* Ensure content stays above pattern */
@@ -83,7 +85,8 @@
 .theme-art-deco .prose h1 {
   font-family: var(--font-heading);
   font-size: clamp(2.5rem, 6vw, 3.5rem);
-  font-weight: 400;
+  font-weight: 400 !important; /* Override Streamdown's font-semibold - Poiret One only has 400 */
+  font-synthesis: none; /* Prevent browser from synthesizing bold/italic */
   letter-spacing: 0.3em;
   text-transform: uppercase;
   color: var(--gold);
@@ -109,7 +112,8 @@
 .theme-art-deco .prose h2 {
   font-family: var(--font-heading);
   font-size: clamp(1.75rem, 4vw, 2.5rem);
-  font-weight: 400;
+  font-weight: 400 !important; /* Override Streamdown's font-semibold */
+  font-synthesis: none;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--gold);
@@ -136,7 +140,8 @@
 .theme-art-deco .prose h3 {
   font-family: var(--font-heading);
   font-size: 1.5rem;
-  font-weight: 400;
+  font-weight: 400 !important; /* Override Streamdown's font-semibold */
+  font-synthesis: none;
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--gold);

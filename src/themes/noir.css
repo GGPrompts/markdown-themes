@@ -69,7 +69,7 @@
 }
 
 /* ============================================
-   DRAMATIC VIGNETTE - Centered for content focus
+   DRAMATIC VIGNETTE - Centered on content area (offset right to spare sidebar)
 ============================================ */
 .theme-noir::after {
   content: '';
@@ -78,13 +78,14 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(ellipse at center, transparent 0%, transparent 40%, rgba(0, 0, 0, 0.7) 100%);
+  /* Shift vignette center right to keep sidebar more visible */
+  background: radial-gradient(ellipse at 60% 50%, transparent 0%, transparent 35%, rgba(0, 0, 0, 0.6) 100%);
   pointer-events: none;
   z-index: 998;
 }
 
 /* ============================================
-   MOUSE SPOTLIGHT - Illumination for UI
+   MOUSE SPOTLIGHT - Follows cursor over content
 ============================================ */
 .theme-noir .noir-spotlight {
   position: fixed;
@@ -528,6 +529,27 @@
 
 .theme-noir .metadata-tag:hover {
   background: rgba(139, 0, 0, 0.3);
+}
+
+/* ============================================
+   SIDEBAR OVERRIDES - Better contrast for selections
+============================================ */
+.theme-noir {
+  /* Selection color override - use white text on accent background */
+  --selection-text: var(--noir-pure-white);
+  --selection-bg: color-mix(in srgb, var(--blood-red) 30%, transparent);
+}
+
+/* Sidebar stays above vignette for better visibility */
+.theme-noir aside {
+  position: relative;
+  z-index: 1001; /* Above vignette (998) and spotlight (999) */
+}
+
+/* Header also above vignette */
+.theme-noir header {
+  position: relative;
+  z-index: 1001;
 }
 
 /* ========================================

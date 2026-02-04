@@ -15,6 +15,7 @@
   --accent-hover: #4f46e5;
   --border: #e5e7eb;
   --font-body: system-ui, -apple-system, sans-serif;
+  --font-display: system-ui, -apple-system, sans-serif;
   --font-heading: system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, 'Cascadia Code', 'Fira Code', monospace;
   --radius: 0.5rem;
@@ -132,6 +133,9 @@ body {
 
 .prose h1, .prose h2, .prose h3, .prose h4 {
   font-family: var(--font-heading);
+  /* Reset font-weight to prevent browser font synthesis */
+  /* Themes can override this - many display fonts only have weight 400 */
+  font-weight: var(--heading-weight, 400);
 }
 
 .prose code {

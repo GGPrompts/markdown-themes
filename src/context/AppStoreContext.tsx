@@ -19,6 +19,7 @@ export interface AppState {
   fontSize: number;
   sidebarWidth: number;
   favorites: FavoriteItem[];
+  followStreamingMode: boolean;
 }
 
 const DEFAULT_STATE: AppState = {
@@ -29,6 +30,7 @@ const DEFAULT_STATE: AppState = {
   fontSize: 100,
   sidebarWidth: 250,
   favorites: [],
+  followStreamingMode: false,
 };
 
 interface AppStoreContextValue {
@@ -43,6 +45,7 @@ interface AppStoreContextValue {
   clearRecentFiles: () => void;
   toggleFavorite: (path: string, isDirectory: boolean) => void;
   isFavorite: (path: string) => boolean;
+  toggleFollowMode: () => void;
 }
 
 const AppStoreContext = createContext<AppStoreContextValue | null>(null);
@@ -61,6 +64,7 @@ function loadFromStorage(): AppState {
       fontSize: parsed.fontSize ?? DEFAULT_STATE.fontSize,
       sidebarWidth: parsed.sidebarWidth ?? DEFAULT_STATE.sidebarWidth,
       favorites: parsed.favorites ?? DEFAULT_STATE.favorites,
+      followStreamingMode: parsed.followStreamingMode ?? DEFAULT_STATE.followStreamingMode,
     };
   } catch {
     return DEFAULT_STATE;
@@ -169,6 +173,14 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     return state.favorites.some((f) => f.path === path);
   }, [state.favorites]);
 
+  const toggleFollowMode = useCallback(() => {
+    setState((prev) => {
+      const next = { ...prev, followStreamingMode: !prev.followStreamingMode };
+      saveToStorage(next);
+      return next;
+    });
+  }, []);
+
   return (
     <AppStoreContext.Provider
       value={{
@@ -183,6 +195,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         clearRecentFiles,
         toggleFavorite,
         isFavorite,
+        toggleFollowMode,
       }}
     >
       {children}

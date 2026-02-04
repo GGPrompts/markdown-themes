@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { Clock, ChevronLeft, GitCommit, FileDiff, Loader2 } from 'lucide-react';
 import { useFileWatcher } from '../hooks/useFileWatcher';
+import { useWorkspaceStreaming } from '../hooks/useWorkspaceStreaming';
 import { useWorkspaceContext } from '../context/WorkspaceContext';
 import { usePageState } from '../context/PageStateContext';
 import { useAppStore } from '../hooks/useAppStore';
@@ -155,6 +156,7 @@ export function Files() {
     saveSidebarWidth,
     toggleFavorite,
     isFavorite,
+    toggleFollowMode,
   } = useAppStore();
 
   // Local state for sidebar width during drag (for smooth updates)
@@ -213,6 +215,23 @@ export function Files() {
   } = useFileWatcher({
     path: isSplit ? rightFile : null,
   });
+
+  // Workspace streaming detection for follow mode
+  const { streamingFile } = useWorkspaceStreaming({
+    workspacePath,
+    enabled: appState.followStreamingMode,
+  });
+
+  // Auto-open streaming file when follow mode is enabled
+  useEffect(() => {
+    if (!appState.followStreamingMode || !streamingFile) return;
+
+    // Only auto-open if the streaming file is different from current file
+    if (streamingFile !== currentFile) {
+      openTab(streamingFile, true); // Open as preview tab
+      addRecentFile(streamingFile);
+    }
+  }, [appState.followStreamingMode, streamingFile, currentFile, openTab, addRecentFile]);
 
   const themeClass = themes.find((t) => t.id === appState.theme)?.className ?? '';
 
@@ -398,12 +417,14 @@ export function Files() {
         fontSize={appState.fontSize}
         isSplit={isSplit}
         isGitGraph={rightPaneContent?.type === 'git-graph'}
+        isFollowMode={appState.followStreamingMode}
         content={content}
         workspacePath={workspacePath}
         onFileSelect={handleFileSelect}
         onFontSizeChange={handleFontSizeChange}
         onSplitToggle={toggleSplit}
         onGitGraphToggle={handleGitGraphToggle}
+        onFollowModeToggle={toggleFollowMode}
         onHotkeysClick={handleHotkeysClick}
       />
 

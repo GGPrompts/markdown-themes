@@ -199,24 +199,24 @@ function JsonNode({ data, path, depth, onCopyPath }: JsonNodeProps) {
  * Each non-empty line is parsed as JSON independently.
  */
 export function parseJsonlContent(content: string): ParsedLine[] {
-  return content
-    .split('\n')
-    .map((line, idx) => {
-      const trimmed = line.trim();
-      if (!trimmed) {
-        return null;
-      }
-      try {
-        return { id: idx, data: JSON.parse(trimmed), error: null };
-      } catch (e) {
-        return {
-          id: idx,
-          data: null,
-          error: e instanceof Error ? e.message : 'Parse error',
-        };
-      }
-    })
-    .filter((line): line is ParsedLine => line !== null);
+  const result: ParsedLine[] = [];
+  const lines = content.split('\n');
+  for (let idx = 0; idx < lines.length; idx++) {
+    const trimmed = lines[idx].trim();
+    if (!trimmed) {
+      continue;
+    }
+    try {
+      result.push({ id: idx, data: JSON.parse(trimmed), error: null });
+    } catch (e) {
+      result.push({
+        id: idx,
+        data: null,
+        error: e instanceof Error ? e.message : 'Parse error',
+      });
+    }
+  }
+  return result;
 }
 
 interface JsonlLineProps {

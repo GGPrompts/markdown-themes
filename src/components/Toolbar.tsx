@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Columns, Copy, AtSign, MessageSquare, Check, GitBranch, Keyboard } from 'lucide-react';
+import { Columns, Copy, AtSign, MessageSquare, Check, GitBranch, Keyboard, Crosshair } from 'lucide-react';
 import { queueToChat } from '../lib/api';
 
 interface ToolbarProps {
@@ -10,12 +10,14 @@ interface ToolbarProps {
   fontSize?: number;
   isSplit?: boolean;
   isGitGraph?: boolean;
+  isFollowMode?: boolean;
   content?: string;
   workspacePath?: string | null;
   onFileSelect: (path: string) => void;
   onFontSizeChange?: (size: number) => void;
   onSplitToggle?: () => void;
   onGitGraphToggle?: () => void;
+  onFollowModeToggle?: () => void;
   onHotkeysClick?: () => void;
 }
 
@@ -27,12 +29,14 @@ export function Toolbar({
   fontSize = 100,
   isSplit = false,
   isGitGraph = false,
+  isFollowMode = false,
   content,
   workspacePath,
   onFileSelect,
   onFontSizeChange,
   onSplitToggle,
   onGitGraphToggle,
+  onFollowModeToggle,
   onHotkeysClick,
 }: ToolbarProps) {
   const [showRecentFiles, setShowRecentFiles] = useState(false);
@@ -314,6 +318,22 @@ export function Toolbar({
         </div>
 
         <div className="flex items-center gap-4">
+          {/* Follow streaming mode toggle */}
+          <button
+            type="button"
+            onClick={onFollowModeToggle}
+            className="w-8 h-8 flex items-center justify-center transition-colors"
+            style={{
+              borderRadius: 'var(--radius)',
+              backgroundColor: isFollowMode ? 'var(--accent)' : 'var(--bg-primary)',
+              color: isFollowMode ? 'var(--bg-primary)' : 'var(--text-primary)',
+              border: '1px solid var(--border)',
+            }}
+            title={isFollowMode ? 'Stop following AI edits' : 'Follow AI edits (auto-open streaming files)'}
+          >
+            <Crosshair className="w-4 h-4" />
+          </button>
+
           {/* Git graph toggle */}
           <button
             type="button"

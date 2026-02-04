@@ -145,22 +145,15 @@ export function Toolbar({
         }}
       >
         <div className="flex items-center gap-4">
-          {/* Connection indicator - only show when file selected but disconnected */}
-          {currentFile && !connected && (
-            <div
-              className="flex items-center gap-1.5 text-xs px-2 py-1 rounded"
+          {/* Connection status dot - subtle indicator */}
+          {currentFile && (
+            <span
+              className="w-2 h-2 rounded-full transition-colors"
               style={{
-                backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                color: 'rgb(239, 68, 68)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
+                backgroundColor: connected ? 'rgb(34, 197, 94)' : 'rgb(239, 68, 68)',
               }}
-            >
-              <span
-                className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: 'rgb(239, 68, 68)' }}
-              />
-              Disconnected
-            </div>
+              title={connected ? 'Connected to TabzChrome' : 'Disconnected from TabzChrome'}
+            />
           )}
 
           <div className="relative" ref={dropdownRef}>

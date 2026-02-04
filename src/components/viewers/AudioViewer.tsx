@@ -7,21 +7,6 @@ interface AudioViewerProps {
 
 const API_BASE = 'http://localhost:8129';
 
-// Map file extensions to MIME types
-function getAudioMimeType(filePath: string): string {
-  const ext = filePath.split('.').pop()?.toLowerCase();
-  const mimeTypes: Record<string, string> = {
-    mp3: 'audio/mpeg',
-    wav: 'audio/wav',
-    ogg: 'audio/ogg',
-    m4a: 'audio/mp4',
-    aac: 'audio/aac',
-    flac: 'audio/flac',
-    webm: 'audio/webm',
-  };
-  return mimeTypes[ext || ''] || 'audio/mpeg';
-}
-
 function formatDuration(seconds: number): string {
   if (!isFinite(seconds) || isNaN(seconds)) return '--:--';
 
@@ -41,10 +26,8 @@ export function AudioViewer({ filePath, fontSize = 100 }: AudioViewerProps) {
 
   const fileName = filePath.split('/').pop() || 'Audio file';
 
-  // Fetch audio as blob and create object URL
+  // Fetch audio as base64 data URI from TabzChrome API
   useEffect(() => {
-    let objectUrl: string | null = null;
-
     setLoading(true);
     setError(null);
     setAudioUrl(null);
@@ -52,31 +35,20 @@ export function AudioViewer({ filePath, fontSize = 100 }: AudioViewerProps) {
     setCurrentTime(0);
     setIsPlaying(false);
 
-    fetch(`${API_BASE}/api/files/content?path=${encodeURIComponent(filePath)}&raw=true`)
+    fetch(`${API_BASE}/api/files/audio?path=${encodeURIComponent(filePath)}`)
       .then((res) => {
-        if (!res.ok) throw new Error('Failed to load audio');
-        return res.blob();
+        if (!res.ok) throw new Error(`Failed to load audio: ${res.status}`);
+        return res.json();
       })
-      .then(async (blob) => {
-        // Re-create blob with correct MIME type (server may return wrong type)
-        const mimeType = getAudioMimeType(filePath);
-        const arrayBuffer = await blob.arrayBuffer();
-        const typedBlob = new Blob([arrayBuffer], { type: mimeType });
-        objectUrl = URL.createObjectURL(typedBlob);
-        setAudioUrl(objectUrl);
+      .then((data) => {
+        if (data.error) throw new Error(data.error);
+        setAudioUrl(data.dataUri);
         setLoading(false);
       })
       .catch((err) => {
         setError(err.message || 'Failed to load audio file');
         setLoading(false);
       });
-
-    // Cleanup object URL on unmount or when filePath changes
-    return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
-    };
   }, [filePath]);
 
   const handleLoadedMetadata = () => {

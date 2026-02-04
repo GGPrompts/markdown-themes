@@ -389,7 +389,7 @@ function FrontmatterHeader({ frontmatter, isExpanded, onToggle }: FrontmatterHea
     <div
       className="px-4 py-3"
       style={{
-        backgroundColor: 'color-mix(in srgb, var(--accent) 5%, transparent)',
+        backgroundColor: 'var(--selection-bg, color-mix(in srgb, var(--accent) 5%, transparent))',
         borderBottom: '1px solid var(--border)',
       }}
     >
@@ -407,7 +407,7 @@ function FrontmatterHeader({ frontmatter, isExpanded, onToggle }: FrontmatterHea
           {frontmatter.name && (
             <h2
               className="text-lg font-semibold"
-              style={{ color: 'var(--accent)', margin: 0 }}
+              style={{ color: 'var(--selection-text, var(--accent))', margin: 0 }}
             >
               {frontmatter.url ? (
                 <a
@@ -444,8 +444,8 @@ function FrontmatterHeader({ frontmatter, isExpanded, onToggle }: FrontmatterHea
                       key={key}
                       className="inline-flex items-center px-2 py-0.5 text-xs rounded"
                       style={{
-                        backgroundColor: 'color-mix(in srgb, var(--accent) 15%, transparent)',
-                        color: 'var(--accent)',
+                        backgroundColor: 'var(--selection-bg, color-mix(in srgb, var(--accent) 15%, transparent))',
+                        color: 'var(--selection-text, var(--accent))',
                         border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
                       }}
                     >

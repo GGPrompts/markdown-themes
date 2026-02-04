@@ -20,17 +20,34 @@ export function AudioViewer({ filePath, fontSize = 100 }: AudioViewerProps) {
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  const audioUrl = `${API_BASE}/api/files/content?path=${encodeURIComponent(filePath)}&raw=true`;
   const fileName = filePath.split('/').pop() || 'Audio file';
 
+  // Fetch audio data URI from TabzChrome API
   useEffect(() => {
-    // Reset state when file changes
+    setLoading(true);
+    setError(null);
+    setAudioUrl(null);
     setDuration(null);
     setCurrentTime(0);
     setIsPlaying(false);
-    setError(null);
+
+    fetch(`${API_BASE}/api/audio/local-file?path=${encodeURIComponent(filePath)}`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load audio');
+        return res.json();
+      })
+      .then((data) => {
+        setAudioUrl(data.dataUri);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message || 'Failed to load audio file');
+        setLoading(false);
+      });
   }, [filePath]);
 
   const handleLoadedMetadata = () => {
@@ -57,13 +74,24 @@ export function AudioViewer({ filePath, fontSize = 100 }: AudioViewerProps) {
     setError('Failed to load audio file');
   };
 
-  if (error) {
+  if (loading) {
     return (
       <div
         className="flex items-center justify-center h-full"
         style={{ color: 'var(--text-secondary)' }}
       >
-        <p>{error}</p>
+        <p>Loading audio...</p>
+      </div>
+    );
+  }
+
+  if (error || !audioUrl) {
+    return (
+      <div
+        className="flex items-center justify-center h-full"
+        style={{ color: 'var(--text-secondary)' }}
+      >
+        <p>{error || 'Failed to load audio file'}</p>
       </div>
     );
   }

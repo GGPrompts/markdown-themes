@@ -209,9 +209,9 @@ export function InlineField({
             }`}
             style={{
               backgroundColor: isEmpty
-                ? 'color-mix(in srgb, var(--accent) 10%, transparent)'
-                : 'color-mix(in srgb, var(--accent) 20%, transparent)',
-              color: isEmpty ? 'var(--accent)' : 'var(--text-primary)',
+                ? 'var(--selection-bg, color-mix(in srgb, var(--accent) 10%, transparent))'
+                : 'var(--selection-bg, color-mix(in srgb, var(--accent) 20%, transparent))',
+              color: isEmpty ? 'var(--selection-text, var(--accent))' : 'var(--text-primary)',
               border: isEmpty
                 ? '1px dashed color-mix(in srgb, var(--accent) 40%, transparent)'
                 : '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
@@ -248,9 +248,9 @@ export function InlineField({
                   style={{
                     backgroundColor:
                       value === option
-                        ? 'color-mix(in srgb, var(--accent) 20%, transparent)'
+                        ? 'var(--selection-bg, color-mix(in srgb, var(--accent) 20%, transparent))'
                         : 'transparent',
-                    color: value === option ? 'var(--accent)' : 'var(--text-primary)',
+                    color: value === option ? 'var(--selection-text, var(--accent))' : 'var(--text-primary)',
                   }}
                   onMouseEnter={(e) => {
                     if (value !== option) {
@@ -279,9 +279,9 @@ export function InlineField({
                   className="w-full text-left px-3 py-1.5 text-sm transition-colors italic"
                   style={{
                     backgroundColor: isCustomValue
-                      ? 'color-mix(in srgb, var(--accent) 20%, transparent)'
+                      ? 'var(--selection-bg, color-mix(in srgb, var(--accent) 20%, transparent))'
                       : 'transparent',
-                    color: isCustomValue ? 'var(--accent)' : 'var(--text-secondary)',
+                    color: isCustomValue ? 'var(--selection-text, var(--accent))' : 'var(--text-secondary)',
                     fontStyle: isCustomValue ? 'normal' : 'italic',
                   }}
                   onMouseEnter={(e) => {
@@ -324,7 +324,7 @@ export function InlineField({
             fontFamily: 'inherit',
             fontSize: 'inherit',
             lineHeight: 'inherit',
-            backgroundColor: 'color-mix(in srgb, var(--accent) 20%, transparent)',
+            backgroundColor: 'var(--selection-bg, color-mix(in srgb, var(--accent) 20%, transparent))',
             border: '1px solid color-mix(in srgb, var(--accent) 50%, transparent)',
             color: 'var(--text-primary)',
           }}
@@ -335,8 +335,8 @@ export function InlineField({
             onClick={handleOpenPicker}
             className="p-1 rounded transition-colors"
             style={{
-              color: 'var(--accent)',
-              backgroundColor: 'color-mix(in srgb, var(--accent) 10%, transparent)',
+              color: 'var(--selection-text, var(--accent))',
+              backgroundColor: 'var(--selection-bg, color-mix(in srgb, var(--accent) 10%, transparent))',
               border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
             }}
             title={`Browse for ${pickerMode}`}
@@ -360,9 +360,9 @@ export function InlineField({
           fontSize: 'inherit',
           lineHeight: 'inherit',
           backgroundColor: isEmpty
-            ? 'color-mix(in srgb, var(--accent) 10%, transparent)'
-            : 'color-mix(in srgb, var(--accent) 20%, transparent)',
-          color: isEmpty ? 'var(--accent)' : 'var(--text-primary)',
+            ? 'var(--selection-bg, color-mix(in srgb, var(--accent) 10%, transparent))'
+            : 'var(--selection-bg, color-mix(in srgb, var(--accent) 20%, transparent))',
+          color: isEmpty ? 'var(--selection-text, var(--accent))' : 'var(--text-primary)',
           border: isEmpty
             ? '1px dashed color-mix(in srgb, var(--accent) 40%, transparent)'
             : '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
@@ -377,8 +377,8 @@ export function InlineField({
           onClick={handleOpenPicker}
           className="p-1 rounded transition-colors"
           style={{
-            color: 'var(--accent)',
-            backgroundColor: 'color-mix(in srgb, var(--accent) 10%, transparent)',
+            color: 'var(--selection-text, var(--accent))',
+            backgroundColor: 'var(--selection-bg, color-mix(in srgb, var(--accent) 10%, transparent))',
             border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
           }}
           title={`Browse for ${pickerMode}`}

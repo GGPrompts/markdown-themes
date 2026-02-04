@@ -5,7 +5,7 @@ import { FILTERS, type FilterId } from '../lib/filters';
 import { getFileIconInfo } from '../utils/fileIcons';
 import type { FavoriteItem } from '../context/AppStoreContext';
 import { FileContextMenu } from './FileContextMenu';
-import { queueToChat, fetchFileContent, pasteToTerminal, readAloud } from '../lib/api';
+import { queueToChat, fetchFileContent, pasteToTerminal, readAloud, fetchGitStatus, type GitStatusMap, type GitStatus } from '../lib/api';
 
 // Context menu state interface
 interface ContextMenuState {
@@ -56,6 +56,8 @@ interface TreeItemProps {
   isFavorite: (path: string) => boolean;
   toggleFavorite: (path: string, isDirectory: boolean) => void;
   onContextMenu: (e: React.MouseEvent, path: string, name: string, isDirectory: boolean) => void;
+  gitStatus: GitStatusMap;
+  getFolderGitStatus: (folderPath: string) => GitStatus | null;
 }
 
 // Indent guide component - renders vertical lines at each depth level
@@ -83,11 +85,28 @@ function IndentGuides({ depth }: { depth: number }) {
   );
 }
 
-function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick, onRightFileSelect, depth, isExpanded, onToggleExpand, expandedPaths, onToggleExpandPath, isFavorite, toggleFavorite, onContextMenu }: TreeItemProps) {
+// Git status dot colors and titles
+const GIT_STATUS_COLORS: Record<GitStatus, string> = {
+  staged: 'bg-blue-400',
+  modified: 'bg-yellow-400',
+  untracked: 'bg-green-400',
+};
+
+const GIT_STATUS_TITLES: Record<GitStatus, string> = {
+  staged: 'Staged for commit',
+  modified: 'Modified',
+  untracked: 'Untracked',
+};
+
+function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick, onRightFileSelect, depth, isExpanded, onToggleExpand, expandedPaths, onToggleExpandPath, isFavorite, toggleFavorite, onContextMenu, gitStatus, getFolderGitStatus }: TreeItemProps) {
   const isSelected = node.path === currentFile;
   // Reduced indent: 8px base + 12px per level (was 12px + 16px)
   const paddingLeft = 8 + depth * 12;
   const favorited = isFavorite(node.path);
+
+  // Get git status for this file
+  const fileStatus = gitStatus[node.path];
+  const folderStatus = node.isDirectory ? getFolderGitStatus(node.path) : null;
 
   const handleStarClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -146,6 +165,8 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
                 isFavorite={isFavorite}
                 toggleFavorite={toggleFavorite}
                 onContextMenu={onContextMenu}
+                gitStatus={gitStatus}
+                getFolderGitStatus={getFolderGitStatus}
               />
             ))}
           </div>
@@ -193,6 +214,12 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
             <FolderIcon open={isExpanded} />
           </span>
           <span className="truncate flex-1 min-w-0">{node.name}</span>
+          {folderStatus && (
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${GIT_STATUS_COLORS[folderStatus]} opacity-60 flex-shrink-0`}
+              title={`Contains ${GIT_STATUS_TITLES[folderStatus].toLowerCase()} files`}
+            />
+          )}
           <span
             onClick={handleStarClick}
             className={`w-3.5 h-3.5 flex items-center justify-center transition-opacity cursor-pointer flex-shrink-0 ${favorited ? 'opacity-100' : 'opacity-0 group-hover/item:opacity-100'}`}
@@ -223,6 +250,8 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
                 isFavorite={isFavorite}
                 toggleFavorite={toggleFavorite}
                 onContextMenu={onContextMenu}
+                gitStatus={gitStatus}
+                getFolderGitStatus={getFolderGitStatus}
               />
             ))}
           </div>
@@ -270,6 +299,12 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
       <IndentGuides depth={depth} />
       <FileIcon path={node.path} />
       <span className="truncate flex-1 min-w-0">{node.name}</span>
+      {fileStatus && (
+        <span
+          className={`w-2 h-2 rounded-full ${GIT_STATUS_COLORS[fileStatus.status]} flex-shrink-0`}
+          title={GIT_STATUS_TITLES[fileStatus.status]}
+        />
+      )}
       <span
         onClick={handleStarClick}
         className={`w-3.5 h-3.5 flex items-center justify-center transition-opacity cursor-pointer flex-shrink-0 ${favorited ? 'opacity-100' : 'opacity-0 group-hover/item:opacity-100'}`}
@@ -431,6 +466,50 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
     isDirectory: false,
   });
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
+
+  // Git status state
+  const [gitStatus, setGitStatus] = useState<GitStatusMap>({});
+
+  // Fetch git status when workspace changes
+  useEffect(() => {
+    if (!workspacePath) {
+      setGitStatus({});
+      return;
+    }
+
+    fetchGitStatus(workspacePath).then((response) => {
+      if (response.isGitRepo) {
+        setGitStatus(response.files);
+      } else {
+        setGitStatus({});
+      }
+    }).catch(() => {
+      setGitStatus({});
+    });
+  }, [workspacePath, fileTree]); // Re-fetch when fileTree changes (file added/removed)
+
+  // Get the most important git status for files under a folder
+  const getFolderGitStatus = useCallback((folderPath: string): GitStatus | null => {
+    // Check for staged files first (highest priority)
+    for (const [filePath, info] of Object.entries(gitStatus)) {
+      if (filePath.startsWith(folderPath + '/') && info.status === 'staged') {
+        return 'staged';
+      }
+    }
+    // Check for modified files
+    for (const [filePath, info] of Object.entries(gitStatus)) {
+      if (filePath.startsWith(folderPath + '/') && info.status === 'modified') {
+        return 'modified';
+      }
+    }
+    // Check for untracked files
+    for (const [filePath, info] of Object.entries(gitStatus)) {
+      if (filePath.startsWith(folderPath + '/') && info.status === 'untracked') {
+        return 'untracked';
+      }
+    }
+    return null;
+  }, [gitStatus]);
 
   // Context menu handlers
   const handleContextMenu = useCallback((e: React.MouseEvent, path: string, name: string, isDirectory: boolean) => {
@@ -929,6 +1008,8 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
                 isFavorite={isFavorite}
                 toggleFavorite={toggleFavorite}
                 onContextMenu={handleContextMenu}
+                gitStatus={gitStatus}
+                getFolderGitStatus={getFolderGitStatus}
               />
             ))
           )}

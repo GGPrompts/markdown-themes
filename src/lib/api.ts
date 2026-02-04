@@ -347,3 +347,38 @@ export async function appendToFile(path: string, line: string): Promise<void> {
 
   await writeFile(path, newContent);
 }
+
+/**
+ * Git status types
+ */
+export type GitStatus = 'staged' | 'modified' | 'untracked';
+
+export interface GitStatusInfo {
+  status: GitStatus;
+  indexStatus: string;
+  workTreeStatus: string;
+}
+
+export interface GitStatusMap {
+  [path: string]: GitStatusInfo;
+}
+
+export interface GitStatusResponse {
+  isGitRepo: boolean;
+  files: GitStatusMap;
+}
+
+/**
+ * Fetch git status for files in a directory
+ */
+export async function fetchGitStatus(path: string): Promise<GitStatusResponse> {
+  const params = new URLSearchParams({ path });
+  const response = await fetch(`${API_BASE}/api/files/git-status?${params}`);
+
+  if (!response.ok) {
+    // Return empty state if endpoint fails (not a git repo, etc.)
+    return { isGitRepo: false, files: {} };
+  }
+
+  return response.json();
+}

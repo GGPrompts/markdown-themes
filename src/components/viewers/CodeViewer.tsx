@@ -214,7 +214,7 @@ export function CodeViewer({ content, filePath, fontSize = 100 }: CodeViewerProp
   }
 
   return (
-    <div className="code-viewer h-full overflow-auto" style={{ zoom: fontSize / 100 }}>
+    <div className="code-viewer h-full" style={{ zoom: fontSize / 100 }}>
       <div className="flex">
         <div
           className="line-numbers select-none text-right pr-4 pl-4 py-4 sticky left-0"
@@ -233,12 +233,27 @@ export function CodeViewer({ content, filePath, fontSize = 100 }: CodeViewerProp
           ))}
         </div>
         <div
-          className="code-content flex-1 py-4 overflow-x-auto"
+          className="code-content flex-1 overflow-x-auto"
           style={{
             backgroundColor: 'var(--bg-secondary)',
           }}
-          dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-        />
+        >
+          <style>{`
+            .code-content pre {
+              margin: 0;
+              padding: 1rem;
+              font-family: var(--font-mono);
+              font-size: 0.875rem;
+              line-height: 1.7;
+            }
+            .code-content code {
+              font-family: inherit;
+              font-size: inherit;
+              line-height: inherit;
+            }
+          `}</style>
+          <div dangerouslySetInnerHTML={{ __html: highlightedHtml }} />
+        </div>
       </div>
     </div>
   );

@@ -79,7 +79,7 @@ export function useDiffAutoScroll({
   scrollContainerRef,
   filePath,
   enabled = true,
-  debounceMs = 150,
+  debounceMs = 50,
 }: UseDiffAutoScrollOptions) {
   const useLineDiff = isCodeFile(filePath);
   const prevContentRef = useRef<string>('');
@@ -150,7 +150,17 @@ export function useDiffAutoScroll({
         const lineDiff = findFirstChangedLine(prevContent, content);
         if (lineDiff.firstChangedLine < 0) return; // No change found
 
-        // Find the line element by data-line attribute
+        // For additions at the end, just scroll to bottom
+        if (lineDiff.isAddition) {
+          lastScrollTimeRef.current = Date.now();
+          container.scrollTo({
+            top: container.scrollHeight,
+            behavior: 'smooth',
+          });
+          return;
+        }
+
+        // For modifications, find the line element by data-line attribute
         const targetLine = container.querySelector(`[data-line="${lineDiff.firstChangedLine}"]`);
 
         if (targetLine) {
@@ -168,8 +178,7 @@ export function useDiffAutoScroll({
           const viewportBottom = currentScroll + viewportHeight;
           const isVisible = lineTop < viewportBottom && lineBottom > viewportTop;
 
-          // Always scroll to new additions, or scroll if line is not visible
-          if (lineDiff.isAddition || !isVisible) {
+          if (!isVisible) {
             lastScrollTimeRef.current = Date.now();
 
             // Scroll to show the line in the lower third of the viewport

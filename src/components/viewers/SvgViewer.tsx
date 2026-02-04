@@ -15,19 +15,10 @@ export function SvgViewer({ filePath, content, fontSize = 100 }: SvgViewerProps)
   const fileName = filePath.split('/').pop() || 'SVG file';
 
   // Create a data URL from the SVG content for inline rendering
-  // Use base64 encoding for better browser compatibility with UTF-8 content
   const svgDataUrl = useMemo(() => {
-    if (!content || !content.trim()) return '';
-    try {
-      // Convert UTF-8 string to base64 properly
-      const bytes = new TextEncoder().encode(content);
-      const binary = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
-      const base64 = btoa(binary);
-      return `data:image/svg+xml;base64,${base64}`;
-    } catch {
-      // Fallback to URL encoding if base64 fails
-      return `data:image/svg+xml,${encodeURIComponent(content)}`;
-    }
+    if (!content) return '';
+    const encoded = encodeURIComponent(content);
+    return `data:image/svg+xml,${encoded}`;
   }, [content]);
 
   // Extract SVG dimensions from content if available
@@ -41,12 +32,8 @@ export function SvgViewer({ filePath, content, fontSize = 100 }: SvgViewerProps)
     let width: string | null = null;
     let height: string | null = null;
 
-    if (widthMatch) {
-      width = widthMatch[1] + (widthMatch[2] || 'px');
-    }
-    if (heightMatch) {
-      height = heightMatch[1] + (heightMatch[2] || 'px');
-    }
+    if (widthMatch) width = widthMatch[1] + (widthMatch[2] || 'px');
+    if (heightMatch) height = heightMatch[1] + (heightMatch[2] || 'px');
 
     // Try to get dimensions from viewBox if width/height not specified
     if (viewBoxMatch && (!width || !height)) {
@@ -59,11 +46,6 @@ export function SvgViewer({ filePath, content, fontSize = 100 }: SvgViewerProps)
 
     return { width, height, viewBox: viewBoxMatch?.[1] || null };
   }, [content]);
-
-  // Guard against empty content (loading state) - AFTER all hooks
-  if (!content || !content.trim()) {
-    return null;
-  }
 
   return (
     <div className="svg-viewer h-full flex flex-col">

@@ -15,6 +15,7 @@ interface GitGraphProps {
   onCommitSelect?: (hash: string) => void;
   onFileClick?: (commitHash: string, filePath: string, status: string) => void;
   className?: string;
+  fontSize?: number;
 }
 
 interface GraphState {
@@ -27,7 +28,7 @@ interface GraphState {
   skip: number;
 }
 
-export function GitGraph({ repoPath, onCommitSelect, onFileClick, className = '' }: GitGraphProps) {
+export function GitGraph({ repoPath, onCommitSelect, onFileClick, className = '', fontSize = 100 }: GitGraphProps) {
   const [state, setState] = useState<GraphState>({
     commits: [],
     layout: { nodes: [], connections: [], railCount: 0 },
@@ -206,7 +207,7 @@ export function GitGraph({ repoPath, onCommitSelect, onFileClick, className = ''
     <div
       ref={containerRef}
       className={`git-graph h-full overflow-auto ${className}`}
-      style={{ backgroundColor: 'var(--bg-primary)' }}
+      style={{ backgroundColor: 'var(--bg-primary)', zoom: fontSize / 100 }}
     >
       {/* Header with refresh button */}
       <div

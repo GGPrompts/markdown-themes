@@ -27,9 +27,10 @@ interface DiffPaneProps {
   base: string;
   head?: string;
   file?: string;
+  fontSize?: number;
 }
 
-function DiffPane({ repoPath, base, head, file }: DiffPaneProps) {
+function DiffPane({ repoPath, base, head, file, fontSize = 100 }: DiffPaneProps) {
   const [diff, setDiff] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,7 +106,7 @@ function DiffPane({ repoPath, base, head, file }: DiffPaneProps) {
     );
   }
 
-  return <DiffViewer diff={diff} />;
+  return <DiffViewer diff={diff} fontSize={fontSize} />;
 }
 
 /**
@@ -520,6 +521,7 @@ export function Files() {
                   onFileClick={(commitHash, filePath) => {
                     setRightPaneDiff(commitHash, undefined, filePath);
                   }}
+                  fontSize={appState.fontSize}
                 />
               )}
 
@@ -530,6 +532,7 @@ export function Files() {
                   base={rightPaneContent.base}
                   head={rightPaneContent.head}
                   file={rightPaneContent.file}
+                  fontSize={appState.fontSize}
                 />
               )}
 

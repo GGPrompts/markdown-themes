@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 interface DiffViewerProps {
   diff: string;
   className?: string;
+  fontSize?: number;
 }
 
 // Types for parsed diff structure
@@ -166,7 +167,7 @@ function formatLineNumber(num: number | null, width: number): string {
   return String(num).padStart(width, ' ');
 }
 
-export function DiffViewer({ diff, className = '' }: DiffViewerProps) {
+export function DiffViewer({ diff, className = '', fontSize = 100 }: DiffViewerProps) {
   const files = useMemo(() => parseDiff(diff), [diff]);
 
   // Calculate the max line number width for alignment
@@ -193,7 +194,7 @@ export function DiffViewer({ diff, className = '' }: DiffViewerProps) {
     return (
       <div
         className={`diff-viewer h-full overflow-auto p-4 ${className}`}
-        style={{ color: 'var(--text-secondary)' }}
+        style={{ color: 'var(--text-secondary)', zoom: fontSize / 100 }}
       >
         <p>No changes to display</p>
       </div>
@@ -203,7 +204,7 @@ export function DiffViewer({ diff, className = '' }: DiffViewerProps) {
   return (
     <div
       className={`diff-viewer h-full overflow-auto ${className}`}
-      style={{ backgroundColor: 'var(--bg-primary)' }}
+      style={{ backgroundColor: 'var(--bg-primary)', zoom: fontSize / 100 }}
     >
       {files.map((file, fileIndex) => (
         <div key={fileIndex} className="mb-4">

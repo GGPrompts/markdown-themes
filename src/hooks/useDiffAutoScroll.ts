@@ -1,6 +1,19 @@
 import { useRef, useEffect, useCallback } from 'react';
 import { findFirstChangedBlock } from '../utils/markdownDiff';
 
+/**
+ * useDiffAutoScroll - Auto-scroll to content changes during AI streaming
+ *
+ * This hook enables a "watch Claude code" experience by automatically
+ * scrolling the viewport to show where changes are happening in real-time.
+ *
+ * Features:
+ * - Block-level diffing for markdown (paragraphs, headings, code blocks)
+ * - Percentage-based fallback for code files
+ * - User interruption detection (pauses if you scroll manually)
+ * - Works at any zoom/font-size level via DOM-based positioning
+ */
+
 interface UseDiffAutoScrollOptions {
   /** Current content to render */
   content: string;
@@ -14,8 +27,12 @@ interface UseDiffAutoScrollOptions {
   debounceMs?: number;
 }
 
-// Block-level elements that correspond to content blocks
-// Includes markdown elements + code viewer elements
+/**
+ * CSS selectors for block-level elements in rendered content.
+ *
+ * For markdown: paragraphs, headings, lists, code blocks, etc.
+ * For code viewers: .line classes or data-line attributes from syntax highlighters
+ */
 const BLOCK_SELECTORS = 'p, h1, h2, h3, h4, h5, h6, pre, ul, ol, blockquote, table, hr, .line, [data-line]';
 
 /**
@@ -189,3 +206,4 @@ export function useDiffAutoScroll({
     resetUserScroll,
   };
 }
+

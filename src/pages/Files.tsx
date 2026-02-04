@@ -376,13 +376,13 @@ export function Files() {
     [rightContent, isRightMarkdownFile]
   );
 
-  // Auto-scroll to changes when streaming or following AI edits (left pane)
-  // Works for all file types - markdown uses block diffing, code falls back to bottom scroll
+  // Auto-scroll to changes during actual streaming (rapid file changes < 1.5s)
+  // Only for markdown files where block diffing works well
   useDiffAutoScroll({
-    content: content,
-    isStreaming: isStreaming || appState.followStreamingMode,
+    content: markdownContent,
+    isStreaming,
     scrollContainerRef: leftScrollContainerRef,
-    enabled: (isStreaming || appState.followStreamingMode) && !!currentFile,
+    enabled: isStreaming && isMarkdownFile,
   });
 
   // Get recent files for empty state (limit to 6)
@@ -614,7 +614,7 @@ export function Files() {
                 onTabPin={pinTab}
               />
 
-              {loading && (
+              {loading && !content && (
                 <div className="flex items-center justify-center h-full">
                   <p style={{ color: 'var(--text-secondary)' }}>Loading...</p>
                 </div>
@@ -689,7 +689,7 @@ export function Files() {
                 </div>
               )}
 
-              {!loading && !error && currentFile && (
+              {!error && currentFile && content && (
                 <>
                   {isMarkdownFile && frontmatter && <MetadataBar frontmatter={frontmatter} />}
                   <div className="flex-1 overflow-auto" ref={leftScrollContainerRef}>

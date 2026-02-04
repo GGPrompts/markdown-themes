@@ -121,7 +121,7 @@ function getLanguageFromPath(filePath: string): string {
 
 export function CodeViewer({ content, filePath, fontSize = 100 }: CodeViewerProps) {
   const [highlightedHtml, setHighlightedHtml] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const language = useMemo(() => getLanguageFromPath(filePath), [filePath]);
@@ -131,7 +131,8 @@ export function CodeViewer({ content, filePath, fontSize = 100 }: CodeViewerProp
     let cancelled = false;
 
     async function highlight() {
-      setIsLoading(true);
+      // Don't show loading on content updates - keep showing old content
+      // Only show loading on initial render when we have nothing to show
       setError(null);
 
       try {
@@ -142,15 +143,13 @@ export function CodeViewer({ content, filePath, fontSize = 100 }: CodeViewerProp
 
         if (!cancelled) {
           setHighlightedHtml(html);
+          setIsInitialLoad(false);
         }
       } catch (err) {
         if (!cancelled) {
           console.error('Shiki highlighting error:', err);
           setError(err instanceof Error ? err.message : 'Failed to highlight code');
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
+          setIsInitialLoad(false);
         }
       }
     }
@@ -167,7 +166,8 @@ export function CodeViewer({ content, filePath, fontSize = 100 }: CodeViewerProp
     return Array.from({ length: lineCount }, (_, i) => i + 1);
   }, [lineCount]);
 
-  if (isLoading) {
+  // Only show loading on initial render, not on content updates
+  if (isInitialLoad && !highlightedHtml) {
     return (
       <div className="flex items-center justify-center h-full" style={{ color: 'var(--text-secondary)' }}>
         <p>Loading...</p>

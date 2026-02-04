@@ -26,8 +26,10 @@ export function AudioViewer({ filePath, fontSize = 100 }: AudioViewerProps) {
 
   const fileName = filePath.split('/').pop() || 'Audio file';
 
-  // Fetch audio data URI from TabzChrome API
+  // Fetch audio as blob and create object URL
   useEffect(() => {
+    let objectUrl: string | null = null;
+
     setLoading(true);
     setError(null);
     setAudioUrl(null);
@@ -35,19 +37,27 @@ export function AudioViewer({ filePath, fontSize = 100 }: AudioViewerProps) {
     setCurrentTime(0);
     setIsPlaying(false);
 
-    fetch(`${API_BASE}/api/audio/local-file?path=${encodeURIComponent(filePath)}`)
+    fetch(`${API_BASE}/api/files/content?path=${encodeURIComponent(filePath)}&raw=true`)
       .then((res) => {
         if (!res.ok) throw new Error('Failed to load audio');
-        return res.json();
+        return res.blob();
       })
-      .then((data) => {
-        setAudioUrl(data.dataUri);
+      .then((blob) => {
+        objectUrl = URL.createObjectURL(blob);
+        setAudioUrl(objectUrl);
         setLoading(false);
       })
       .catch((err) => {
         setError(err.message || 'Failed to load audio file');
         setLoading(false);
       });
+
+    // Cleanup object URL on unmount or when filePath changes
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
   }, [filePath]);
 
   const handleLoadedMetadata = () => {

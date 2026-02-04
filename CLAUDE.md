@@ -44,7 +44,7 @@ src/
 │   ├── PromptLibrary.tsx      # Prompty file browser sidebar
 │   ├── InlineField.tsx        # Editable {{variable}} fields
 │   ├── viewers/               # File type viewers (see Supported File Types)
-│   └── git/                   # Git components (RepoCard, CommitForm, etc.)
+│   └── git/                   # Git components (GitGraph, CommitDetails, RepoCard, etc.)
 ├── context/
 │   ├── AppStoreContext.tsx    # localStorage persistence (theme, recent files, favorites)
 │   ├── WorkspaceContext.tsx   # Current workspace path + file tree
@@ -141,7 +141,32 @@ The app integrates with TabzChrome for terminal/chat actions via WebSocket:
 
 Uses `queueToChat()` in `lib/api.ts` which sends `{ type: 'QUEUE_COMMAND', command }` via WebSocket.
 
-**Future**: Spawn terminals via `POST /api/spawn` (see `.claude/skills/tabz-integration/`)
+**Spawn Terminals** - Used by GitGraph's "Gitlogue" button:
+```ts
+await fetch(`${API_BASE}/api/spawn`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', 'X-Auth-Token': token },
+  body: JSON.stringify({ name: 'Tab name', command: 'command to run' }),
+});
+```
+
+### GitGraph
+The Files page toolbar has a git graph button that shows commit history in the right pane:
+
+- **GitGraph** (`components/git/GitGraph.tsx`) - Renders commit history with canvas rail lines
+- **CommitDetails** (`components/git/CommitDetails.tsx`) - Expandable commit details shown when clicking a row
+- **DiffViewer** (`components/viewers/DiffViewer.tsx`) - Shows file diffs when clicking "View" on changed files
+
+**Expanding commits:** Click a commit row to see:
+- Full commit message and body
+- List of changed files (A/M/D status)
+- Copy Hash button (copies full SHA)
+- Gitlogue button (spawns terminal to replay commit)
+
+**APIs used:**
+- `GET /api/git/graph?path=...&limit=50&skip=0` - Paginated commit list
+- `GET /api/git/commit/:hash?path=...` - Commit details with files
+- `GET /api/git/diff?path=...&base=hash&file=path` - File diff for a commit
 
 ## Commands
 
@@ -161,8 +186,10 @@ Tests use Vitest + React Testing Library. Run `npm run test:run` before committi
 - `src/utils/frontmatter.test.ts` - YAML frontmatter parsing
 - `src/utils/promptyUtils.test.ts` - Prompty variable detection/substitution
 - `src/lib/filters.test.ts` - File tree filtering
+- `src/lib/graphLayout.test.ts` - Git graph layout algorithm
 - `src/context/AppStoreContext.test.tsx` - localStorage persistence
 - `src/components/viewers/JsonViewer.test.ts` - JSONC comment stripping
+- `src/components/viewers/DiffViewer.test.ts` - Unified diff parsing
 
 ## Prerequisites
 

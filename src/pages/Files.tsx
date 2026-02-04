@@ -15,6 +15,7 @@ import { TabBar } from '../components/TabBar';
 import { SplitView } from '../components/SplitView';
 import { GitGraph } from '../components/git';
 import { DiffViewer } from '../components/viewers/DiffViewer';
+import { PersistentAudio, isAudioFile } from '../components/PersistentAudio';
 import { parseFrontmatter } from '../utils/frontmatter';
 import { themes } from '../themes';
 
@@ -241,6 +242,12 @@ export function Files() {
     const ext = currentFile.split('.').pop()?.toLowerCase();
     return ext === 'md' || ext === 'markdown' || ext === 'mdx';
   }, [currentFile]);
+
+  // Check if current file is audio (handled by PersistentAudio)
+  const isCurrentAudioFile = useMemo(
+    () => currentFile ? isAudioFile(currentFile) : false,
+    [currentFile]
+  );
 
   // Parse frontmatter from content (only for markdown files)
   const { frontmatter, content: markdownContent } = useMemo(
@@ -542,7 +549,18 @@ export function Files() {
                 </div>
               )}
 
-              {!loading && !error && currentFile && (
+              {/* Audio files - rendered persistently to keep playing across tab switches */}
+              {tabs.some((t) => isAudioFile(t.path)) && (
+                <div
+                  className="flex-1 overflow-auto"
+                  style={{ display: isCurrentAudioFile ? 'block' : 'none' }}
+                >
+                  <PersistentAudio tabs={tabs} activeTabId={activeTabId} />
+                </div>
+              )}
+
+              {/* Non-audio files */}
+              {!loading && !error && currentFile && !isCurrentAudioFile && (
                 <>
                   {isMarkdownFile && frontmatter && <MetadataBar frontmatter={frontmatter} />}
                   <div className="flex-1 overflow-auto">

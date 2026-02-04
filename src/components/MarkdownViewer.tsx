@@ -2,6 +2,9 @@ import { forwardRef, useImperativeHandle, useRef, useMemo } from 'react';
 import { Streamdown } from 'streamdown';
 import { createCodePlugin } from '@streamdown/code';
 import { createCssVariablesTheme } from 'shiki';
+import { mermaid } from '@streamdown/mermaid';
+import { math } from '@streamdown/math';
+import 'katex/dist/katex.min.css';
 
 interface MarkdownViewerProps {
   content: string;
@@ -71,7 +74,7 @@ export const MarkdownViewer = forwardRef<MarkdownViewerHandle, MarkdownViewerPro
         caret={isStreaming ? 'block' : undefined}
         parseIncompleteMarkdown={true}
         className="streamdown-content"
-        plugins={{ code: codePlugin }}
+        plugins={{ code: codePlugin, mermaid, math }}
       >
         {content}
       </Streamdown>

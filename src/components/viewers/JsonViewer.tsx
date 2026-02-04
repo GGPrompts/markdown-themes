@@ -256,18 +256,18 @@ function JsonNode({ data, path, depth, onCopyPath }: JsonNodeProps) {
 
 export function JsonViewer({ content, fontSize = 100 }: JsonViewerProps) {
   const [copiedPath, setCopiedPath] = useState<string | null>(null);
-  const [parseError, setParseError] = useState<string | null>(null);
 
-  const parsedData = useMemo(() => {
+  // Parse JSON and derive error state (don't use setState in useMemo)
+  const { parsedData, parseError } = useMemo(() => {
     try {
-      setParseError(null);
       // Strip comments for JSONC support (tsconfig.json, etc.)
       const stripped = stripJsonComments(content);
-      return JSON.parse(stripped);
+      return { parsedData: JSON.parse(stripped), parseError: null };
     } catch (err) {
-      // TODO: Include file path in error message for better context
-      setParseError(err instanceof Error ? err.message : 'Invalid JSON');
-      return null;
+      return {
+        parsedData: null,
+        parseError: err instanceof Error ? err.message : 'Invalid JSON',
+      };
     }
   }, [content]);
 

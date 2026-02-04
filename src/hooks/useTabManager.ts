@@ -1,10 +1,19 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 
+// Diff data for diff tabs
+export interface DiffData {
+  base: string;  // commit hash
+  head?: string; // optional head commit hash
+  file: string;  // file path within repo
+}
+
 export interface Tab {
   id: string;
   path: string;
   isPreview: boolean;
   isPinned: boolean;
+  type: 'file' | 'diff';
+  diffData?: DiffData;
 }
 
 interface UseTabManagerOptions {
@@ -18,6 +27,7 @@ interface UseTabManagerResult {
   activeTabId: string | null;
   activeTab: Tab | null;
   openTab: (path: string, preview?: boolean) => void;
+  openDiffTab: (base: string, file: string, head?: string) => void;
   pinTab: (id: string) => void;
   closeTab: (id: string) => void;
   setActiveTab: (id: string) => void;
@@ -63,14 +73,14 @@ export function useTabManager(options: UseTabManagerOptions = {}): UseTabManager
     const currentTabs = tabsRef.current;
 
     // Check if file is already open in a pinned tab
-    const existingPinnedTab = currentTabs.find((t) => t.path === path && t.isPinned);
+    const existingPinnedTab = currentTabs.find((t) => t.type === 'file' && t.path === path && t.isPinned);
     if (existingPinnedTab) {
       setActiveTabId(existingPinnedTab.id);
       return;
     }
 
     // Check if file is already open in a preview tab
-    const existingPreviewTab = currentTabs.find((t) => t.path === path && t.isPreview);
+    const existingPreviewTab = currentTabs.find((t) => t.type === 'file' && t.path === path && t.isPreview);
     if (existingPreviewTab) {
       setActiveTabId(existingPreviewTab.id);
       return;
@@ -83,10 +93,11 @@ export function useTabManager(options: UseTabManagerOptions = {}): UseTabManager
         path,
         isPreview: true,
         isPinned: false,
+        type: 'file',
       };
 
       setTabs((prevTabs) => {
-        const existingPreviewIndex = prevTabs.findIndex((t) => t.isPreview);
+        const existingPreviewIndex = prevTabs.findIndex((t) => t.isPreview && t.type === 'file');
         if (existingPreviewIndex >= 0) {
           // Replace existing preview tab
           const newTabs = [...prevTabs];
@@ -102,7 +113,7 @@ export function useTabManager(options: UseTabManagerOptions = {}): UseTabManager
       // Opening as pinned (double-click behavior)
       setTabs((prevTabs) => {
         // First check if there's a preview tab for this file - convert it to pinned
-        const previewTabIndex = prevTabs.findIndex((t) => t.path === path && t.isPreview);
+        const previewTabIndex = prevTabs.findIndex((t) => t.type === 'file' && t.path === path && t.isPreview);
         if (previewTabIndex >= 0) {
           const newTabs = [...prevTabs];
           newTabs[previewTabIndex] = {
@@ -120,6 +131,7 @@ export function useTabManager(options: UseTabManagerOptions = {}): UseTabManager
           path,
           isPreview: false,
           isPinned: true,
+          type: 'file',
         };
         setActiveTabId(newTab.id);
         return [...prevTabs, newTab];
@@ -160,11 +172,41 @@ export function useTabManager(options: UseTabManagerOptions = {}): UseTabManager
     setActiveTabId(id);
   }, []);
 
+  const openDiffTab = useCallback((base: string, file: string, head?: string) => {
+    const currentTabs = tabsRef.current;
+
+    // Create a unique identifier for this diff
+    const diffId = `${base.substring(0, 7)}:${file}`;
+
+    // Check if this diff is already open
+    const existingDiffTab = currentTabs.find(
+      (t) => t.type === 'diff' && t.diffData?.base === base && t.diffData?.file === file
+    );
+    if (existingDiffTab) {
+      setActiveTabId(existingDiffTab.id);
+      return;
+    }
+
+    // Create new diff tab (always pinned, never preview)
+    const newTab: Tab = {
+      id: generateTabId(),
+      path: diffId, // Used for display purposes
+      isPreview: false,
+      isPinned: true,
+      type: 'diff',
+      diffData: { base, file, head },
+    };
+
+    setTabs((prevTabs) => [...prevTabs, newTab]);
+    setActiveTabId(newTab.id);
+  }, []);
+
   return {
     tabs,
     activeTabId,
     activeTab,
     openTab,
+    openDiffTab,
     pinTab,
     closeTab,
     setActiveTab,

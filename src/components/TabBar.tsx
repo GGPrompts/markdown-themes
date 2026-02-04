@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { FileDiff } from 'lucide-react';
 import type { Tab } from '../hooks/useTabManager';
 import { getFileIconInfo } from '../utils/fileIcons';
 
@@ -21,7 +22,15 @@ interface TabItemProps {
 function TabItem({ tab, isActive, onSelect, onClose, onPin }: TabItemProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const fileName = tab.path.split('/').pop() ?? tab.path.split('\\').pop() ?? tab.path;
+
+  // For diff tabs, show "filename @ abc123", for files show just filename
+  const displayName = tab.type === 'diff' && tab.diffData
+    ? `${tab.diffData.file.split('/').pop()} @ ${tab.diffData.base.substring(0, 7)}`
+    : (tab.path.split('/').pop() ?? tab.path.split('\\').pop() ?? tab.path);
+
+  const tooltipText = tab.type === 'diff' && tab.diffData
+    ? `Diff: ${tab.diffData.file} (${tab.diffData.base.substring(0, 7)})`
+    : tab.path;
 
   const handleDoubleClick = () => {
     if (tab.isPreview) {
@@ -35,6 +44,11 @@ function TabItem({ tab, isActive, onSelect, onClose, onPin }: TabItemProps) {
   };
 
   const handleDragStart = (e: React.DragEvent) => {
+    // Only allow dragging file tabs, not diff tabs
+    if (tab.type === 'diff') {
+      e.preventDefault();
+      return;
+    }
     e.dataTransfer.setData('text/plain', tab.path);
     e.dataTransfer.effectAllowed = 'move';
     setIsDragging(true);
@@ -67,16 +81,16 @@ function TabItem({ tab, isActive, onSelect, onClose, onPin }: TabItemProps) {
       onDoubleClick={handleDoubleClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      title={tab.path}
+      title={tooltipText}
     >
-      <FileIcon path={tab.path} />
+      <TabIcon tab={tab} />
       <span
         className="truncate"
         style={{
           fontStyle: tab.isPreview ? 'italic' : 'normal',
         }}
       >
-        {fileName}
+        {displayName}
       </span>
       {showCloseButton ? (
         <button
@@ -148,4 +162,15 @@ function FileIcon({ path }: { path: string }) {
       <Icon size={14} style={{ color }} />
     </span>
   );
+}
+
+function TabIcon({ tab }: { tab: Tab }) {
+  if (tab.type === 'diff') {
+    return (
+      <span className="w-4 h-4 flex items-center justify-center flex-shrink-0">
+        <FileDiff size={14} style={{ color: 'var(--accent)' }} />
+      </span>
+    );
+  }
+  return <FileIcon path={tab.path} />;
 }

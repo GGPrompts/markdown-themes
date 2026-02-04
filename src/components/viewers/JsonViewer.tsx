@@ -259,6 +259,11 @@ export function JsonViewer({ content, fontSize = 100 }: JsonViewerProps) {
 
   // Parse JSON and derive error state (don't use setState in useMemo)
   const { parsedData, parseError } = useMemo(() => {
+    // Treat empty/whitespace content as loading - don't show parse error
+    // This happens on initial render before file content arrives
+    if (!content || !content.trim()) {
+      return { parsedData: null, parseError: null };
+    }
     try {
       // Strip comments for JSONC support (tsconfig.json, etc.)
       const stripped = stripJsonComments(content);
@@ -308,6 +313,11 @@ export function JsonViewer({ content, fontSize = 100 }: JsonViewerProps) {
         </pre>
       </div>
     );
+  }
+
+  // Content is empty/loading - render nothing until content arrives
+  if (parsedData === null) {
+    return null;
   }
 
   return (

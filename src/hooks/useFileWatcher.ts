@@ -24,10 +24,14 @@ export function useFileWatcher({
   streamingTimeout = 1500,
 }: UseFileWatcherOptions): UseFileWatcherResult {
   const [content, setContent] = useState<string>('');
+  const [contentPath, setContentPath] = useState<string | null>(null); // Track which path content belongs to
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [pendingLoad, setPendingLoad] = useState(false); // True while waiting for WebSocket response
   const [isStreaming, setIsStreaming] = useState(false);
   const [connected, setConnected] = useState(false);
+
+  // Derive loading: true if we're pending OR if content doesn't match requested path
+  const loading = pendingLoad || (path !== null && contentPath !== path);
 
   const wsRef = useRef<WebSocket | null>(null);
   const streamingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -80,13 +84,15 @@ export function useFileWatcher({
           case 'file-content':
             // Initial file content
             setContent(message.content);
-            setLoading(false);
+            setContentPath(currentPathRef.current);
+            setPendingLoad(false);
             setError(null);
             break;
 
           case 'file-change':
             // File was modified
             setContent(message.content);
+            setContentPath(currentPathRef.current);
             setError(null);
 
             // Detect streaming based on time between changes
@@ -105,6 +111,7 @@ export function useFileWatcher({
 
           case 'file-deleted':
             setContent('');
+            setContentPath(currentPathRef.current);
             setError('File was deleted');
             setIsStreaming(false);
             clearStreamingTimer();
@@ -112,7 +119,8 @@ export function useFileWatcher({
 
           case 'file-watch-error':
             setError(message.error);
-            setLoading(false);
+            setContentPath(currentPathRef.current); // Mark as "loaded" even on error
+            setPendingLoad(false);
             break;
         }
       } catch (err) {
@@ -135,7 +143,7 @@ export function useFileWatcher({
       return;
     }
 
-    setLoading(true);
+    setPendingLoad(true);
     setError(null);
 
     try {
@@ -177,7 +185,7 @@ export function useFileWatcher({
           }, delay);
         } else if (reconnectAttemptRef.current >= maxReconnectAttempts) {
           setError('Lost connection to TabzChrome. Please ensure the backend is running.');
-          setLoading(false);
+          setPendingLoad(false);
         }
       };
 
@@ -192,7 +200,7 @@ export function useFileWatcher({
       setError(
         `Failed to connect to TabzChrome: ${err instanceof Error ? err.message : 'Unknown error'}`
       );
-      setLoading(false);
+      setPendingLoad(false);
       setConnected(false);
 
       // Clear token and retry
@@ -230,7 +238,8 @@ export function useFileWatcher({
 
     const filePath = currentPathRef.current;
     setContent('');
-    setLoading(true);
+    setContentPath(null); // Clear to trigger loading state
+    setPendingLoad(true);
     setError(null);
 
     // Unsubscribe and resubscribe to get fresh content
@@ -260,7 +269,8 @@ export function useFileWatcher({
         unsubscribeFrom(wsRef.current, previousPath);
       }
       setContent('');
-      setLoading(false);
+      setContentPath(null);
+      setPendingLoad(false);
       setError(null);
       setIsStreaming(false);
       return;
@@ -271,7 +281,7 @@ export function useFileWatcher({
       if (previousPath && previousPath !== path) {
         unsubscribeFrom(wsRef.current, previousPath);
       }
-      setLoading(true);
+      setPendingLoad(true);
       setContent('');
       setError(null);
       subscribeTo(wsRef.current, path);

@@ -29,6 +29,17 @@ function useGitStatus(repoPath: string) {
   const [repo, setRepo] = useState<GitRepo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [debouncedError, setDebouncedError] = useState<string | null>(null);
+
+  // Debounce error display to avoid flashing transient errors
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => setDebouncedError(error), 300);
+      return () => clearTimeout(timer);
+    } else {
+      setDebouncedError(null);
+    }
+  }, [error]);
 
   const fetchStatus = useCallback(async () => {
     if (!repoPath) return;
@@ -69,7 +80,7 @@ function useGitStatus(repoPath: string) {
     fetchStatus();
   }, [fetchStatus]);
 
-  return { repo, loading, error, refetch: fetchStatus };
+  return { repo, loading, error: debouncedError, refetch: fetchStatus };
 }
 
 export function WorkingTree({ repoPath, onFileSelect }: WorkingTreeProps) {

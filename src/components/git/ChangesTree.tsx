@@ -23,6 +23,7 @@ interface ChangesTreeProps {
   onDiscard?: (files: string[]) => void;
   onDiscardAll?: () => void;
   onIgnore?: (file: string) => void;
+  onFileClick?: (file: GitFile) => void;
   loading?: string | null;
 }
 
@@ -51,6 +52,7 @@ interface FileListProps {
   onDiscard?: (files: string[]) => void;
   onDiscardAll?: () => void;
   onIgnore?: (file: string) => void;
+  onFileClick?: (file: GitFile) => void;
   showDiscard?: boolean;
   loading?: boolean;
   discardLoading?: boolean;
@@ -66,6 +68,7 @@ function FileList({
   onDiscard,
   onDiscardAll,
   onIgnore,
+  onFileClick,
   showDiscard,
   loading,
   discardLoading,
@@ -162,8 +165,9 @@ function FileList({
             >
               <FileIcon status={file.status} />
               <span
-                className="font-mono truncate text-sm"
+                className={`font-mono truncate text-sm ${onFileClick ? 'cursor-pointer hover:underline' : ''}`}
                 style={{ color: 'var(--text-primary)', maxWidth: '400px' }}
+                onClick={onFileClick ? () => onFileClick(file) : undefined}
               >
                 {file.path}
               </span>
@@ -254,6 +258,7 @@ export function ChangesTree({
   onDiscard,
   onDiscardAll,
   onIgnore,
+  onFileClick,
   loading,
 }: ChangesTreeProps) {
   const totalChanges = staged.length + unstaged.length + untracked.length;
@@ -275,6 +280,7 @@ export function ChangesTree({
         actionIcon={Minus}
         actionLabel="Unstage"
         onAction={onUnstage}
+        onFileClick={onFileClick}
         loading={loading === 'unstage'}
       />
       <FileList
@@ -286,6 +292,7 @@ export function ChangesTree({
         onAction={onStage}
         onDiscard={onDiscard}
         onDiscardAll={onDiscardAll}
+        onFileClick={onFileClick}
         showDiscard={true}
         loading={loading === 'stage'}
         discardLoading={loading === 'discard'}
@@ -298,6 +305,7 @@ export function ChangesTree({
         actionLabel="Stage"
         onAction={onStage}
         onIgnore={onIgnore}
+        onFileClick={onFileClick}
         loading={loading === 'stage'}
       />
     </div>

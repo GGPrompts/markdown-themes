@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 
 interface AudioViewerProps {
   filePath: string;
-  fontSize?: number;
 }
 
 const API_BASE = 'http://localhost:8129';
@@ -59,7 +58,7 @@ const DownloadIcon = () => (
 
 const PLAYBACK_SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
-export function AudioViewer({ filePath, fontSize = 100 }: AudioViewerProps) {
+export function AudioViewer({ filePath }: AudioViewerProps) {
   const [duration, setDuration] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);

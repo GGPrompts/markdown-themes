@@ -141,6 +141,8 @@ function getHeaderTitle(content: RightPaneContent | null | undefined): { title: 
     }
     case 'git-graph':
       return { title: 'Git Graph' };
+    case 'working-tree':
+      return { title: 'Working Tree' };
     case 'diff': {
       const base = content.base.substring(0, 8);
       const head = content.head ? content.head.substring(0, 8) : 'working tree';

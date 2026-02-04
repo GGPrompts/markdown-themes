@@ -13,7 +13,7 @@ import { MetadataBar } from '../components/MetadataBar';
 import { Sidebar } from '../components/Sidebar';
 import { TabBar } from '../components/TabBar';
 import { SplitView } from '../components/SplitView';
-import { GitGraph } from '../components/git';
+import { GitGraph, WorkingTree } from '../components/git';
 import { DiffViewer } from '../components/viewers/DiffViewer';
 import { parseFrontmatter } from '../utils/frontmatter';
 import { themes } from '../themes';
@@ -185,6 +185,7 @@ export function Files() {
     setRightFile,
     setRightPaneFile,
     setRightPaneGitGraph,
+    setRightPaneWorkingTree,
     setRightPaneDiff,
   } = useSplitView({
     initialState: {
@@ -359,6 +360,20 @@ export function Files() {
     }
   }, [rightPaneContent, isSplit, toggleSplit, setRightFile, setRightPaneGitGraph]);
 
+  // Handle working tree toggle
+  const handleWorkingTreeToggle = useCallback(() => {
+    // If working tree is already shown, close the split view
+    if (rightPaneContent?.type === 'working-tree') {
+      setRightFile(null);
+    } else {
+      // Open split view with working tree
+      if (!isSplit) {
+        toggleSplit();
+      }
+      setRightPaneWorkingTree();
+    }
+  }, [rightPaneContent, isSplit, toggleSplit, setRightFile, setRightPaneWorkingTree]);
+
   // Handle hotkeys button - open HOTKEYS.md in right pane
   const handleHotkeysClick = useCallback(() => {
     if (!workspacePath) return;
@@ -399,9 +414,16 @@ export function Files() {
       }
 
       // Ctrl/Cmd + G - Toggle git graph
-      if ((e.ctrlKey || e.metaKey) && e.key === 'g') {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'g') {
         e.preventDefault();
         handleGitGraphToggle();
+        return;
+      }
+
+      // Ctrl/Cmd + Shift + G - Toggle working tree
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'G') {
+        e.preventDefault();
+        handleWorkingTreeToggle();
         return;
       }
 
@@ -423,7 +445,7 @@ export function Files() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSplit, handleGitGraphToggle, handleHotkeysClick]);
+  }, [toggleSplit, handleGitGraphToggle, handleWorkingTreeToggle, handleHotkeysClick]);
 
   return (
     <>
@@ -435,6 +457,7 @@ export function Files() {
         fontSize={appState.fontSize}
         isSplit={isSplit}
         isGitGraph={rightPaneContent?.type === 'git-graph'}
+        isWorkingTree={rightPaneContent?.type === 'working-tree'}
         isFollowMode={appState.followStreamingMode}
         content={content}
         workspacePath={workspacePath}
@@ -442,6 +465,7 @@ export function Files() {
         onFontSizeChange={handleFontSizeChange}
         onSplitToggle={toggleSplit}
         onGitGraphToggle={handleGitGraphToggle}
+        onWorkingTreeToggle={handleWorkingTreeToggle}
         onFollowModeToggle={toggleFollowMode}
         onHotkeysClick={handleHotkeysClick}
       />
@@ -632,6 +656,17 @@ export function Files() {
                     setRightPaneDiff(commitHash, undefined, filePath);
                   }}
                   fontSize={appState.fontSize}
+                />
+              )}
+
+              {/* Working tree content type */}
+              {rightPaneContent?.type === 'working-tree' && workspacePath && (
+                <WorkingTree
+                  repoPath={workspacePath}
+                  onFileSelect={(path) => {
+                    // Open the file in the left pane
+                    handleFileSelect(path);
+                  }}
                 />
               )}
 

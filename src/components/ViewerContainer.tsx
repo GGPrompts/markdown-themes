@@ -115,7 +115,7 @@ export function ViewerContainer({
       return <JsonlViewer content={content} fontSize={fontSize} />;
 
     case 'audio':
-      return <AudioViewer filePath={filePath} fontSize={fontSize} />;
+      return <AudioViewer filePath={filePath} />;
 
     case 'video':
       return <VideoViewer filePath={filePath} fontSize={fontSize} />;

@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 export type RightPaneContent =
   | { type: 'file'; path: string }
   | { type: 'git-graph' }
+  | { type: 'working-tree' }
   | { type: 'diff'; base: string; head?: string; file?: string }
   | { type: 'commit'; hash: string };
 
@@ -33,6 +34,7 @@ interface UseSplitViewResult {
   // New helper functions for setting different content types
   setRightPaneFile: (path: string) => void;
   setRightPaneGitGraph: () => void;
+  setRightPaneWorkingTree: () => void;
   setRightPaneDiff: (base: string, head?: string, file?: string) => void;
   setRightPaneCommit: (hash: string) => void;
   clearRightPane: () => void;
@@ -92,6 +94,10 @@ export function useSplitView(options: UseSplitViewOptions = {}): UseSplitViewRes
     setRightPaneContentState({ type: 'git-graph' });
   }, []);
 
+  const setRightPaneWorkingTree = useCallback(() => {
+    setRightPaneContentState({ type: 'working-tree' });
+  }, []);
+
   const setRightPaneDiff = useCallback((base: string, head?: string, file?: string) => {
     setRightPaneContentState({ type: 'diff', base, head, file });
   }, []);
@@ -119,6 +125,7 @@ export function useSplitView(options: UseSplitViewOptions = {}): UseSplitViewRes
     setRightFile,
     setRightPaneFile,
     setRightPaneGitGraph,
+    setRightPaneWorkingTree,
     setRightPaneDiff,
     setRightPaneCommit,
     clearRightPane,

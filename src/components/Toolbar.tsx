@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Columns, Copy, AtSign, MessageSquare, Check, GitBranch, Keyboard, Crosshair } from 'lucide-react';
+import { Columns, Copy, AtSign, MessageSquare, Check, GitBranch, GitPullRequestDraft, Keyboard, Crosshair } from 'lucide-react';
 import { queueToChat } from '../lib/api';
 
 interface ToolbarProps {
@@ -10,6 +10,7 @@ interface ToolbarProps {
   fontSize?: number;
   isSplit?: boolean;
   isGitGraph?: boolean;
+  isWorkingTree?: boolean;
   isFollowMode?: boolean;
   content?: string;
   workspacePath?: string | null;
@@ -17,6 +18,7 @@ interface ToolbarProps {
   onFontSizeChange?: (size: number) => void;
   onSplitToggle?: () => void;
   onGitGraphToggle?: () => void;
+  onWorkingTreeToggle?: () => void;
   onFollowModeToggle?: () => void;
   onHotkeysClick?: () => void;
 }
@@ -29,6 +31,7 @@ export function Toolbar({
   fontSize = 100,
   isSplit = false,
   isGitGraph = false,
+  isWorkingTree = false,
   isFollowMode = false,
   content,
   workspacePath,
@@ -36,6 +39,7 @@ export function Toolbar({
   onFontSizeChange,
   onSplitToggle,
   onGitGraphToggle,
+  onWorkingTreeToggle,
   onFollowModeToggle,
   onHotkeysClick,
 }: ToolbarProps) {
@@ -338,9 +342,25 @@ export function Toolbar({
               color: isGitGraph ? 'var(--bg-primary)' : 'var(--text-primary)',
               border: '1px solid var(--border)',
             }}
-            title={isGitGraph ? 'Close git graph' : 'Show git graph'}
+            title={isGitGraph ? 'Close git graph (Ctrl+G)' : 'Show git graph (Ctrl+G)'}
           >
             <GitBranch className="w-4 h-4" />
+          </button>
+
+          {/* Working tree toggle */}
+          <button
+            type="button"
+            onClick={onWorkingTreeToggle}
+            className="w-8 h-8 flex items-center justify-center transition-colors"
+            style={{
+              borderRadius: 'var(--radius)',
+              backgroundColor: isWorkingTree ? 'var(--accent)' : 'var(--bg-primary)',
+              color: isWorkingTree ? 'var(--bg-primary)' : 'var(--text-primary)',
+              border: '1px solid var(--border)',
+            }}
+            title={isWorkingTree ? 'Close working tree (Ctrl+Shift+G)' : 'Show working tree (Ctrl+Shift+G)'}
+          >
+            <GitPullRequestDraft className="w-4 h-4" />
           </button>
 
           {/* Split view toggle */}

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import type { FileTreeNode } from '../context/WorkspaceContext';
+import { useWorkspaceContext, type FileTreeNode } from '../context/WorkspaceContext';
 import { useFileFilter, type ScopedFileTreeNode } from '../hooks/useFileFilter';
 import { FILTERS, type FilterId } from '../lib/filters';
 import { getFileIconInfo } from '../utils/fileIcons';
@@ -67,6 +67,12 @@ interface TreeItemProps {
   onContextMenu: (e: React.MouseEvent, path: string, name: string, isDirectory: boolean) => void;
   gitStatus: GitStatusMap;
   getFolderGitStatus: (folderPath: string) => GitStatus | null;
+  /** Set of paths that have been lazy-loaded */
+  loadedPaths: Set<string>;
+  /** Set of paths currently being loaded */
+  loadingPaths: Set<string>;
+  /** Function to lazy load children for a folder */
+  loadChildren: (folderPath: string) => Promise<void>;
 }
 
 // Indent guide component - renders vertical lines at each depth level
@@ -107,7 +113,7 @@ const GIT_STATUS_TITLES: Record<GitStatus, string> = {
   untracked: 'Untracked',
 };
 
-function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick, onRightFileSelect, depth, isExpanded, onToggleExpand, expandedPaths, onToggleExpandPath, isFavorite, toggleFavorite, onContextMenu, gitStatus, getFolderGitStatus }: TreeItemProps) {
+function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick, onRightFileSelect, depth, isExpanded, onToggleExpand, expandedPaths, onToggleExpandPath, isFavorite, toggleFavorite, onContextMenu, gitStatus, getFolderGitStatus, loadedPaths, loadingPaths, loadChildren }: TreeItemProps) {
   const isSelected = node.path === currentFile;
   // Reduced indent: 8px base + 12px per level (was 12px + 16px)
   const paddingLeft = 8 + depth * 12;
@@ -176,6 +182,9 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
                 onContextMenu={onContextMenu}
                 gitStatus={gitStatus}
                 getFolderGitStatus={getFolderGitStatus}
+                loadedPaths={loadedPaths}
+                loadingPaths={loadingPaths}
+                loadChildren={loadChildren}
               />
             ))}
           </div>
@@ -190,10 +199,27 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
   };
 
   if (node.isDirectory) {
+    // Check if this folder needs lazy loading (no children and not yet loaded)
+    const needsLoading = !node.children && !loadedPaths.has(node.path);
+    const isLoading = loadingPaths.has(node.path);
+
+    const handleFolderClick = () => {
+      if (needsLoading && !isLoading) {
+        // Trigger lazy loading, then expand
+        loadChildren(node.path).then(() => {
+          if (!isExpanded) {
+            onToggleExpand();
+          }
+        });
+      } else {
+        onToggleExpand();
+      }
+    };
+
     return (
       <div>
         <button
-          onClick={onToggleExpand}
+          onClick={handleFolderClick}
           onContextMenu={handleContextMenu}
           className="group/item w-full text-left py-1.5 pr-2 flex items-center gap-1 text-sm transition-colors relative"
           style={{
@@ -217,7 +243,7 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
               transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
             }}
           >
-            <ChevronIcon />
+            {isLoading ? <SpinnerIcon /> : <ChevronIcon />}
           </span>
           <span className="w-3.5 h-3.5 flex items-center justify-center flex-shrink-0">
             <FolderIcon open={isExpanded} />
@@ -261,6 +287,9 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
                 onContextMenu={onContextMenu}
                 gitStatus={gitStatus}
                 getFolderGitStatus={getFolderGitStatus}
+                loadedPaths={loadedPaths}
+                loadingPaths={loadingPaths}
+                loadChildren={loadChildren}
               />
             ))}
           </div>
@@ -457,6 +486,10 @@ const MAX_SIDEBAR_WIDTH = 400;
 
 export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSplit, width = 250, onWidthChange, onWidthChangeEnd, onFileSelect, onFileDoubleClick, onRightFileSelect, favorites, toggleFavorite, isFavorite, searchInputRef }: SidebarProps) {
   const workspaceName = workspacePath?.split('/').pop() ?? workspacePath?.split('\\').pop() ?? 'Workspace';
+
+  // Get lazy loading state from workspace context
+  const { loadedPaths, loadingPaths, loadChildren } = useWorkspaceContext();
+
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [favoritesExpanded, setFavoritesExpanded] = useState(true);
@@ -1028,6 +1061,9 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
                 onContextMenu={handleContextMenu}
                 gitStatus={gitStatus}
                 getFolderGitStatus={getFolderGitStatus}
+                loadedPaths={loadedPaths}
+                loadingPaths={loadingPaths}
+                loadChildren={loadChildren}
               />
             ))
           )}
@@ -1072,6 +1108,23 @@ function ChevronIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
       <path d="M4.5 2.5L8 6L4.5 9.5" />
+    </svg>
+  );
+}
+
+function SpinnerIcon() {
+  return (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 12 12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      className="animate-spin"
+    >
+      <circle cx="6" cy="6" r="4" strokeOpacity="0.3" />
+      <path d="M6 2a4 4 0 0 1 4 4" />
     </svg>
   );
 }

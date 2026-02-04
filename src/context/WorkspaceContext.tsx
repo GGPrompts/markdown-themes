@@ -17,6 +17,12 @@ interface WorkspaceContextValue {
   openWorkspace: (path: string) => Promise<boolean>;
   closeWorkspace: () => void;
   refreshWorkspace: () => Promise<void>;
+  /** Paths that have been loaded (children fetched) */
+  loadedPaths: Set<string>;
+  /** Paths currently being loaded */
+  loadingPaths: Set<string>;
+  /** Lazy load children for a folder path */
+  loadChildren: (folderPath: string) => Promise<void>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
@@ -111,12 +117,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [fileTree, setFileTree] = useState<FileTreeNode[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadedPaths, setLoadedPaths] = useState<Set<string>>(new Set());
+  const [loadingPaths, setLoadingPaths] = useState<Set<string>>(new Set());
 
   const { state: appState, isLoading: storeLoading, saveLastWorkspace, addRecentFolder } = useAppStore();
 
   const loadWorkspace = useCallback(async (path: string): Promise<boolean> => {
     setLoading(true);
     setError(null);
+    // Reset lazy loading state when opening a new workspace
+    setLoadedPaths(new Set());
+    setLoadingPaths(new Set());
 
     try {
       // Use shallow depth for projects directories to avoid performance issues
@@ -156,6 +167,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setWorkspacePath(null);
     setFileTree([]);
     setError(null);
+    setLoadedPaths(new Set());
+    setLoadingPaths(new Set());
     saveLastWorkspace(null);
   }, [saveLastWorkspace]);
 
@@ -164,6 +177,64 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       await loadWorkspace(workspacePath);
     }
   }, [workspacePath, loadWorkspace]);
+
+  /**
+   * Lazy load children for a folder path.
+   * Fetches the folder contents and merges them into the existing tree.
+   */
+  const loadChildren = useCallback(async (folderPath: string): Promise<void> => {
+    // Already loaded or currently loading
+    if (loadedPaths.has(folderPath) || loadingPaths.has(folderPath)) {
+      return;
+    }
+
+    // Mark as loading
+    setLoadingPaths(prev => new Set(prev).add(folderPath));
+
+    try {
+      // Fetch just this folder with depth 1
+      const apiTree = await fetchFileTree(folderPath, 1, false);
+      const converted = convertTree(apiTree);
+      const newChildren = converted?.children || [];
+      const sortedChildren = sortTree(newChildren);
+
+      // Merge the children into the existing tree
+      setFileTree(prevTree => {
+        const mergeChildren = (nodes: FileTreeNode[]): FileTreeNode[] => {
+          return nodes.map(node => {
+            if (node.path === folderPath && node.isDirectory) {
+              // Found the target folder, update its children
+              return {
+                ...node,
+                children: sortedChildren.length > 0 ? sortedChildren : undefined,
+              };
+            }
+            if (node.children) {
+              // Recursively search in children
+              return {
+                ...node,
+                children: mergeChildren(node.children),
+              };
+            }
+            return node;
+          });
+        };
+        return mergeChildren(prevTree);
+      });
+
+      // Mark as loaded
+      setLoadedPaths(prev => new Set(prev).add(folderPath));
+    } catch (err) {
+      console.error(`Failed to load children for ${folderPath}:`, err);
+    } finally {
+      // Remove from loading
+      setLoadingPaths(prev => {
+        const next = new Set(prev);
+        next.delete(folderPath);
+        return next;
+      });
+    }
+  }, [loadedPaths, loadingPaths]);
 
   // Restore last workspace on mount
   useEffect(() => {
@@ -209,6 +280,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         openWorkspace,
         closeWorkspace,
         refreshWorkspace,
+        loadedPaths,
+        loadingPaths,
+        loadChildren,
       }}
     >
       {children}

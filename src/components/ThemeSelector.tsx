@@ -132,7 +132,7 @@ export function ThemeSelector({ currentTheme, onThemeChange }: ThemeSelectorProp
           <ul
             role="listbox"
             aria-activedescendant={focusedIndex >= 0 ? `theme-option-${themes[focusedIndex].id}` : undefined}
-            className="absolute top-full left-0 mt-1 w-full max-h-[320px] overflow-y-auto overflow-x-hidden z-50"
+            className="absolute top-full left-0 mt-1 w-full max-h-[320px] overflow-y-auto overflow-x-hidden z-[200]"
             style={{
               borderRadius: 'var(--radius)',
               border: '1px solid var(--border)',

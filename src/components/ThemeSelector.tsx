@@ -143,7 +143,7 @@ export function ThemeSelector({ currentTheme, onThemeChange }: ThemeSelectorProp
                 color: theme.accent,
                 fontFamily: theme.font,
                 fontWeight: 500,
-                fontSize: theme.id === 'pixel-art' ? '0.75rem' : '1rem',
+                fontSize: theme.id === 'pixel-art' ? '0.875rem' : '1.125rem',
               }}
             >
               {theme.name}

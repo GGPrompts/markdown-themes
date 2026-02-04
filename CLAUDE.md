@@ -173,6 +173,7 @@ The Files page toolbar has a git graph button that shows commit history in the r
 ### Files Page
 | Shortcut | Action |
 |----------|--------|
+| `?` | Show keyboard shortcuts |
 | `/` | Focus sidebar search |
 | `Ctrl+B` | Toggle sidebar |
 | `Ctrl+\` | Toggle split view |

@@ -181,6 +181,7 @@ export function Files() {
     toggleSplit,
     setSplitRatio,
     setRightFile,
+    setRightPaneFile,
     setRightPaneGitGraph,
     setRightPaneDiff,
   } = useSplitView({
@@ -321,6 +322,16 @@ export function Files() {
     }
   }, [rightPaneContent, isSplit, toggleSplit, setRightFile, setRightPaneGitGraph]);
 
+  // Handle hotkeys button - open HOTKEYS.md in right pane
+  const handleHotkeysClick = useCallback(() => {
+    if (!workspacePath) return;
+    const hotkeysPath = workspacePath + '/HOTKEYS.md';
+    if (!isSplit) {
+      toggleSplit();
+    }
+    setRightPaneFile(hotkeysPath);
+  }, [workspacePath, isSplit, toggleSplit, setRightPaneFile]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -357,6 +368,13 @@ export function Files() {
         return;
       }
 
+      // ? - Show keyboard shortcuts
+      if (e.key === '?') {
+        e.preventDefault();
+        handleHotkeysClick();
+        return;
+      }
+
       // Escape - Clear focus / close split
       if (e.key === 'Escape') {
         if (document.activeElement instanceof HTMLElement) {
@@ -368,7 +386,7 @@ export function Files() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSplit, handleGitGraphToggle]);
+  }, [toggleSplit, handleGitGraphToggle, handleHotkeysClick]);
 
   return (
     <>
@@ -386,6 +404,7 @@ export function Files() {
         onFontSizeChange={handleFontSizeChange}
         onSplitToggle={toggleSplit}
         onGitGraphToggle={handleGitGraphToggle}
+        onHotkeysClick={handleHotkeysClick}
       />
 
       <div className="flex-1 flex overflow-hidden">

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Columns, Copy, AtSign, MessageSquare, Check, GitBranch } from 'lucide-react';
+import { Columns, Copy, AtSign, MessageSquare, Check, GitBranch, Keyboard } from 'lucide-react';
 import { queueToChat } from '../lib/api';
 
 interface ToolbarProps {
@@ -16,6 +16,7 @@ interface ToolbarProps {
   onFontSizeChange?: (size: number) => void;
   onSplitToggle?: () => void;
   onGitGraphToggle?: () => void;
+  onHotkeysClick?: () => void;
 }
 
 export function Toolbar({
@@ -32,6 +33,7 @@ export function Toolbar({
   onFontSizeChange,
   onSplitToggle,
   onGitGraphToggle,
+  onHotkeysClick,
 }: ToolbarProps) {
   const [showRecentFiles, setShowRecentFiles] = useState(false);
   const [showPathInput, setShowPathInput] = useState(false);
@@ -342,6 +344,22 @@ export function Toolbar({
             title={isSplit ? 'Close split view' : 'Open split view'}
           >
             <Columns className="w-4 h-4" />
+          </button>
+
+          {/* Keyboard shortcuts help */}
+          <button
+            type="button"
+            onClick={onHotkeysClick}
+            className="w-8 h-8 flex items-center justify-center transition-colors"
+            style={{
+              borderRadius: 'var(--radius)',
+              backgroundColor: 'var(--bg-primary)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border)',
+            }}
+            title="Keyboard shortcuts"
+          >
+            <Keyboard className="w-4 h-4" />
           </button>
 
           {/* Font size controls */}

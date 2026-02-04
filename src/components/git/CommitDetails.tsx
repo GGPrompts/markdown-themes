@@ -14,9 +14,9 @@ interface CommitData {
   shortHash: string;
   message: string;
   body: string | null;
-  author: string;
-  email: string;
-  date: string;
+  author: string | null;
+  email: string | null;
+  date: string | null;
   parents: string[];
   refs: string[];
   files: CommitFile[];
@@ -124,7 +124,7 @@ export function CommitDetails({ hash, repoPath, onFileClick }: CommitDetailsProp
         },
         body: JSON.stringify({
           name: `Gitlogue: ${data.shortHash}`,
-          command: `cd "${repoPath}" && gitlogue ${data.hash}`,
+          command: `cd "${repoPath}" && gitlogue --commit ${data.hash}`,
         }),
       });
     } catch (err) {
@@ -165,7 +165,7 @@ export function CommitDetails({ hash, repoPath, onFileClick }: CommitDetailsProp
 
   if (!data) return null;
 
-  const formattedDate = new Date(data.date).toLocaleString();
+  const formattedDate = data.date ? new Date(data.date).toLocaleString() : null;
 
   return (
     <div
@@ -192,11 +192,13 @@ export function CommitDetails({ hash, repoPath, onFileClick }: CommitDetailsProp
       </div>
 
       {/* Author and date */}
-      <div className="text-xs mb-3" style={{ color: 'var(--text-secondary)' }}>
-        <span>{data.author}</span>
-        <span className="mx-2">•</span>
-        <span>{formattedDate}</span>
-      </div>
+      {(data.author || formattedDate) && (
+        <div className="text-xs mb-3" style={{ color: 'var(--text-secondary)' }}>
+          {data.author && <span>{data.author}</span>}
+          {data.author && formattedDate && <span className="mx-2">•</span>}
+          {formattedDate && <span>{formattedDate}</span>}
+        </div>
+      )}
 
       {/* Files changed */}
       {data.files.length > 0 && (

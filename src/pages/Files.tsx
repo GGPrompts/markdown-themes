@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
 import { Clock, ChevronLeft, GitCommit, FileDiff, Loader2 } from 'lucide-react';
 import { useFileWatcher } from '../hooks/useFileWatcher';
 import { useWorkspaceContext } from '../context/WorkspaceContext';
@@ -159,6 +159,8 @@ export function Files() {
 
   // Local state for sidebar width during drag (for smooth updates)
   const [sidebarWidth, setSidebarWidth] = useState(appState.sidebarWidth);
+  const [sidebarVisible, setSidebarVisible] = useState(true);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Get workspace from global context
   const { workspacePath, fileTree } = useWorkspaceContext();
@@ -319,6 +321,55 @@ export function Files() {
     }
   }, [rightPaneContent, isSplit, toggleSplit, setRightFile, setRightPaneGitGraph]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      // / - Focus search
+      if (e.key === '/') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+
+      // Ctrl/Cmd + B - Toggle sidebar
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        setSidebarVisible((prev) => !prev);
+        return;
+      }
+
+      // Ctrl/Cmd + \ - Toggle split view
+      if ((e.ctrlKey || e.metaKey) && e.key === '\\') {
+        e.preventDefault();
+        toggleSplit();
+        return;
+      }
+
+      // Ctrl/Cmd + G - Toggle git graph
+      if ((e.ctrlKey || e.metaKey) && e.key === 'g') {
+        e.preventDefault();
+        handleGitGraphToggle();
+        return;
+      }
+
+      // Escape - Clear focus / close split
+      if (e.key === 'Escape') {
+        if (document.activeElement instanceof HTMLElement) {
+          document.activeElement.blur();
+        }
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toggleSplit, handleGitGraphToggle]);
+
   return (
     <>
       <Toolbar
@@ -338,7 +389,7 @@ export function Files() {
       />
 
       <div className="flex-1 flex overflow-hidden">
-        {workspacePath && (
+        {workspacePath && sidebarVisible && (
           <Sidebar
             fileTree={fileTree}
             currentFile={currentFile}
@@ -354,6 +405,7 @@ export function Files() {
             favorites={appState.favorites}
             toggleFavorite={toggleFavorite}
             isFavorite={isFavorite}
+            searchInputRef={searchInputRef}
           />
         )}
 

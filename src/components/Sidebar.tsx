@@ -7,6 +7,15 @@ import type { FavoriteItem } from '../context/AppStoreContext';
 import { FileContextMenu } from './FileContextMenu';
 import { queueToChat, fetchFileContent, pasteToTerminal, readAloud, fetchGitStatus, type GitStatusMap, type GitStatus } from '../lib/api';
 
+/**
+ * Check if a path looks like a "projects directory" (contains repos, not a repo itself).
+ * These should start collapsed to avoid overwhelming the user.
+ */
+function isProjectsDirectory(path: string | null): boolean {
+  if (!path) return false;
+  return /\/(projects|Projects|repos|code|dev)$/.test(path);
+}
+
 // Context menu state interface
 interface ContextMenuState {
   show: boolean;
@@ -617,8 +626,12 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
 
   const isSearching = searchQuery.trim().length > 0;
 
-  // Expanded state management - start with all directories expanded
+  // Expanded state management - start collapsed for projects directories, expanded otherwise
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => {
+    // Projects directories start collapsed for performance
+    if (isProjectsDirectory(workspacePath)) {
+      return new Set<string>();
+    }
     return new Set(getAllDirectoryPaths(fileTree));
   });
 
@@ -628,7 +641,12 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
   // Update expanded paths when file tree changes (e.g., new directories added)
   // Also auto-expand scope headers and filtered home files
   // But never re-add paths the user explicitly collapsed
+  // Skip auto-expand for projects directories (they start collapsed)
   useEffect(() => {
+    // Don't auto-expand for projects directories
+    if (isProjectsDirectory(workspacePath)) {
+      return;
+    }
     const allDirs = getAllDirectoryPaths(fileTree);
     const filteredDirs = getAllDirectoryPaths(filteredFiles);
     setExpandedPaths(prev => {
@@ -641,7 +659,7 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
       });
       return next;
     });
-  }, [fileTree, filteredFiles, collapsedPaths]);
+  }, [fileTree, filteredFiles, collapsedPaths, workspacePath]);
 
   const toggleExpandPath = (path: string) => {
     setExpandedPaths(prev => {

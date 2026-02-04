@@ -48,6 +48,15 @@ const allowedHiddenNames = new Set([
   '.claudeignore',
 ]);
 
+/**
+ * Check if a path looks like a "projects directory" (contains repos, not a repo itself).
+ * These directories need shallow loading to avoid performance issues.
+ */
+function isProjectsDirectory(path: string): boolean {
+  // Match common patterns: ~/projects, ~/Projects, ~/repos, ~/code, ~/dev
+  return /\/(projects|Projects|repos|code|dev)$/.test(path);
+}
+
 function shouldInclude(name: string): boolean {
   if (excludedNames.has(name)) {
     return false;
@@ -68,15 +77,13 @@ function convertTree(node: APIFileTreeNode): FileTreeNode | null {
       .map(convertTree)
       .filter((child): child is FileTreeNode => child !== null);
 
-    if (children.length > 0) {
-      return {
-        name: node.name,
-        path: node.path,
-        isDirectory: true,
-        children,
-      };
-    }
-    return null;
+    // Always include directories, even if empty (for shallow loading)
+    return {
+      name: node.name,
+      path: node.path,
+      isDirectory: true,
+      children: children.length > 0 ? children : undefined,
+    };
   } else {
     return {
       name: node.name,
@@ -112,7 +119,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      const apiTree = await fetchFileTree(path, 5, false);
+      // Use shallow depth for projects directories to avoid performance issues
+      const depth = isProjectsDirectory(path) ? 1 : 5;
+      const apiTree = await fetchFileTree(path, depth, false);
       const converted = convertTree(apiTree);
       const children = converted?.children || [];
       const sorted = sortTree(children);
@@ -172,9 +181,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!workspacePath) return;
 
+    const depth = isProjectsDirectory(workspacePath) ? 1 : 5;
     const interval = setInterval(() => {
       // Silent refresh - don't set loading state to avoid UI flicker
-      fetchFileTree(workspacePath, 5, false)
+      fetchFileTree(workspacePath, depth, false)
         .then((apiTree) => {
           const converted = convertTree(apiTree);
           const children = converted?.children || [];

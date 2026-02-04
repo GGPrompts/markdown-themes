@@ -109,9 +109,6 @@ export function AudioViewer({ filePath, fontSize = 100 }: AudioViewerProps) {
     );
   }
 
-  // Scale factor for custom UI (not applied to native audio controls)
-  const scale = fontSize / 100;
-
   return (
     <div
       className="audio-viewer h-full flex flex-col items-center justify-center p-8"
@@ -119,14 +116,12 @@ export function AudioViewer({ filePath, fontSize = 100 }: AudioViewerProps) {
         backgroundColor: 'var(--bg-primary)',
       }}
     >
-      {/* Custom UI with zoom scaling */}
       <div
         className="w-full max-w-lg p-6 rounded-lg"
         style={{
           backgroundColor: 'var(--bg-secondary)',
           border: '1px solid var(--border)',
           borderRadius: 'var(--radius)',
-          zoom: scale,
         }}
       >
         {/* File name */}
@@ -182,32 +177,29 @@ export function AudioViewer({ filePath, fontSize = 100 }: AudioViewerProps) {
           <span>{duration ? formatDuration(duration) : '--:--'}</span>
         </div>
 
-        {/* Native audio element - reset zoom to prevent menu positioning issues */}
-        <div style={{ zoom: 1 / scale }}>
-          <audio
-            ref={audioRef}
-            src={audioUrl}
-            controls
-            className="audio-controls"
-            onLoadedMetadata={handleLoadedMetadata}
-            onTimeUpdate={handleTimeUpdate}
-            onPlay={handlePlay}
-            onPause={handlePause}
-            onEnded={handleEnded}
-            onError={handleError}
-            style={{
-              borderRadius: 'var(--radius)',
-              outline: 'none',
-              width: `${100 * scale}%`,
-            }}
-          />
-        </div>
+        {/* Native audio element - no zoom to avoid menu positioning issues */}
+        <audio
+          ref={audioRef}
+          src={audioUrl}
+          controls
+          className="w-full audio-controls"
+          onLoadedMetadata={handleLoadedMetadata}
+          onTimeUpdate={handleTimeUpdate}
+          onPlay={handlePlay}
+          onPause={handlePause}
+          onEnded={handleEnded}
+          onError={handleError}
+          style={{
+            borderRadius: 'var(--radius)',
+            outline: 'none',
+          }}
+        />
       </div>
 
       {/* File info */}
       <div
         className="mt-4 text-sm"
-        style={{ color: 'var(--text-secondary)', zoom: scale }}
+        style={{ color: 'var(--text-secondary)' }}
       >
         {duration && (
           <span>Duration: {formatDuration(duration)}</span>

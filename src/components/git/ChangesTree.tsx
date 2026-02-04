@@ -79,9 +79,12 @@ function FileList({
 
   return (
     <div className="mb-4">
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-2 text-sm font-medium mb-2 px-2 py-1.5 rounded w-full text-left group"
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(!expanded); } }}
+        className="flex items-center gap-2 text-sm font-medium mb-2 px-2 py-1.5 rounded w-full text-left group cursor-pointer"
         style={{
           backgroundColor: 'transparent',
         }}
@@ -149,7 +152,7 @@ function FileList({
             </button>
           )}
         </div>
-      </button>
+      </div>
 
       {expanded && (
         <div className="ml-2 space-y-1">

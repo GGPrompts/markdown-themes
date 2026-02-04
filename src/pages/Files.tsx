@@ -195,13 +195,25 @@ export function Files() {
     onStateChange: handleSplitStateChange,
   });
 
-  // Check if current file is audio (AudioViewer fetches its own content)
-  const AUDIO_EXTENSIONS = ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'webm'];
+  // Binary file types that have dedicated viewers fetching their own content
+  // Skip file watcher for these to avoid binary data leaking to markdown renderer
+  const BINARY_EXTENSIONS = new Set([
+    // Audio
+    'mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'webm', 'wma', 'aiff', 'ape',
+    // Video
+    'mp4', 'ogv', 'mov', 'avi', 'mkv', 'm4v', 'wmv', 'flv',
+    // Images
+    'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp', 'tiff', 'tif', 'avif',
+    // Documents
+    'pdf',
+  ]);
   const currentFileExt = currentFile?.split('.').pop()?.toLowerCase();
-  const isCurrentFileAudio = currentFileExt ? AUDIO_EXTENSIONS.includes(currentFileExt) : false;
+  const isCurrentFileBinary = currentFileExt ? BINARY_EXTENSIONS.has(currentFileExt) : false;
+  const rightFileExt = rightFile?.split('.').pop()?.toLowerCase();
+  const isRightFileBinary = rightFileExt ? BINARY_EXTENSIONS.has(rightFileExt) : false;
 
   // Use file watcher to get content and streaming state (left/main pane)
-  // Skip for audio files - AudioViewer fetches its own data URI
+  // Skip for binary files - their viewers fetch their own data
   const {
     content,
     error,
@@ -209,7 +221,7 @@ export function Files() {
     isStreaming,
     connected,
   } = useFileWatcher({
-    path: isCurrentFileAudio ? null : currentFile,
+    path: isCurrentFileBinary ? null : currentFile,
   });
 
   // File watcher for right pane (only active when split view is enabled)
@@ -219,7 +231,7 @@ export function Files() {
     loading: rightLoading,
     isStreaming: rightIsStreaming,
   } = useFileWatcher({
-    path: isSplit ? rightFile : null,
+    path: isSplit && !isRightFileBinary ? rightFile : null,
   });
 
   // Workspace streaming detection for follow mode

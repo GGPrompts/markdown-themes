@@ -169,7 +169,7 @@ export function useGitDiff({
 
       const data = await response.json();
 
-      // API returns { success: true, diff: "..." } or { success: false, error: "..." }
+      // API returns { success: true, data: { diff: "..." } } or { success: false, error: "..." }
       if (!data.success) {
         // No diff or error - just clear highlights
         setChangedLines(new Map());
@@ -178,7 +178,7 @@ export function useGitDiff({
         return;
       }
 
-      const lines = extractLineChanges(data.diff || '');
+      const lines = extractLineChanges(data.data?.diff || '');
       setChangedLines(lines);
       setLoading(false);
     } catch (err) {

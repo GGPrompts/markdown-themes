@@ -140,13 +140,14 @@ export function CodeViewer({ content, filePath, fontSize = 100, isStreaming = fa
   const prevContentRef = useRef<string>('');
   const recentEditTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Git diff highlighting
-  const { changedLines: gitChangedLines } = useGitDiff({
-    filePath,
-    repoPath,
-    content, // Trigger refetch on content change
-    debounceMs: 800, // Slightly longer debounce for git diff
-  });
+  // Git diff highlighting (temporarily disabled for debugging)
+  // const { changedLines: gitChangedLines } = useGitDiff({
+  //   filePath,
+  //   repoPath,
+  //   content, // Trigger refetch on content change
+  //   debounceMs: 800, // Slightly longer debounce for git diff
+  // });
+  const gitChangedLines = new Map<number, GitDiffLineType>();
 
   const language = useMemo(() => getLanguageFromPath(filePath), [filePath]);
   const lineCount = useMemo(() => content.split('\n').length, [content]);

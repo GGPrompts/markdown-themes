@@ -114,7 +114,7 @@ export function AudioViewer({ filePath, fontSize = 100 }: AudioViewerProps) {
       className="audio-viewer h-full flex flex-col items-center justify-center p-8"
       style={{
         backgroundColor: 'var(--bg-primary)',
-        zoom: fontSize / 100,
+        // Note: Don't use zoom here - it breaks native audio controls menu positioning
       }}
     >
       <div

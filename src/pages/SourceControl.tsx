@@ -3,10 +3,34 @@ import { GitBranch, RefreshCw, AlertCircle, Search } from 'lucide-react';
 import { useGitRepos } from '../hooks/useGitRepos';
 import { useBulkGitOperations } from '../hooks/useBulkGitOperations';
 import { usePageState } from '../context/PageStateContext';
+import { useWorkspaceContext } from '../context/WorkspaceContext';
 import { RepoCard, BulkActionsBar } from '../components/git';
 
-// Default projects directory
-const DEFAULT_PROJECTS_DIR = '/home/marci/projects';
+/**
+ * Derive the projects directory from the workspace path.
+ * e.g., /home/matt/projects/markdown-themes -> /home/matt/projects
+ */
+function getProjectsDir(workspacePath: string | null): string {
+  if (!workspacePath) {
+    // Fallback - try to guess from common patterns
+    return '/home/matt/projects';
+  }
+
+  // Match /home/<user>/projects or /home/<user>/Projects
+  const match = workspacePath.match(/^(\/home\/[^/]+\/[Pp]rojects)/);
+  if (match) {
+    return match[1];
+  }
+
+  // If workspace is directly in home, use parent of workspace
+  // e.g., /home/matt/myproject -> /home/matt
+  const parts = workspacePath.split('/');
+  if (parts.length >= 4 && parts[1] === 'home') {
+    return parts.slice(0, 4).join('/'); // /home/<user>/<first-dir>
+  }
+
+  return workspacePath;
+}
 
 // Loading skeleton component
 function RepoSkeleton() {
@@ -38,7 +62,8 @@ function RepoSkeleton() {
 }
 
 export function SourceControl() {
-  const [projectsDir] = useState(DEFAULT_PROJECTS_DIR);
+  const { workspacePath } = useWorkspaceContext();
+  const projectsDir = useMemo(() => getProjectsDir(workspacePath), [workspacePath]);
   const { data, loading, error, refetch } = useGitRepos(projectsDir);
 
   // Bulk operations

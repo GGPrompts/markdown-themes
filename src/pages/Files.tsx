@@ -15,8 +15,15 @@ import { SplitView } from '../components/SplitView';
 import { parseFrontmatter } from '../utils/frontmatter';
 import { themes } from '../themes';
 
-// Default home path for WSL - used for fetching user-level config files
-const DEFAULT_HOME_PATH = '/home/marci';
+/**
+ * Derive home path from workspace path.
+ * e.g., /home/matt/projects/something -> /home/matt
+ */
+function getHomePath(workspacePath: string | null): string {
+  if (!workspacePath) return '/home';
+  const match = workspacePath.match(/^(\/home\/[^/]+)/);
+  return match ? match[1] : '/home';
+}
 
 export function Files() {
   // Get page state from context for persistence across navigation
@@ -223,7 +230,7 @@ export function Files() {
             fileTree={fileTree}
             currentFile={currentFile}
             workspacePath={workspacePath}
-            homePath={DEFAULT_HOME_PATH}
+            homePath={getHomePath(workspacePath)}
             isSplit={isSplit}
             width={sidebarWidth}
             onWidthChange={handleSidebarWidthChange}

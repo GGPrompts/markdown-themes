@@ -56,9 +56,35 @@ interface TreeItemProps {
   onContextMenu: (e: React.MouseEvent, path: string, name: string, isDirectory: boolean) => void;
 }
 
+// Indent guide component - renders vertical lines at each depth level
+function IndentGuides({ depth }: { depth: number }) {
+  if (depth === 0) return null;
+
+  return (
+    <div
+      className="absolute top-0 bottom-0 pointer-events-none"
+      style={{ left: 8 }}
+    >
+      {Array.from({ length: depth }, (_, i) => (
+        <div
+          key={i}
+          className="absolute top-0 bottom-0"
+          style={{
+            left: i * 12,
+            width: 1,
+            backgroundColor: 'var(--border)',
+            opacity: 0.5,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick, onRightFileSelect, depth, isExpanded, onToggleExpand, expandedPaths, onToggleExpandPath, isFavorite, toggleFavorite, onContextMenu }: TreeItemProps) {
   const isSelected = node.path === currentFile;
-  const paddingLeft = 12 + depth * 16;
+  // Reduced indent: 8px base + 12px per level (was 12px + 16px)
+  const paddingLeft = 8 + depth * 12;
   const favorited = isFavorite(node.path);
 
   const handleStarClick = (e: React.MouseEvent) => {
@@ -137,7 +163,7 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
         <button
           onClick={onToggleExpand}
           onContextMenu={handleContextMenu}
-          className="group/item w-full text-left py-1.5 pr-2 flex items-center gap-1.5 text-sm transition-colors"
+          className="group/item w-full text-left py-1.5 pr-2 flex items-center gap-1 text-sm transition-colors relative"
           style={{
             paddingLeft,
             color: 'var(--text-secondary)',
@@ -151,8 +177,9 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
             e.currentTarget.style.color = 'var(--text-secondary)';
           }}
         >
+          <IndentGuides depth={depth} />
           <span
-            className="w-4 h-4 flex items-center justify-center transition-transform"
+            className="w-3.5 h-3.5 flex items-center justify-center transition-transform flex-shrink-0"
             style={{
               color: 'var(--text-secondary)',
               transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
@@ -160,13 +187,13 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
           >
             <ChevronIcon />
           </span>
-          <span className="w-4 h-4 flex items-center justify-center">
+          <span className="w-3.5 h-3.5 flex items-center justify-center flex-shrink-0">
             <FolderIcon open={isExpanded} />
           </span>
-          <span className="truncate flex-1">{node.name}</span>
+          <span className="truncate flex-1 min-w-0">{node.name}</span>
           <span
             onClick={handleStarClick}
-            className={`w-4 h-4 flex items-center justify-center transition-opacity cursor-pointer ${favorited ? 'opacity-100' : 'opacity-0 group-hover/item:opacity-100'}`}
+            className={`w-3.5 h-3.5 flex items-center justify-center transition-opacity cursor-pointer flex-shrink-0 ${favorited ? 'opacity-100' : 'opacity-0 group-hover/item:opacity-100'}`}
             style={{ color: favorited ? 'var(--accent)' : 'var(--text-secondary)' }}
             onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = favorited ? 'var(--accent)' : 'var(--text-secondary)'; }}
@@ -211,42 +238,46 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
     }
   };
 
+  // Files get extra indent to align with folder names (chevron width)
+  const filePaddingLeft = paddingLeft + 16;
+
   return (
     <button
       onClick={handleClick}
       onDoubleClick={() => onFileDoubleClick?.(node.path)}
       onContextMenu={handleContextMenu}
-      className="group/item w-full text-left py-1.5 pr-2 flex items-center gap-1.5 text-sm transition-colors"
-        style={{
-          paddingLeft: paddingLeft + 20,
-          backgroundColor: isSelected ? 'var(--selection-bg, color-mix(in srgb, var(--accent) 20%, transparent))' : 'transparent',
-          color: isSelected ? 'var(--selection-text, var(--accent))' : 'var(--text-primary)',
-          fontWeight: isSelected ? 500 : 400,
-        }}
-        onMouseEnter={(e) => {
-          if (!isSelected) {
-            e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isSelected) {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }
-        }}
-        title={isSplit ? 'Click to open, Ctrl+click to open in right pane' : undefined}
+      className="group/item w-full text-left py-1.5 pr-2 flex items-center gap-1 text-sm transition-colors relative"
+      style={{
+        paddingLeft: filePaddingLeft,
+        backgroundColor: isSelected ? 'var(--selection-bg, color-mix(in srgb, var(--accent) 20%, transparent))' : 'transparent',
+        color: isSelected ? 'var(--selection-text, var(--accent))' : 'var(--text-primary)',
+        fontWeight: isSelected ? 500 : 400,
+      }}
+      onMouseEnter={(e) => {
+        if (!isSelected) {
+          e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isSelected) {
+          e.currentTarget.style.backgroundColor = 'transparent';
+        }
+      }}
+      title={isSplit ? 'Click to open, Ctrl+click to open in right pane' : undefined}
+    >
+      <IndentGuides depth={depth} />
+      <FileIcon path={node.path} />
+      <span className="truncate flex-1 min-w-0">{node.name}</span>
+      <span
+        onClick={handleStarClick}
+        className={`w-3.5 h-3.5 flex items-center justify-center transition-opacity cursor-pointer flex-shrink-0 ${favorited ? 'opacity-100' : 'opacity-0 group-hover/item:opacity-100'}`}
+        style={{ color: favorited ? 'var(--accent)' : 'var(--text-secondary)' }}
+        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = favorited ? 'var(--accent)' : 'var(--text-secondary)'; }}
+        title={favorited ? 'Remove from favorites' : 'Add to favorites'}
       >
-        <FileIcon path={node.path} />
-        <span className="truncate flex-1">{node.name}</span>
-        <span
-          onClick={handleStarClick}
-          className={`w-4 h-4 flex items-center justify-center transition-opacity cursor-pointer ${favorited ? 'opacity-100' : 'opacity-0 group-hover/item:opacity-100'}`}
-          style={{ color: favorited ? 'var(--accent)' : 'var(--text-secondary)' }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--accent)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = favorited ? 'var(--accent)' : 'var(--text-secondary)'; }}
-          title={favorited ? 'Remove from favorites' : 'Add to favorites'}
-        >
-          {favorited ? <StarFilledIcon /> : <StarOutlineIcon />}
-        </span>
+        {favorited ? <StarFilledIcon /> : <StarOutlineIcon />}
+      </span>
     </button>
   );
 }

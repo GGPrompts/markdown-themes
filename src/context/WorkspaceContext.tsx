@@ -168,6 +168,27 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
   }, [storeLoading, appState.lastWorkspace, workspacePath, loadWorkspace, saveLastWorkspace]);
 
+  // Auto-refresh file tree every 8 seconds to catch new files
+  useEffect(() => {
+    if (!workspacePath) return;
+
+    const interval = setInterval(() => {
+      // Silent refresh - don't set loading state to avoid UI flicker
+      fetchFileTree(workspacePath, 5, false)
+        .then((apiTree) => {
+          const converted = convertTree(apiTree);
+          const children = converted?.children || [];
+          const sorted = sortTree(children);
+          setFileTree(sorted);
+        })
+        .catch(() => {
+          // Silently ignore refresh errors
+        });
+    }, 8000);
+
+    return () => clearInterval(interval);
+  }, [workspacePath]);
+
   return (
     <WorkspaceContext.Provider
       value={{

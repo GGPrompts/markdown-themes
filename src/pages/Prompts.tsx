@@ -9,8 +9,15 @@ import { FilePickerModal } from '../components/FilePickerModal';
 import { isPromptyFile } from '../utils/promptyUtils';
 import { FolderOpen, FileText, X, Clock, ChevronLeft } from 'lucide-react';
 
-// Default home path for WSL - can be customized
-const DEFAULT_HOME_PATH = '/home/marci';
+/**
+ * Derive home path from workspace path.
+ * e.g., /home/matt/projects/something -> /home/matt
+ */
+function getHomePath(workspacePath: string | null): string {
+  if (!workspacePath) return '/home';
+  const match = workspacePath.match(/^(\/home\/[^/]+)/);
+  return match ? match[1] : '/home';
+}
 
 export function Prompts() {
   // Get page state from context for persistence across navigation
@@ -241,7 +248,7 @@ export function Prompts() {
       <div className="flex-1 flex overflow-hidden">
         {showLibrary && (
           <PromptLibrary
-            homePath={DEFAULT_HOME_PATH}
+            homePath={getHomePath(workspacePath)}
             projectPath={workspacePath ?? undefined}
             selectedPath={currentFile ?? undefined}
             onSelectPrompt={handleFileSelect}
@@ -344,7 +351,7 @@ export function Prompts() {
           mode="file"
           onSelect={handleFilePickerSelect}
           onCancel={handleFilePickerCancel}
-          initialPath={workspacePath ?? DEFAULT_HOME_PATH}
+          initialPath={workspacePath ?? getHomePath(workspacePath)}
           filter={['.prompty']}
           title="Open Prompty File"
         />

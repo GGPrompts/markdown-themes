@@ -340,6 +340,30 @@
   box-shadow: 0 4px 12px rgba(60, 50, 40, 0.15);
 }
 
+/* Icon buttons - subtle hover without dark fill */
+.theme-film-grain [data-streamdown="code-block-copy-button"],
+.theme-film-grain [data-streamdown="code-block-download-button"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.theme-film-grain [data-streamdown="code-block-copy-button"]:hover,
+.theme-film-grain [data-streamdown="code-block-download-button"]:hover {
+  background: var(--cream-dark) !important;
+  color: var(--amber-dark) !important;
+  box-shadow: none !important;
+}
+
+/* Small icon buttons (dropdowns, toggles) - subtle hover */
+.theme-film-grain button:has(svg:only-child):hover,
+.theme-film-grain button[class*="chevron"]:hover,
+.theme-film-grain button[aria-expanded]:hover {
+  background: var(--cream-dark) !important;
+  color: var(--charcoal) !important;
+  box-shadow: none !important;
+}
+
 /* Accent buttons */
 .theme-film-grain .btn-accent {
   background: var(--amber) !important;

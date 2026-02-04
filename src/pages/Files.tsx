@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Clock, ChevronLeft } from 'lucide-react';
+import { Clock, ChevronLeft, GitBranch, GitCommit, FileDiff } from 'lucide-react';
 import { useFileWatcher } from '../hooks/useFileWatcher';
 import { useWorkspaceContext } from '../context/WorkspaceContext';
 import { usePageState } from '../context/PageStateContext';
@@ -71,7 +71,7 @@ export function Files() {
 
   // Split view state with initial state from context
   const handleSplitStateChange = useCallback(
-    (state: { isSplit: boolean; splitRatio: number; rightFile: string | null }) => {
+    (state: { isSplit: boolean; splitRatio: number; rightPaneContent: Parameters<typeof setFilesState>[0]['rightPaneContent'] }) => {
       setFilesState(state);
     },
     [setFilesState]
@@ -80,6 +80,7 @@ export function Files() {
   const {
     isSplit,
     splitRatio,
+    rightPaneContent,
     rightFile,
     toggleSplit,
     setSplitRatio,
@@ -88,7 +89,7 @@ export function Files() {
     initialState: {
       isSplit: filesState.isSplit,
       splitRatio: filesState.splitRatio,
-      rightFile: filesState.rightFile,
+      rightPaneContent: filesState.rightPaneContent,
     },
     onStateChange: handleSplitStateChange,
   });
@@ -249,7 +250,7 @@ export function Files() {
           splitRatio={splitRatio}
           onSplitRatioChange={setSplitRatio}
           onDropToRight={handleDropToRight}
-          rightFile={rightFile}
+          rightPaneContent={rightPaneContent}
           onCloseRight={handleCloseRight}
           rightIsStreaming={rightIsStreaming}
           leftPane={
@@ -355,21 +356,8 @@ export function Files() {
           }
           rightPane={
             <div className="flex-1 flex flex-col overflow-hidden">
-              {rightLoading && (
-                <div className="flex items-center justify-center h-full">
-                  <p style={{ color: 'var(--text-secondary)' }}>Loading...</p>
-                </div>
-              )}
-
-              {rightError && (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <p className="text-red-500 mb-2">{rightError}</p>
-                  </div>
-                </div>
-              )}
-
-              {!rightLoading && !rightError && !rightFile && (
+              {/* Empty state - no content selected */}
+              {!rightPaneContent && (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center">
                     <p style={{ color: 'var(--text-secondary)' }}>
@@ -379,19 +367,90 @@ export function Files() {
                 </div>
               )}
 
-              {!rightLoading && !rightError && rightFile && (
+              {/* File content type */}
+              {rightPaneContent?.type === 'file' && (
                 <>
-                  {isRightMarkdownFile && rightFrontmatter && <MetadataBar frontmatter={rightFrontmatter} />}
-                  <div className="flex-1 overflow-auto">
-                    <ViewerContainer
-                      filePath={rightFile}
-                      content={rightMarkdownContent}
-                      isStreaming={rightIsStreaming}
-                      themeClassName={themeClass}
-                      fontSize={appState.fontSize}
-                    />
-                  </div>
+                  {rightLoading && (
+                    <div className="flex items-center justify-center h-full">
+                      <p style={{ color: 'var(--text-secondary)' }}>Loading...</p>
+                    </div>
+                  )}
+
+                  {rightError && (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <p className="text-red-500 mb-2">{rightError}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {!rightLoading && !rightError && (
+                    <>
+                      {isRightMarkdownFile && rightFrontmatter && <MetadataBar frontmatter={rightFrontmatter} />}
+                      <div className="flex-1 overflow-auto">
+                        <ViewerContainer
+                          filePath={rightFile!}
+                          content={rightMarkdownContent}
+                          isStreaming={rightIsStreaming}
+                          themeClassName={themeClass}
+                          fontSize={appState.fontSize}
+                        />
+                      </div>
+                    </>
+                  )}
                 </>
+              )}
+
+              {/* Git graph content type - placeholder */}
+              {rightPaneContent?.type === 'git-graph' && (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <GitBranch size={48} style={{ color: 'var(--text-secondary)', margin: '0 auto 16px' }} />
+                    <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+                      Git Graph
+                    </h3>
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                      Coming soon
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Diff content type - placeholder */}
+              {rightPaneContent?.type === 'diff' && (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <FileDiff size={48} style={{ color: 'var(--text-secondary)', margin: '0 auto 16px' }} />
+                    <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+                      Diff View
+                    </h3>
+                    <p style={{ color: 'var(--text-secondary)' }}>
+                      Comparing: {rightPaneContent.base}
+                      {rightPaneContent.head && ` ... ${rightPaneContent.head}`}
+                    </p>
+                    <p className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>
+                      Coming soon
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Commit content type - placeholder */}
+              {rightPaneContent?.type === 'commit' && (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <GitCommit size={48} style={{ color: 'var(--text-secondary)', margin: '0 auto 16px' }} />
+                    <h3 className="text-lg font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+                      Commit Details
+                    </h3>
+                    <p className="font-mono text-sm" style={{ color: 'var(--accent)' }}>
+                      {rightPaneContent.hash.substring(0, 8)}
+                    </p>
+                    <p className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>
+                      Coming soon
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           }

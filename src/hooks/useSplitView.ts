@@ -1,9 +1,16 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 
+// Right pane content types
+export type RightPaneContent =
+  | { type: 'file'; path: string }
+  | { type: 'git-graph' }
+  | { type: 'diff'; base: string; head?: string; file?: string }
+  | { type: 'commit'; hash: string };
+
 interface SplitViewState {
   isSplit: boolean;
   splitRatio: number;
-  rightFile: string | null;
+  rightPaneContent: RightPaneContent | null;
 }
 
 interface UseSplitViewOptions {
@@ -15,11 +22,20 @@ interface UseSplitViewResult {
   isSplit: boolean;
   splitRatio: number;
   leftFile: string | null;
+  rightPaneContent: RightPaneContent | null;
+  // Convenience getter for backward compatibility
   rightFile: string | null;
   toggleSplit: () => void;
   setSplitRatio: (ratio: number) => void;
   setLeftFile: (path: string | null) => void;
+  // Legacy setter (still works for files)
   setRightFile: (path: string | null) => void;
+  // New helper functions for setting different content types
+  setRightPaneFile: (path: string) => void;
+  setRightPaneGitGraph: () => void;
+  setRightPaneDiff: (base: string, head?: string, file?: string) => void;
+  setRightPaneCommit: (hash: string) => void;
+  clearRightPane: () => void;
 }
 
 export function useSplitView(options: UseSplitViewOptions = {}): UseSplitViewResult {
@@ -28,7 +44,9 @@ export function useSplitView(options: UseSplitViewOptions = {}): UseSplitViewRes
   const [isSplit, setIsSplit] = useState(initialState?.isSplit ?? false);
   const [splitRatio, setSplitRatioState] = useState(initialState?.splitRatio ?? 0.5);
   const [leftFile, setLeftFile] = useState<string | null>(null);
-  const [rightFile, setRightFileState] = useState<string | null>(initialState?.rightFile ?? null);
+  const [rightPaneContent, setRightPaneContentState] = useState<RightPaneContent | null>(
+    initialState?.rightPaneContent ?? null
+  );
 
   // Track if this is the initial mount to avoid triggering onStateChange
   const isInitialMount = useRef(true);
@@ -39,8 +57,8 @@ export function useSplitView(options: UseSplitViewOptions = {}): UseSplitViewRes
       isInitialMount.current = false;
       return;
     }
-    onStateChange?.({ isSplit, splitRatio, rightFile });
-  }, [isSplit, splitRatio, rightFile, onStateChange]);
+    onStateChange?.({ isSplit, splitRatio, rightPaneContent });
+  }, [isSplit, splitRatio, rightPaneContent, onStateChange]);
 
   const toggleSplit = useCallback(() => {
     setIsSplit((prev) => !prev);
@@ -52,18 +70,53 @@ export function useSplitView(options: UseSplitViewOptions = {}): UseSplitViewRes
     setSplitRatioState(clampedRatio);
   }, []);
 
+  // Legacy setter for backward compatibility - sets file content type
   const setRightFile = useCallback((path: string | null) => {
-    setRightFileState(path);
+    if (path === null) {
+      setRightPaneContentState(null);
+    } else {
+      setRightPaneContentState({ type: 'file', path });
+    }
   }, []);
+
+  // New helper functions
+  const setRightPaneFile = useCallback((path: string) => {
+    setRightPaneContentState({ type: 'file', path });
+  }, []);
+
+  const setRightPaneGitGraph = useCallback(() => {
+    setRightPaneContentState({ type: 'git-graph' });
+  }, []);
+
+  const setRightPaneDiff = useCallback((base: string, head?: string, file?: string) => {
+    setRightPaneContentState({ type: 'diff', base, head, file });
+  }, []);
+
+  const setRightPaneCommit = useCallback((hash: string) => {
+    setRightPaneContentState({ type: 'commit', hash });
+  }, []);
+
+  const clearRightPane = useCallback(() => {
+    setRightPaneContentState(null);
+  }, []);
+
+  // Convenience getter for backward compatibility
+  const rightFile = rightPaneContent?.type === 'file' ? rightPaneContent.path : null;
 
   return {
     isSplit,
     splitRatio,
     leftFile,
+    rightPaneContent,
     rightFile,
     toggleSplit,
     setSplitRatio,
     setLeftFile,
     setRightFile,
+    setRightPaneFile,
+    setRightPaneGitGraph,
+    setRightPaneDiff,
+    setRightPaneCommit,
+    clearRightPane,
   };
 }

@@ -1,12 +1,13 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import type { Tab } from '../hooks/useTabManager';
+import type { RightPaneContent } from '../hooks/useSplitView';
 
 interface FilesPageState {
   tabs: Tab[];
   activeTabId: string | null;
   isSplit: boolean;
   splitRatio: number;
-  rightFile: string | null;
+  rightPaneContent: RightPaneContent | null;
 }
 
 interface PromptsPageState {
@@ -45,7 +46,7 @@ const defaultState: PageState = {
     activeTabId: null,
     isSplit: false,
     splitRatio: 0.5,
-    rightFile: null,
+    rightPaneContent: null,
   },
   prompts: {
     currentFile: null,

@@ -4,7 +4,6 @@ import {
   getRailColor,
   RAIL_COLORS,
   type Commit,
-  type GraphLayout,
 } from './graphLayout';
 
 // Helper to create a commit

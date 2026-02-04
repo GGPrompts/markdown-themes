@@ -1,4 +1,5 @@
 import { useRef, useCallback, useState, type ReactNode } from 'react';
+import type { RightPaneContent } from '../hooks/useSplitView';
 
 interface SplitViewProps {
   isSplit: boolean;
@@ -7,7 +8,7 @@ interface SplitViewProps {
   leftPane: ReactNode;
   rightPane: ReactNode;
   onDropToRight?: (path: string) => void;
-  rightFile?: string | null;
+  rightPaneContent?: RightPaneContent | null;
   onCloseRight?: () => void;
   rightIsStreaming?: boolean;
 }
@@ -19,7 +20,7 @@ export function SplitView({
   leftPane,
   rightPane,
   onDropToRight,
-  rightFile,
+  rightPaneContent,
   onCloseRight,
   rightIsStreaming,
 }: SplitViewProps) {
@@ -118,7 +119,7 @@ export function SplitView({
       >
         {/* Right pane header */}
         <RightPaneHeader
-          rightFile={rightFile}
+          rightPaneContent={rightPaneContent}
           rightIsStreaming={rightIsStreaming}
           onClose={onCloseRight}
         />
@@ -128,16 +129,42 @@ export function SplitView({
   );
 }
 
+function getHeaderTitle(content: RightPaneContent | null | undefined): { title: string; subtitle?: string } {
+  if (!content) {
+    return { title: 'Drag a tab here' };
+  }
+
+  switch (content.type) {
+    case 'file': {
+      const fileName = content.path.split('/').pop() ?? content.path.split('\\').pop() ?? content.path;
+      return { title: fileName, subtitle: content.path };
+    }
+    case 'git-graph':
+      return { title: 'Git Graph' };
+    case 'diff': {
+      const base = content.base.substring(0, 8);
+      const head = content.head ? content.head.substring(0, 8) : 'working tree';
+      return { title: `${base}...${head}`, subtitle: content.file };
+    }
+    case 'commit': {
+      const hash = content.hash.substring(0, 8);
+      return { title: `Commit ${hash}` };
+    }
+  }
+}
+
 function RightPaneHeader({
-  rightFile,
+  rightPaneContent,
   rightIsStreaming,
   onClose,
 }: {
-  rightFile?: string | null;
+  rightPaneContent?: RightPaneContent | null;
   rightIsStreaming?: boolean;
   onClose?: () => void;
 }) {
-  const fileName = rightFile?.split('/').pop() ?? rightFile?.split('\\').pop();
+  const { title, subtitle } = getHeaderTitle(rightPaneContent);
+  const hasContent = !!rightPaneContent;
+  const showStreaming = rightIsStreaming && rightPaneContent?.type === 'file';
 
   return (
     <div
@@ -148,16 +175,16 @@ function RightPaneHeader({
         minHeight: '36px',
       }}
     >
-      {rightFile ? (
+      {hasContent ? (
         <>
           <span
             className="flex-1 text-sm truncate"
             style={{ color: 'var(--text-primary)' }}
-            title={rightFile}
+            title={subtitle ?? title}
           >
-            {fileName}
+            {title}
           </span>
-          {rightIsStreaming && (
+          {showStreaming && (
             <span className="flex items-center gap-1 text-xs" style={{ color: 'var(--accent)' }}>
               <span className="relative flex h-2 w-2">
                 <span
@@ -198,7 +225,7 @@ function RightPaneHeader({
           className="flex-1 text-sm"
           style={{ color: 'var(--text-secondary)' }}
         >
-          Drag a tab here
+          {title}
         </span>
       )}
     </div>

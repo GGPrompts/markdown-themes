@@ -154,24 +154,38 @@ function formatUserMessage(entry: UserMessage): string {
 /**
  * Format an assistant message to markdown.
  * Handles text, thinking, and tool_use blocks.
+ * @param entry The assistant message entry
+ * @param expandLastThinking If true, expands the last thinking block in this message
  */
-function formatAssistantMessage(entry: AssistantMessage): string {
+function formatAssistantMessage(entry: AssistantMessage, expandLastThinking = false): string {
   const content = entry.message.content;
 
   if (typeof content === 'string') {
     return `## Assistant\n\n${content}`;
   }
 
+  // Find the index of the last thinking block if we need to expand it
+  let lastThinkingIndex = -1;
+  if (expandLastThinking) {
+    for (let i = content.length - 1; i >= 0; i--) {
+      if (content[i].type === 'thinking') {
+        lastThinkingIndex = i;
+        break;
+      }
+    }
+  }
+
   const parts: string[] = ['## Assistant'];
 
-  for (const block of content) {
+  for (let i = 0; i < content.length; i++) {
+    const block = content[i];
     switch (block.type) {
       case 'text':
         parts.push(block.text);
         break;
 
       case 'thinking':
-        parts.push(formatThinkingBlock(block.thinking));
+        parts.push(formatThinkingBlock(block.thinking, i === lastThinkingIndex));
         break;
 
       case 'tool_use':
@@ -189,9 +203,11 @@ function formatAssistantMessage(entry: AssistantMessage): string {
 
 /**
  * Format thinking block as collapsible details element.
+ * @param thinking The thinking content
+ * @param isExpanded Whether to render the details element open (default false)
  */
-function formatThinkingBlock(thinking: string): string {
-  return `<details>
+function formatThinkingBlock(thinking: string, isExpanded = false): string {
+  return `<details${isExpanded ? ' open' : ''}>
 <summary>Thinking</summary>
 
 ${thinking}
@@ -300,14 +316,25 @@ export function jsonlToMarkdown(content: string, maxEntries: number = 50): strin
 
   const formattedParts: string[] = [];
 
-  for (const entry of entries) {
+  // Find the index of the last assistant message to expand its last thinking block
+  let lastAssistantIndex = -1;
+  for (let i = entries.length - 1; i >= 0; i--) {
+    if (entries[i].type === 'assistant') {
+      lastAssistantIndex = i;
+      break;
+    }
+  }
+
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
     switch (entry.type) {
       case 'user':
         formattedParts.push(formatUserMessage(entry as UserMessage));
         break;
 
       case 'assistant':
-        formattedParts.push(formatAssistantMessage(entry as AssistantMessage));
+        // Expand last thinking block only in the last assistant message
+        formattedParts.push(formatAssistantMessage(entry as AssistantMessage, i === lastAssistantIndex));
         break;
 
       case 'summary':

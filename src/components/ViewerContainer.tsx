@@ -102,6 +102,8 @@ export function ViewerContainer({
           isStreaming={isStreaming}
           themeClassName={themeClassName}
           fontSize={fontSize}
+          filePath={filePath}
+          repoPath={repoPath}
         />
       );
 

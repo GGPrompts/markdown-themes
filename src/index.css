@@ -160,6 +160,42 @@ body {
   50% { opacity: 0; }
 }
 
+/* Prose diff highlighting for markdown viewer */
+.prose [data-diff="added"] {
+  background-color: var(--diff-added);
+  border-radius: calc(var(--radius) * 0.5);
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  margin-left: -0.5rem;
+  margin-right: -0.5rem;
+}
+
+.prose [data-diff="modified"] {
+  background-color: var(--diff-modified);
+  border-radius: calc(var(--radius) * 0.5);
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  margin-left: -0.5rem;
+  margin-right: -0.5rem;
+}
+
+/* Smooth transition when diff highlighting appears/disappears */
+.prose > p,
+.prose > h1,
+.prose > h2,
+.prose > h3,
+.prose > h4,
+.prose > h5,
+.prose > h6,
+.prose > pre,
+.prose > ul,
+.prose > ol,
+.prose > blockquote,
+.prose > table,
+.prose > hr {
+  transition: background-color 0.3s ease-out;
+}
+
 @keyframes waveform-pulse {
   0%, 100% { transform: scaleY(1); }
   50% { transform: scaleY(0.6); }

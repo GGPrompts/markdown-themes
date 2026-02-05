@@ -158,6 +158,26 @@ export interface AllChangedLinesResult {
   totalLines: number;
 }
 
+export type BlockChangeType = 'added' | 'modified';
+
+export interface BlockRange {
+  /** Starting line number (1-based) */
+  startLine: number;
+  /** Ending line number (1-based, inclusive) */
+  endLine: number;
+}
+
+export interface BlockWithChange {
+  /** The block content */
+  content: string;
+  /** Block index (0-based) */
+  index: number;
+  /** Line range in the original markdown */
+  lines: BlockRange;
+  /** Change type if this block contains changes, undefined if unchanged */
+  changeType?: BlockChangeType;
+}
+
 /**
  * Find the first line that differs between old and new content.
  * Used for code files where line-level precision is needed.
@@ -245,4 +265,115 @@ export function findAllChangedLines(oldContent: string, newContent: string): All
     changedLines,
     totalLines: newLines.length,
   };
+}
+
+/**
+ * Split markdown into blocks with line number tracking.
+ * Each block knows its start and end line numbers.
+ */
+function splitIntoBlocksWithLines(content: string): { blocks: string[]; lineRanges: BlockRange[] } {
+  if (!content) return { blocks: [], lineRanges: [] };
+
+  // Normalize line endings
+  const normalized = content.replace(/\r\n/g, '\n');
+
+  const blocks: string[] = [];
+  const lineRanges: BlockRange[] = [];
+  let currentBlock = '';
+  let currentBlockStartLine = 1;
+  let currentLine = 1;
+  let inCodeBlock = false;
+
+  const lines = normalized.split('\n');
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const isCodeFence = line.startsWith('```') || line.startsWith('~~~');
+
+    if (isCodeFence) {
+      if (inCodeBlock) {
+        // End of code block
+        currentBlock += line + '\n';
+        blocks.push(currentBlock.trim());
+        lineRanges.push({ startLine: currentBlockStartLine, endLine: currentLine });
+        currentBlock = '';
+        currentBlockStartLine = currentLine + 1;
+        inCodeBlock = false;
+      } else {
+        // Start of code block - save current block first
+        if (currentBlock.trim()) {
+          blocks.push(currentBlock.trim());
+          lineRanges.push({ startLine: currentBlockStartLine, endLine: currentLine - 1 });
+        }
+        currentBlock = line + '\n';
+        currentBlockStartLine = currentLine;
+        inCodeBlock = true;
+      }
+    } else if (inCodeBlock) {
+      // Inside code block - just accumulate
+      currentBlock += line + '\n';
+    } else if (line === '') {
+      // Empty line outside code block - might be block separator
+      if (currentBlock.trim()) {
+        blocks.push(currentBlock.trim());
+        lineRanges.push({ startLine: currentBlockStartLine, endLine: currentLine - 1 });
+        currentBlock = '';
+        currentBlockStartLine = currentLine + 1;
+      } else {
+        // Skip empty lines, but update start line for next block
+        currentBlockStartLine = currentLine + 1;
+      }
+    } else {
+      currentBlock += line + '\n';
+    }
+    currentLine++;
+  }
+
+  // Don't forget the last block
+  if (currentBlock.trim()) {
+    blocks.push(currentBlock.trim());
+    lineRanges.push({ startLine: currentBlockStartLine, endLine: currentLine - 1 });
+  }
+
+  return { blocks, lineRanges };
+}
+
+/**
+ * Map git diff line changes to markdown blocks.
+ * Returns blocks with their change types based on whether they contain changed lines.
+ *
+ * @param content The markdown content
+ * @param changedLines Map of line numbers to change types from git diff
+ * @returns Array of blocks with their change types
+ */
+export function mapLinesToBlocks(
+  content: string,
+  changedLines: Map<number, 'added' | 'modified'>
+): BlockWithChange[] {
+  const { blocks, lineRanges } = splitIntoBlocksWithLines(content);
+
+  return blocks.map((block, index) => {
+    const range = lineRanges[index];
+    let changeType: BlockChangeType | undefined;
+
+    // Check if any line in this block is changed
+    for (let line = range.startLine; line <= range.endLine; line++) {
+      const lineChange = changedLines.get(line);
+      if (lineChange) {
+        // Prefer 'added' over 'modified' if block has both
+        if (lineChange === 'added' || changeType === undefined) {
+          changeType = lineChange;
+        }
+        // If we find 'added', that takes precedence
+        if (changeType === 'added') break;
+      }
+    }
+
+    return {
+      content: block,
+      index,
+      lines: range,
+      changeType,
+    };
+  });
 }

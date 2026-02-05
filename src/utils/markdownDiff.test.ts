@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findFirstChangedBlock, getScrollPercentage, findFirstChangedLine, findAllChangedLines } from './markdownDiff';
+import { findFirstChangedBlock, getScrollPercentage, findFirstChangedLine, findAllChangedLines, mapLinesToBlocks } from './markdownDiff';
 
 describe('findFirstChangedBlock', () => {
   it('returns -1 when content is identical', () => {
@@ -248,5 +248,98 @@ describe('findAllChangedLines', () => {
     const newContent = 'line1\nline2\nline3\nline4\nline5';
     const result = findAllChangedLines(old, newContent);
     expect(result.totalLines).toBe(5);
+  });
+});
+
+describe('mapLinesToBlocks', () => {
+  it('returns blocks with no changes when no lines are changed', () => {
+    const content = '# Hello\n\nWorld';
+    const changedLines = new Map<number, 'added' | 'modified'>();
+    const result = mapLinesToBlocks(content, changedLines);
+
+    expect(result.length).toBe(2);
+    expect(result[0].changeType).toBeUndefined();
+    expect(result[1].changeType).toBeUndefined();
+  });
+
+  it('marks block as added when its line is added', () => {
+    const content = '# Hello\n\nWorld\n\nNew paragraph';
+    const changedLines = new Map<number, 'added' | 'modified'>([
+      [5, 'added'],
+    ]);
+    const result = mapLinesToBlocks(content, changedLines);
+
+    expect(result.length).toBe(3);
+    expect(result[0].changeType).toBeUndefined();
+    expect(result[1].changeType).toBeUndefined();
+    expect(result[2].changeType).toBe('added');
+  });
+
+  it('marks block as modified when its line is modified', () => {
+    const content = '# Hello\n\nWorld changed';
+    const changedLines = new Map<number, 'added' | 'modified'>([
+      [3, 'modified'],
+    ]);
+    const result = mapLinesToBlocks(content, changedLines);
+
+    expect(result.length).toBe(2);
+    expect(result[0].changeType).toBeUndefined();
+    expect(result[1].changeType).toBe('modified');
+  });
+
+  it('handles multiple changed blocks', () => {
+    const content = '# Changed heading\n\nSecond paragraph\n\nThird changed';
+    const changedLines = new Map<number, 'added' | 'modified'>([
+      [1, 'modified'],
+      [5, 'added'],
+    ]);
+    const result = mapLinesToBlocks(content, changedLines);
+
+    expect(result.length).toBe(3);
+    expect(result[0].changeType).toBe('modified');
+    expect(result[1].changeType).toBeUndefined();
+    expect(result[2].changeType).toBe('added');
+  });
+
+  it('prefers added over modified when block has both', () => {
+    // A multi-line block with both added and modified lines
+    const content = 'Line 1\nLine 2\nLine 3';
+    const changedLines = new Map<number, 'added' | 'modified'>([
+      [1, 'modified'],
+      [2, 'added'],
+    ]);
+    const result = mapLinesToBlocks(content, changedLines);
+
+    expect(result.length).toBe(1);
+    expect(result[0].changeType).toBe('added');
+  });
+
+  it('handles code blocks as single blocks', () => {
+    const content = '# Title\n\n```js\nconst x = 1;\nconst y = 2;\n```\n\nAfter';
+    const changedLines = new Map<number, 'added' | 'modified'>([
+      [4, 'modified'], // Line inside code block
+    ]);
+    const result = mapLinesToBlocks(content, changedLines);
+
+    expect(result.length).toBe(3);
+    expect(result[0].changeType).toBeUndefined(); // Title
+    expect(result[1].changeType).toBe('modified'); // Code block
+    expect(result[2].changeType).toBeUndefined(); // After
+  });
+
+  it('returns correct line ranges for blocks', () => {
+    const content = '# Title\n\nParagraph one\nwith two lines\n\nParagraph two';
+    const changedLines = new Map<number, 'added' | 'modified'>();
+    const result = mapLinesToBlocks(content, changedLines);
+
+    expect(result.length).toBe(3);
+    expect(result[0].lines).toEqual({ startLine: 1, endLine: 1 });
+    expect(result[1].lines).toEqual({ startLine: 3, endLine: 4 });
+    expect(result[2].lines).toEqual({ startLine: 6, endLine: 6 });
+  });
+
+  it('handles empty content', () => {
+    const result = mapLinesToBlocks('', new Map());
+    expect(result.length).toBe(0);
   });
 });

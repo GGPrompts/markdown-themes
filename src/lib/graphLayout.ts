@@ -156,13 +156,14 @@ export function calculateGraphLayout(commits: Commit[]): GraphLayout {
       row,
     });
 
-    // Handle parents
-    if (commit.parents.length === 0) {
+    // Handle parents (guard against undefined parents from API)
+    const parents = commit.parents ?? [];
+    if (parents.length === 0) {
       // Root commit - this rail becomes inactive
       activeRails.delete(rail);
     } else {
       // First parent continues on the same rail
-      const firstParent = commit.parents[0];
+      const firstParent = parents[0];
       activeRails.set(rail, firstParent);
 
       // Register this rail as expecting the first parent
@@ -171,8 +172,8 @@ export function calculateGraphLayout(commits: Commit[]): GraphLayout {
       expectedParents.set(firstParent, existing);
 
       // Additional parents get new rails (merge scenario)
-      for (let i = 1; i < commit.parents.length; i++) {
-        const parentHash = commit.parents[i];
+      for (let i = 1; i < parents.length; i++) {
+        const parentHash = parents[i];
 
         // Find first free rail for this branch
         let newRail = 0;
@@ -193,7 +194,7 @@ export function calculateGraphLayout(commits: Commit[]): GraphLayout {
 
   // Generate connections
   for (const node of nodes) {
-    for (const parentHash of node.parents) {
+    for (const parentHash of node.parents ?? []) {
       const parentRow = commitRowMap.get(parentHash);
       const parentRail = commitRailMap.get(parentHash);
 

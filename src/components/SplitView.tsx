@@ -197,6 +197,9 @@ function getHeaderTitle(content: RightPaneContent | null | undefined): { title: 
     }
     case 'chat':
       return { title: 'AI Chat' };
+    default:
+      // Handle unknown/corrupted content types gracefully
+      return { title: 'Unknown' };
   }
 }
 

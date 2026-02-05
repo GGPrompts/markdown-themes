@@ -319,6 +319,30 @@ describe('calculateGraphLayout', () => {
   });
 });
 
+describe('edge cases', () => {
+  it('handles commits with undefined parents gracefully', () => {
+    // Simulates corrupted/malformed API response
+    const commits = [
+      {
+        hash: 'aaa',
+        shortHash: 'aaa',
+        message: 'test',
+        author: 'Test',
+        date: '2026-02-04T12:00:00Z',
+        parents: undefined as unknown as string[], // Force undefined
+        refs: [],
+      },
+    ];
+
+    // Should not throw
+    const result = calculateGraphLayout(commits);
+
+    expect(result.nodes).toHaveLength(1);
+    expect(result.nodes[0].rail).toBe(0);
+    expect(result.connections).toHaveLength(0);
+  });
+});
+
 describe('getRailColor', () => {
   it('returns colors for rails 0-7', () => {
     expect(getRailColor(0)).toBe('#6bcaf7');  // cyan

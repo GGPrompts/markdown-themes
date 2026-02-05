@@ -389,14 +389,93 @@ export function Files() {
     }
   }, [appState.followStreamingMode, streamingFile, rightPaneFilePath, isSplit, toggleSplit, setRightPaneFile, openRightTab, addRecentFile]);
 
-  // NOTE: Auto-open tabs feature disabled - was causing crashes when combined
-  // with right pane streaming. The right pane already shows the streaming file.
-  // TODO: Re-enable when right pane has its own tab system.
+  // Track files that have been auto-opened as tabs (to avoid re-opening)
+  const autoOpenedFilesRef = useRef<Set<string>>(new Set());
 
-  // Stub for WorkingTree callback (auto-tab-close feature disabled)
-  const handleCommitSuccess = useCallback((_committedFiles: string[]) => {
-    // No-op: auto-opened tabs feature is disabled
-  }, []);
+  // Auto-open changed files as tabs in the RIGHT pane when Follow mode is active
+  useEffect(() => {
+    if (!appState.followStreamingMode || !isSplit) return;
+
+    // Find new changed files that haven't been auto-opened yet
+    const newChangedFiles: string[] = [];
+    changedFiles.forEach((filePath) => {
+      if (autoOpenedFilesRef.current.has(filePath)) return;
+
+      // Check if file is already open as a tab in the right pane
+      const existingTab = rightPaneTabs.find((t) => t.path === filePath);
+      if (existingTab) return;
+
+      // Apply the same filtering as the streaming file follow logic
+      const fileName = filePath.split('/').pop() || '';
+      const ext = fileName.split('.').pop()?.toLowerCase() || '';
+
+      // Skip internal/generated files
+      if (
+        filePath.includes('/.beads/') ||
+        filePath.includes('/node_modules/') ||
+        filePath.includes('/.git/') ||
+        filePath.includes('/coverage/') ||
+        filePath.includes('/.nyc_output/') ||
+        filePath.includes('/dist/') ||
+        filePath.includes('/build/') ||
+        fileName.startsWith('.') ||
+        fileName === 'package-lock.json' ||
+        fileName === 'yarn.lock' ||
+        fileName === 'pnpm-lock.yaml' ||
+        fileName === 'composer.lock' ||
+        ext === 'log' ||
+        fileName.includes('.test-result') ||
+        fileName.includes('.junit') ||
+        (ext === 'json' && (
+          fileName.includes('test') ||
+          fileName.includes('result') ||
+          fileName.includes('report') ||
+          fileName.includes('coverage')
+        )) ||
+        ext === 'jsonl' ||
+        ext === 'ndjson'
+      ) {
+        return;
+      }
+
+      // Only follow source code and documentation files
+      const followableExtensions = new Set([
+        'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs',
+        'py', 'rb', 'go', 'rs', 'java', 'kt', 'swift',
+        'c', 'cpp', 'h', 'hpp', 'cs',
+        'php', 'vue', 'svelte', 'astro',
+        'md', 'mdx', 'markdown', 'txt', 'rst',
+        'css', 'scss', 'sass', 'less',
+        'json', 'yaml', 'yml', 'toml', 'ini',
+        'xml', 'html', 'htm',
+        'sh', 'bash', 'zsh',
+      ]);
+
+      if (followableExtensions.has(ext)) {
+        newChangedFiles.push(filePath);
+      }
+    });
+
+    // Open new tabs in the right pane as preview tabs
+    newChangedFiles.forEach((filePath) => {
+      autoOpenedFilesRef.current.add(filePath);
+      openRightTab(filePath, true); // preview mode
+    });
+  }, [appState.followStreamingMode, isSplit, changedFiles, rightPaneTabs, openRightTab]);
+
+  // Handle commit success - close auto-opened tabs for committed files
+  const handleCommitSuccess = useCallback((committedFiles: string[]) => {
+    const committedSet = new Set(committedFiles);
+
+    // Find and close tabs in the right pane that were auto-opened and are now committed
+    const tabsToClose = rightPaneTabs.filter(
+      (t) => t.isPreview && committedSet.has(t.path)
+    );
+    tabsToClose.forEach((t) => closeRightTab(t.id));
+
+    // Remove from tracking ref
+    committedFiles.forEach((f) => autoOpenedFilesRef.current.delete(f));
+  }, [rightPaneTabs, closeRightTab]);
 
   const themeClass = themes.find((t) => t.id === appState.theme)?.className ?? '';
 

@@ -294,9 +294,9 @@
   background-size: 200px 10px;
 }
 
-/* Code Blocks - IC/Terminal on PCB */
+/* Code Blocks - Terminal on PCB */
 .theme-circuit-board .prose pre {
-  background: var(--ic-body);
+  background: var(--pcb-green-dark);
   border: 2px solid var(--tin);
   box-shadow: var(--shadow-component);
   padding: 1.5rem;
@@ -403,14 +403,14 @@
 
 /* Shiki syntax highlighting */
 .theme-circuit-board .streamdown-content pre[data-streamdown] {
-  background: var(--ic-body) !important;
+  background: var(--pcb-green-dark) !important;
   border: 2px solid var(--tin);
   box-shadow: var(--shadow-component);
 }
 
 /* Catch-all for code blocks outside .prose (frontmatter, viewers, etc) */
 .theme-circuit-board pre:not(.prose pre) {
-  background: #2D2D2D;
+  background: #0F2D1A;  /* PCB dark green */
   color: #33FF33;
 }
 
@@ -439,7 +439,7 @@
 .theme-circuit-board {
   /* Shiki base colors */
   --shiki-foreground: #33FF33;
-  --shiki-background: #2D2D2D;
+  --shiki-background: #0F2D1A;  /* PCB dark green */
 
   /* Shiki token colors - PCB palette */
   --shiki-token-constant: var(--led-amber);           /* Amber LED for constants */

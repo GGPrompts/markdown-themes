@@ -261,6 +261,13 @@ export function Files() {
     onStateChange: handleRightPaneTabsStateChange,
   });
 
+  // Clear rightFile when all tabs are closed (so pane doesn't show stale content)
+  useEffect(() => {
+    if (rightPaneTabs.length === 0 && rightPaneContent?.type === 'file') {
+      setRightFile(null);
+    }
+  }, [rightPaneTabs.length, rightPaneContent?.type, setRightFile]);
+
   // Binary file types that have dedicated viewers fetching their own content
   // Skip file watcher for these to avoid binary data leaking to markdown renderer
   const BINARY_EXTENSIONS = new Set([

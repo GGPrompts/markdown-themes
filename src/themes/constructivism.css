@@ -469,7 +469,7 @@
 }
 
 /* Shiki syntax highlighting - Streamdown specific */
-.theme-constructivism .streamdown-content pre.shiki {
+.theme-constructivism .streamdown-content pre[data-streamdown] {
   background: var(--black) !important;
   border: 4px solid var(--grey-industrial);
 }

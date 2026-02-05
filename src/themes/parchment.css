@@ -350,8 +350,8 @@
 }
 
 /* === Shiki code highlighting - Sepia filter === */
-.theme-parchment .prose pre.shiki,
-.theme-parchment .streamdown-content pre.shiki {
+.theme-parchment .prose pre[data-streamdown],
+.theme-parchment .streamdown-content pre[data-streamdown] {
   background: linear-gradient(135deg, var(--parchment-light) 0%, var(--parchment) 100%) !important;
   border: 2px solid var(--ink-light);
   filter: sepia(15%);

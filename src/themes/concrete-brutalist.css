@@ -402,7 +402,7 @@
 }
 
 /* Shiki syntax highlighting */
-.theme-concrete-brutalist .streamdown-content pre.shiki {
+.theme-concrete-brutalist .streamdown-content pre[data-streamdown] {
   background: var(--charcoal) !important;
   border: 4px solid var(--concrete-mid);
   box-shadow: var(--shadow-inset);

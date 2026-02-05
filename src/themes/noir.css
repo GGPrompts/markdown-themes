@@ -479,7 +479,7 @@
 /* ============================================
    SHIKI CODE THEME OVERRIDE
 ============================================ */
-.theme-noir .streamdown-content pre.shiki {
+.theme-noir .streamdown-content pre[data-streamdown] {
   background-color: var(--bg-secondary) !important;
   border: 1px solid var(--border);
 }

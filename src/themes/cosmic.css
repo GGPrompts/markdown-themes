@@ -313,7 +313,7 @@
 }
 
 /* Shiki code blocks */
-.theme-cosmic .streamdown-content pre.shiki {
+.theme-cosmic .streamdown-content pre[data-streamdown] {
   background: linear-gradient(135deg, var(--deep-space), rgba(45, 27, 78, 0.4)) !important;
   border: 1px solid rgba(224, 86, 160, 0.2);
   border-radius: 16px;

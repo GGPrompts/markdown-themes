@@ -346,7 +346,7 @@
 }
 
 /* Shiki syntax highlighting */
-.theme-industrial .streamdown-content pre.shiki {
+.theme-industrial .streamdown-content pre[data-streamdown] {
   background: var(--oil-black) !important;
   border: 3px solid var(--steel-mid);
   box-shadow: var(--shadow-inset), 0 2px 0 rgba(255, 255, 255, 0.05);

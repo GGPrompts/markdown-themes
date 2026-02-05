@@ -181,7 +181,7 @@
 }
 
 /* Shiki code block overrides */
-.theme-glassmorphism .streamdown-content pre.shiki {
+.theme-glassmorphism .streamdown-content pre[data-streamdown] {
   background: rgba(10, 8, 24, 0.85) !important;
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);

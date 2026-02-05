@@ -499,7 +499,7 @@
    SHIKI CODE BLOCK STYLING
    ======================================== */
 
-.theme-retro-terminal .streamdown-content pre.shiki {
+.theme-retro-terminal .streamdown-content pre[data-streamdown] {
   background: var(--crt-black) !important;
   border: 1px solid var(--phosphor-dark);
   box-shadow: var(--shadow-inset);

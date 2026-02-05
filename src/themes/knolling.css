@@ -310,7 +310,7 @@
 }
 
 /* Shiki syntax highlighting - Objects on surface */
-.theme-knolling .streamdown-content pre.shiki {
+.theme-knolling .streamdown-content pre[data-streamdown] {
   background: var(--surface-white) !important;
   border: 1px solid var(--shadow-light);
   box-shadow: var(--shadow-object);

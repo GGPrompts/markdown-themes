@@ -395,7 +395,7 @@
 }
 
 /* Shiki syntax highlighting */
-.theme-byzantine .streamdown-content pre.shiki {
+.theme-byzantine .streamdown-content pre[data-streamdown] {
   background: var(--purple-dark) !important;
   border: 2px solid rgba(212, 160, 18, 0.4);
   box-shadow: var(--shadow-inset), var(--shadow-gold);

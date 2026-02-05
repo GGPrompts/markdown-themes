@@ -295,12 +295,12 @@
 }
 
 /* Shiki code blocks */
-.theme-art-deco .streamdown-content pre.shiki {
+.theme-art-deco .streamdown-content pre[data-streamdown] {
   background: var(--bg-secondary) !important;
   border: 1px solid var(--gold);
 }
 
-.theme-art-deco .streamdown-content pre.shiki::before {
+.theme-art-deco .streamdown-content pre[data-streamdown]::before {
   content: '';
   position: absolute;
   top: 8px;

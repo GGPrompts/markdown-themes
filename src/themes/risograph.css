@@ -443,13 +443,13 @@
 }
 
 /* Shiki pre styling */
-.theme-risograph .streamdown-content pre.shiki {
+.theme-risograph .streamdown-content pre[data-streamdown] {
   background: var(--riso-cream) !important;
   border: 3px solid var(--riso-black);
   position: relative;
 }
 
-.theme-risograph .streamdown-content pre.shiki::before {
+.theme-risograph .streamdown-content pre[data-streamdown]::before {
   content: '';
   position: absolute;
   top: var(--offset-md);

@@ -391,7 +391,7 @@
 }
 
 /* Shiki syntax highlighting */
-.theme-editorial .streamdown-content pre.shiki {
+.theme-editorial .streamdown-content pre[data-streamdown] {
   background: var(--paper-warm) !important;
   border: 1px solid var(--rule-medium);
   box-shadow: var(--shadow-subtle);

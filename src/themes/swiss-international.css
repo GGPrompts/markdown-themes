@@ -331,10 +331,14 @@
   margin: 1.5rem 0;
 }
 
-/* Shiki syntax highlighting */
-.theme-swiss-international .streamdown-content pre.shiki {
+/* Shiki syntax highlighting - must use !important to override Streamdown inline styles */
+.theme-swiss-international .streamdown-content pre[data-streamdown] {
   background: var(--gray-900) !important;
   border: none;
+}
+
+.theme-swiss-international .prose pre {
+  background: var(--gray-900) !important;
 }
 
 /* Catch-all for code blocks outside .prose (frontmatter, viewers, etc) */

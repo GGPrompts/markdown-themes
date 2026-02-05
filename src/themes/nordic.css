@@ -282,7 +282,7 @@
 }
 
 /* Streamdown-specific overrides */
-.theme-nordic .streamdown-content pre.shiki {
+.theme-nordic .streamdown-content pre[data-streamdown] {
   background: linear-gradient(135deg, #FFFFFF 0%, var(--frost) 100%) !important;
   border: 1px solid var(--border-soft);
   border-radius: var(--radius);

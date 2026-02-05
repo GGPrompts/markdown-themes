@@ -322,7 +322,7 @@
 }
 
 /* Shiki syntax highlighting */
-.theme-windows31 .streamdown-content pre.shiki {
+.theme-windows31 .streamdown-content pre[data-streamdown] {
   background: var(--vga-white) !important;
   border: 2px solid;
   border-color: var(--bevel-shadow) var(--bevel-light) var(--bevel-light) var(--bevel-shadow);

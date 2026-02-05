@@ -257,7 +257,7 @@
 }
 
 /* Shiki syntax highlighting - warm sepia tones */
-.theme-dark-academia .streamdown-content pre.shiki {
+.theme-dark-academia .streamdown-content pre[data-streamdown] {
   background: linear-gradient(135deg, rgba(61, 41, 20, 0.6) 0%, rgba(42, 26, 10, 0.8) 100%) !important;
   border: 1px solid var(--gold-muted);
   box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.3), var(--shadow-warm);

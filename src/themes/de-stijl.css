@@ -409,7 +409,7 @@
 }
 
 /* Shiki syntax highlighting */
-.theme-de-stijl .streamdown-content pre.shiki {
+.theme-de-stijl .streamdown-content pre[data-streamdown] {
   background: var(--stijl-black) !important;
   border: 4px solid var(--stijl-black);
 }

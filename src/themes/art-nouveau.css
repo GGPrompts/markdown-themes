@@ -482,7 +482,7 @@
 }
 
 /* Shiki syntax highlighting - pre blocks */
-.theme-art-nouveau .streamdown-content pre.shiki {
+.theme-art-nouveau .streamdown-content pre[data-streamdown] {
   background: linear-gradient(180deg, var(--cream) 0%, var(--ivory-warm) 100%) !important;
   border: 1px solid var(--gold-wash);
   border-radius: var(--radius-organic);

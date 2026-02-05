@@ -306,7 +306,7 @@
   --shiki-token-link: var(--amber);
 }
 
-.theme-film-grain .streamdown-content pre.shiki {
+.theme-film-grain .streamdown-content pre[data-streamdown] {
   background: var(--cream) !important;
   border: 1px solid var(--warm-gray-light);
   border-radius: var(--radius);

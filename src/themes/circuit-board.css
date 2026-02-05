@@ -402,7 +402,7 @@
 }
 
 /* Shiki syntax highlighting */
-.theme-circuit-board .streamdown-content pre.shiki {
+.theme-circuit-board .streamdown-content pre[data-streamdown] {
   background: var(--ic-body) !important;
   border: 2px solid var(--tin);
   box-shadow: var(--shadow-component);

@@ -445,13 +445,13 @@
   clip-path: var(--clip-corner);
 }
 
-.theme-cyberpunk .streamdown-content pre.shiki {
+.theme-cyberpunk .streamdown-content pre[data-streamdown] {
   background: var(--bg-secondary) !important;
   border: 1px solid var(--border);
   clip-path: var(--clip-corner);
 }
 
-.theme-cyberpunk .streamdown-content pre.shiki::before {
+.theme-cyberpunk .streamdown-content pre[data-streamdown]::before {
   content: '';
   position: absolute;
   top: 0;

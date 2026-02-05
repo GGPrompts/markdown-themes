@@ -316,9 +316,11 @@ func GitGraph(w http.ResponseWriter, r *http.Request) {
 		commits = commits[:limit]
 	}
 
-	json.NewEncoder(w).Encode(models.GitGraphResponse{
-		Commits: commits,
-		HasMore: hasMore,
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"data": models.GitGraphResponse{
+			Commits: commits,
+			HasMore: hasMore,
+		},
 	})
 }
 
@@ -452,7 +454,9 @@ func GitCommitDetails(w http.ResponseWriter, r *http.Request) {
 		details.Files = parseCommitFiles(string(output), gitRoot, hash)
 	}
 
-	json.NewEncoder(w).Encode(details)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"data": details,
+	})
 }
 
 func parseCommitFiles(output string, gitRoot string, hash string) []models.GitFileChange {
@@ -603,5 +607,7 @@ func GitDiff(w http.ResponseWriter, r *http.Request) {
 		FilePath: file,
 	}
 
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"data": response,
+	})
 }

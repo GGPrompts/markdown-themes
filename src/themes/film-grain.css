@@ -297,12 +297,12 @@
   --shiki-background: transparent;
   --shiki-token-constant: var(--amber-dark);
   --shiki-token-string: var(--faded-green);
-  --shiki-token-comment: var(--warm-gray);
+  --shiki-token-comment: #6A6458;              /* Darker warm gray for readable comments */
   --shiki-token-keyword: var(--sepia);
   --shiki-token-parameter: var(--charcoal);
   --shiki-token-function: var(--faded-red);
   --shiki-token-string-expression: var(--faded-green);
-  --shiki-token-punctuation: var(--warm-gray);
+  --shiki-token-punctuation: #6A6458;          /* Match comment color for consistency */
   --shiki-token-link: var(--amber);
 }
 

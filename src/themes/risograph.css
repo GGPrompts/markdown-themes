@@ -433,7 +433,7 @@
   /* Shiki token colors - bright riso inks for visibility on cream */
   --shiki-token-constant: #B54A24;        /* Deep rust orange for constants */
   --shiki-token-string: #1A9E92;          /* Dark teal for strings */
-  --shiki-token-comment: #8A8A9F;         /* Muted gray for comments */
+  --shiki-token-comment: #5A5A6F;         /* Darker gray for readable comments */
   --shiki-token-keyword: #CC0058;         /* Deep pink for keywords */
   --shiki-token-parameter: #3D4DB7;       /* Deep blue for parameters */
   --shiki-token-function: #D42C70;        /* Bright pink for functions */

@@ -353,7 +353,7 @@
   /* Shiki token colors - VGA palette for code highlighting */
   --shiki-token-constant: var(--vga-dark-red);        /* Dark red for constants */
   --shiki-token-string: var(--vga-dark-green);        /* Dark green for strings */
-  --shiki-token-comment: var(--vga-dark-gray);        /* Gray for comments */
+  --shiki-token-comment: #505050;                      /* Darker gray for readable comments on light-gray bg */
   --shiki-token-keyword: var(--vga-dark-blue);        /* Navy blue for keywords */
   --shiki-token-parameter: var(--vga-brown);          /* Brown for parameters */
   --shiki-token-function: var(--vga-dark-magenta);    /* Purple for functions */

@@ -421,7 +421,7 @@
   /* Shiki token colors - muted editorial palette for readability */
   --shiki-token-constant: #7B4D2B;           /* Warm brown for constants */
   --shiki-token-string: #2E6B4F;             /* Deep green for strings */
-  --shiki-token-comment: var(--ink-muted);   /* Muted gray for comments */
+  --shiki-token-comment: #5A5A5A;             /* Darker gray for readable comments */
   --shiki-token-keyword: var(--accent-primary); /* Editorial red for keywords */
   --shiki-token-parameter: #5A5A5A;          /* Medium gray for parameters */
   --shiki-token-function: #3D5A80;           /* Slate blue for functions */

@@ -424,7 +424,7 @@
   /* Shiki token colors - muted, natural palette with good contrast */
   --shiki-token-constant: #8B6B4B;            /* Aged wood brown for constants */
   --shiki-token-string: #5D6B4A;              /* Moss green for strings */
-  --shiki-token-comment: var(--ink-wash);     /* Soft gray for comments */
+  --shiki-token-comment: #6A6A6A;              /* Darker gray for readable comments */
   --shiki-token-keyword: #6B7A4B;             /* Bamboo dark for keywords */
   --shiki-token-parameter: #7A6B5A;           /* Earth tone for parameters */
   --shiki-token-function: #4A5C4A;            /* Deep moss for functions */

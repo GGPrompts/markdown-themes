@@ -492,8 +492,8 @@
 
 .theme-constructivism {
   /* Shiki base colors */
-  --shiki-foreground: var(--white);
-  --shiki-background: transparent;
+  --shiki-foreground: #F5F5F0;
+  --shiki-background: #0A0A0A;
 
   /* Shiki token colors - bold, high contrast palette */
   --shiki-token-constant: #E52222;           /* Red-light for constants */

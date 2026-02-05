@@ -425,8 +425,8 @@
 
 .theme-concrete-brutalist {
   /* Shiki base colors */
-  --shiki-foreground: var(--concrete-light);
-  --shiki-background: transparent;
+  --shiki-foreground: #C4C4BC;
+  --shiki-background: #1C1C1A;
 
   /* Shiki token colors - grays and safety colors */
   --shiki-token-constant: var(--safety-orange);         /* Orange for constants */

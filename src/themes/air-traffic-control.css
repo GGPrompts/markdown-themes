@@ -420,8 +420,8 @@
 
 .theme-air-traffic-control {
   /* Shiki base colors */
-  --shiki-foreground: var(--phosphor);
-  --shiki-background: transparent;
+  --shiki-foreground: #00ff66;
+  --shiki-background: #0a0f0a;
 
   /* Shiki token colors - high contrast radar display palette */
   --shiki-token-constant: #00aaff;           /* Info blue for constants - high contrast */

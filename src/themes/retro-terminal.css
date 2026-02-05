@@ -480,8 +480,8 @@
 
 .theme-retro-terminal {
   /* Shiki base colors */
-  --shiki-foreground: var(--phosphor-mid);
-  --shiki-background: transparent;
+  --shiki-foreground: #33ff33;
+  --shiki-background: #000a00;
 
   /* Shiki token colors - phosphor palette with good contrast */
   --shiki-token-constant: var(--amber-bright);           /* Amber for constants - high contrast */

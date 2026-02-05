@@ -404,8 +404,8 @@
 
 .theme-streamline-moderne {
   /* Shiki base colors */
-  --shiki-foreground: var(--cream);
-  --shiki-background: transparent;
+  --shiki-foreground: #F5F0E6;
+  --shiki-background: #1A2A4A;
 
   /* Shiki token colors - chrome, mint, and burgundy accents */
   --shiki-token-constant: #A5D4CD;             /* Mint light for constants/numbers */

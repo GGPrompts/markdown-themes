@@ -427,8 +427,8 @@
 
 .theme-circuit-board {
   /* Shiki base colors */
-  --shiki-foreground: var(--led-green);
-  --shiki-background: transparent;
+  --shiki-foreground: #33FF33;
+  --shiki-background: #2D2D2D;
 
   /* Shiki token colors - PCB palette */
   --shiki-token-constant: var(--led-amber);           /* Amber LED for constants */

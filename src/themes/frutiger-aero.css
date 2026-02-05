@@ -403,7 +403,7 @@
 .theme-frutiger-aero {
   /* Shiki base colors */
   --shiki-foreground: #e8eef3;
-  --shiki-background: transparent;
+  --shiki-background: rgba(26, 58, 74, 0.95);
 
   /* Token colors - Good contrast on dark code bg */
   --shiki-token-constant: #7ec8f0;           /* Sky blue light for constants */

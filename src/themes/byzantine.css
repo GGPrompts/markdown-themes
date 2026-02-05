@@ -419,8 +419,8 @@
 
 .theme-byzantine {
   /* Shiki base colors */
-  --shiki-foreground: var(--ivory);
-  --shiki-background: transparent;
+  --shiki-foreground: #f5f0e1;
+  --shiki-background: #2d0a30;
 
   /* Shiki token colors - Byzantine jewel-tone palette */
   --shiki-token-constant: var(--gold-light);            /* Sacred gold for constants */

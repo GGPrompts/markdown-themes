@@ -356,7 +356,7 @@
 .theme-swiss-international {
   /* Shiki base colors */
   --shiki-foreground: #E5E5E5;
-  --shiki-background: transparent;
+  --shiki-background: #171717;
 
   /* Shiki token colors - clean, high contrast palette */
   --shiki-token-constant: #FF6B6B;           /* Soft red for constants */

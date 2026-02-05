@@ -281,8 +281,8 @@
 
 .theme-dark-academia {
   /* Shiki base colors */
-  --shiki-foreground: var(--parchment);
-  --shiki-background: transparent;
+  --shiki-foreground: #f4f1e8;
+  --shiki-background: #2a1a0a;
 
   /* Shiki token colors - brighter scholarly palette for readability */
   --shiki-token-constant: #8fc98f;                /* Bright sage green for constants */

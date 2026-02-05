@@ -370,8 +370,8 @@
 
 .theme-industrial {
   /* Shiki base colors */
-  --shiki-foreground: var(--dirty-white);
-  --shiki-background: transparent;
+  --shiki-foreground: #E8E4DC;
+  --shiki-background: #0D0F10;
 
   /* Shiki token colors - industrial palette for readability */
   --shiki-token-constant: var(--rust-accent);           /* Rust orange for constants */

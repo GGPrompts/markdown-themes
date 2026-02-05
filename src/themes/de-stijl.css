@@ -432,15 +432,15 @@
 
 .theme-de-stijl {
   /* Shiki base colors */
-  --shiki-foreground: var(--stijl-white);
-  --shiki-background: transparent;
+  --shiki-foreground: #FFFFFF;
+  --shiki-background: #000000;
 
   /* Shiki token colors - primary color palette with high contrast */
   --shiki-token-constant: #FF6B6B;           /* Soft red for constants */
   --shiki-token-string: #7ED97E;             /* Green for strings - good contrast */
   --shiki-token-comment: #888888;            /* Gray for comments */
   --shiki-token-keyword: #F7D117;            /* Yellow for keywords */
-  --shiki-token-parameter: #FFFFFF;          /* White for parameters */
+  --shiki-token-parameter: #E5E5E5;          /* Light gray for parameters */
   --shiki-token-function: #6BB3FF;           /* Light blue for functions */
   --shiki-token-string-expression: #7ED97E;  /* Green for string expressions */
   --shiki-token-punctuation: #CCCCCC;        /* Light gray for punctuation */

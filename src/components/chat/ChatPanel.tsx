@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { MessageSquarePlus, Trash2, ChevronLeft, Bot } from 'lucide-react';
+import { MessageSquarePlus, Trash2, ChevronLeft, Bot, StopCircle } from 'lucide-react';
 import { ChatMessageComponent } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { useAIChat, type Conversation } from '../../hooks/useAIChat';
@@ -25,6 +25,7 @@ export function ChatPanel({ cwd, currentFile, currentFileContent: _currentFileCo
     newConversation,
     setActiveConversation,
     deleteConversation,
+    endConversation,
     clearError,
   } = useAIChat({ cwd });
 
@@ -38,6 +39,20 @@ export function ChatPanel({ cwd, currentFile, currentFileContent: _currentFileCo
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [activeConversation?.messages]);
+
+  // Keyboard shortcut: Ctrl+Shift+N for new conversation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'N') {
+        e.preventDefault();
+        newConversation();
+        setShowList(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [newConversation]);
 
   const handleSend = useCallback((content: string) => {
     // If user wants to include current file as context, they can use @file syntax
@@ -63,6 +78,35 @@ export function ChatPanel({ cwd, currentFile, currentFileContent: _currentFileCo
     e.stopPropagation();
     deleteConversation(id);
   }, [deleteConversation]);
+
+  const handleEndConversation = useCallback(() => {
+    if (activeConversationId) {
+      endConversation(activeConversationId);
+    }
+  }, [activeConversationId, endConversation]);
+
+  const handleDeleteCurrent = useCallback(() => {
+    if (activeConversationId) {
+      deleteConversation(activeConversationId);
+      setShowList(true);
+    }
+  }, [activeConversationId, deleteConversation]);
+
+  // Calculate total usage for the conversation
+  const totalUsage = activeConversation?.messages.reduce(
+    (acc, msg) => {
+      if (msg.usage) {
+        const usage = msg.usage as { input_tokens?: number; output_tokens?: number };
+        acc.inputTokens += usage.input_tokens || 0;
+        acc.outputTokens += usage.output_tokens || 0;
+      }
+      if (msg.costUSD) {
+        acc.costUSD += msg.costUSD;
+      }
+      return acc;
+    },
+    { inputTokens: 0, outputTokens: 0, costUSD: 0 }
+  );
 
   const scale = fontSize / 100;
 
@@ -157,6 +201,20 @@ export function ChatPanel({ cwd, currentFile, currentFileContent: _currentFileCo
         >
           {activeConversation?.title || 'New conversation'}
         </span>
+
+        {/* Token/cost usage display */}
+        {totalUsage && (totalUsage.inputTokens > 0 || totalUsage.costUSD > 0) && (
+          <span
+            className="text-xs shrink-0 px-1.5 py-0.5 rounded"
+            style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--bg-primary)' }}
+            title={`Input: ${totalUsage.inputTokens.toLocaleString()} tokens, Output: ${totalUsage.outputTokens.toLocaleString()} tokens`}
+          >
+            {totalUsage.costUSD > 0
+              ? `$${totalUsage.costUSD.toFixed(4)}`
+              : `${((totalUsage.inputTokens + totalUsage.outputTokens) / 1000).toFixed(1)}k`}
+          </span>
+        )}
+
         {isGenerating && (
           <span className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--accent)' }}>
             <span className="relative flex h-2 w-2">
@@ -172,6 +230,28 @@ export function ChatPanel({ cwd, currentFile, currentFileContent: _currentFileCo
             Thinking...
           </span>
         )}
+
+        {/* End conversation button - only show if session exists */}
+        {activeConversation?.claudeSessionId && !isGenerating && (
+          <button
+            onClick={handleEndConversation}
+            className="p-1 rounded hover:opacity-80 transition-opacity"
+            style={{ color: 'var(--text-secondary)' }}
+            title="End conversation (clear session)"
+          >
+            <StopCircle size={16} />
+          </button>
+        )}
+
+        {/* Delete conversation button */}
+        <button
+          onClick={handleDeleteCurrent}
+          className="p-1 rounded hover:opacity-80 transition-opacity"
+          style={{ color: 'var(--text-secondary)' }}
+          title="Delete conversation"
+        >
+          <Trash2 size={16} />
+        </button>
       </div>
 
       {/* Error banner */}

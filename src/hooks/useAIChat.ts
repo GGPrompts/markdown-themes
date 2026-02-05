@@ -46,6 +46,7 @@ interface UseAIChatResult {
   newConversation: () => void;
   setActiveConversation: (id: string) => void;
   deleteConversation: (id: string) => void;
+  endConversation: (id: string) => Promise<void>;
   clearError: () => void;
 }
 
@@ -126,6 +127,34 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
     setConversations(prev => prev.filter(c => c.id !== id));
     setActiveConversationId(prevId => prevId === id ? null : prevId);
   }, []);
+
+  const endConversation = useCallback(async (id: string) => {
+    // Stop any active generation first
+    if (abortControllerRef.current && activeConversationId === id) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setIsGenerating(false);
+      inFlightRef.current = false;
+    }
+
+    // Kill the Claude process on the backend
+    try {
+      await fetch(`${API_BASE}/api/chat/process?conversationId=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+    } catch (err) {
+      console.warn('[useAIChat] Failed to kill backend process:', err);
+    }
+
+    // Clear the claudeSessionId so next message starts a fresh session
+    setConversations(prev =>
+      prev.map(c =>
+        c.id === id
+          ? { ...c, claudeSessionId: undefined }
+          : c
+      )
+    );
+  }, [activeConversationId]);
 
   const clearError = useCallback(() => setError(null), []);
 
@@ -416,6 +445,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
     newConversation,
     setActiveConversation,
     deleteConversation,
+    endConversation,
     clearError,
   };
 }

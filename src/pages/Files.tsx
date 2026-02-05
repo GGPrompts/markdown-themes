@@ -21,6 +21,7 @@ import { SplitView } from '../components/SplitView';
 import { GitGraph, WorkingTree, MultiRepoView } from '../components/git';
 import { DiffViewer } from '../components/viewers/DiffViewer';
 import { ArchiveModal } from '../components/ArchiveModal';
+import { ChatPanel } from '../components/chat';
 import { parseFrontmatter } from '../utils/frontmatter';
 import { themes } from '../themes';
 import type { ArchivedConversation } from '../context/AppStoreContext';
@@ -305,6 +306,7 @@ export function Files() {
     setRightPaneFile,
     setRightPaneGitGraph,
     setRightPaneWorkingTree,
+    setRightPaneChat,
   } = useSplitView({
     initialState: {
       isSplit: filesState.isSplit,
@@ -764,6 +766,18 @@ export function Files() {
     }
   }, [rightPaneContent, isSplit, toggleSplit, setRightFile, setRightPaneWorkingTree]);
 
+  // Handle chat toggle
+  const handleChatToggle = useCallback(() => {
+    if (rightPaneContent?.type === 'chat') {
+      setRightFile(null);
+    } else {
+      if (!isSplit) {
+        toggleSplit();
+      }
+      setRightPaneChat();
+    }
+  }, [rightPaneContent, isSplit, toggleSplit, setRightFile, setRightPaneChat]);
+
   // Handle hotkeys button - open HOTKEYS.md in right pane
   const handleHotkeysClick = useCallback(async () => {
     if (!workspacePath) return;
@@ -856,6 +870,13 @@ export function Files() {
         return;
       }
 
+      // Ctrl/Cmd + Shift + C - Toggle AI chat
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
+        e.preventDefault();
+        handleChatToggle();
+        return;
+      }
+
       // ? - Show keyboard shortcuts
       if (e.key === '?') {
         e.preventDefault();
@@ -874,7 +895,7 @@ export function Files() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSplit, handleGitGraphToggle, handleWorkingTreeToggle, handleHotkeysClick]);
+  }, [toggleSplit, handleGitGraphToggle, handleWorkingTreeToggle, handleChatToggle, handleHotkeysClick]);
 
   return (
     <>
@@ -887,6 +908,7 @@ export function Files() {
         isSplit={isSplit}
         isGitGraph={rightPaneContent?.type === 'git-graph'}
         isWorkingTree={rightPaneContent?.type === 'working-tree'}
+        isChat={rightPaneContent?.type === 'chat'}
         isFollowMode={appState.followStreamingMode}
         content={content}
         workspacePath={workspacePath}
@@ -899,6 +921,7 @@ export function Files() {
         onSplitToggle={toggleSplit}
         onGitGraphToggle={handleGitGraphToggle}
         onWorkingTreeToggle={handleWorkingTreeToggle}
+        onChatToggle={handleChatToggle}
         onFollowModeToggle={toggleFollowMode}
         onHotkeysClick={handleHotkeysClick}
         onViewConversation={handleViewConversation}
@@ -1153,6 +1176,16 @@ export function Files() {
                   file={rightPaneContent.file}
                   fontSize={appState.fontSize}
                   onBack={setRightPaneGitGraph}
+                />
+              )}
+
+              {/* AI Chat content type */}
+              {rightPaneContent?.type === 'chat' && (
+                <ChatPanel
+                  cwd={workspacePath}
+                  currentFile={currentFile}
+                  currentFileContent={content}
+                  fontSize={appState.fontSize}
                 />
               )}
 

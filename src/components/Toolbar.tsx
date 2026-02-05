@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Columns, Copy, AtSign, MessageSquare, MessageCircle, Check, GitBranch, GitPullRequestDraft, Keyboard, Crosshair, Loader2, Archive, Users } from 'lucide-react';
+import { Columns, Copy, AtSign, MessageSquare, MessageCircle, Check, GitBranch, GitPullRequestDraft, Keyboard, Crosshair, Loader2, Archive, Users, Bot } from 'lucide-react';
 import { queueToChat } from '../lib/api';
 
 interface ToolbarProps {
@@ -11,6 +11,7 @@ interface ToolbarProps {
   isSplit?: boolean;
   isGitGraph?: boolean;
   isWorkingTree?: boolean;
+  isChat?: boolean;
   isFollowMode?: boolean;
   content?: string;
   workspacePath?: string | null;
@@ -25,6 +26,7 @@ interface ToolbarProps {
   onSplitToggle?: () => void;
   onGitGraphToggle?: () => void;
   onWorkingTreeToggle?: () => void;
+  onChatToggle?: () => void;
   onFollowModeToggle?: () => void;
   onHotkeysClick?: () => void;
   onViewConversation?: () => void;
@@ -41,6 +43,7 @@ export function Toolbar({
   isSplit = false,
   isGitGraph = false,
   isWorkingTree = false,
+  isChat = false,
   isFollowMode = false,
   content,
   workspacePath,
@@ -53,6 +56,7 @@ export function Toolbar({
   onSplitToggle,
   onGitGraphToggle,
   onWorkingTreeToggle,
+  onChatToggle,
   onFollowModeToggle,
   onHotkeysClick,
   onViewConversation,
@@ -432,6 +436,22 @@ export function Toolbar({
             title={isWorkingTree ? 'Close working tree (Ctrl+Shift+G)' : 'Show working tree (Ctrl+Shift+G)'}
           >
             <GitPullRequestDraft className="w-4 h-4" />
+          </button>
+
+          {/* AI Chat toggle */}
+          <button
+            type="button"
+            onClick={onChatToggle}
+            className="w-8 h-8 flex items-center justify-center transition-colors"
+            style={{
+              borderRadius: 'var(--radius)',
+              backgroundColor: isChat ? 'var(--accent)' : 'var(--bg-primary)',
+              color: isChat ? 'var(--bg-primary)' : 'var(--text-primary)',
+              border: '1px solid var(--border)',
+            }}
+            title={isChat ? 'Close AI chat (Ctrl+Shift+C)' : 'Open AI chat (Ctrl+Shift+C)'}
+          >
+            <Bot className="w-4 h-4" />
           </button>
 
           {/* Split view toggle */}

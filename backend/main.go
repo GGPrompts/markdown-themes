@@ -36,10 +36,10 @@ func main() {
 		MaxAge:           300,
 	}))
 
-	// JSON content type for API responses
+	// JSON content type for API responses (except WebSocket and SSE endpoints)
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path != "/ws" {
+			if r.URL.Path != "/ws" && !(r.URL.Path == "/api/chat" && r.Method == "POST") {
 				w.Header().Set("Content-Type", "application/json")
 			}
 			next.ServeHTTP(w, r)
@@ -62,6 +62,11 @@ func main() {
 
 		// Claude
 		r.Get("/claude/session", handlers.ClaudeSession)
+
+		// Chat (AI conversations via Claude CLI)
+		r.Post("/chat", handlers.Chat)
+		r.Get("/chat/process", handlers.ChatProcessStatus)
+		r.Delete("/chat/process", handlers.ChatProcessKill)
 
 		// Git
 		r.Get("/git/repos", handlers.GitRepos)

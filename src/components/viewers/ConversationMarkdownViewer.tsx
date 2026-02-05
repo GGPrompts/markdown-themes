@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import { MarkdownViewer } from '../MarkdownViewer';
 import { jsonlToMarkdown } from '../../utils/conversationMarkdown';
 
@@ -65,6 +65,23 @@ export function ConversationMarkdownViewer({
   // Extract metadata for header
   const metadata = useMemo(() => extractMetadata(content), [content]);
 
+  // Scroll to bottom on initial load (conversations are chronological)
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hasScrolledRef = useRef(false);
+
+  useEffect(() => {
+    // Only scroll once on initial content load, not during streaming updates
+    if (markdown && !hasScrolledRef.current && containerRef.current) {
+      // Use setTimeout to ensure content is rendered
+      setTimeout(() => {
+        if (containerRef.current) {
+          containerRef.current.scrollTop = containerRef.current.scrollHeight;
+          hasScrolledRef.current = true;
+        }
+      }, 50);
+    }
+  }, [markdown]);
+
   // Handle empty content
   if (!markdown) {
     return (
@@ -78,7 +95,7 @@ export function ConversationMarkdownViewer({
   }
 
   return (
-    <div className="conversation-viewer h-full overflow-auto">
+    <div ref={containerRef} className="conversation-viewer h-full overflow-auto">
       {/* Metadata header */}
       {metadata && (
         <div

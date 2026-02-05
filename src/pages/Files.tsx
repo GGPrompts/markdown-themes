@@ -21,7 +21,6 @@ import { SplitView } from '../components/SplitView';
 import { GitGraph, WorkingTree, MultiRepoView } from '../components/git';
 import { DiffViewer } from '../components/viewers/DiffViewer';
 import { ArchiveModal } from '../components/ArchiveModal';
-import { fetchFileContent } from '../lib/api';
 import { parseFrontmatter } from '../utils/frontmatter';
 import { themes } from '../themes';
 import type { ArchivedConversation } from '../context/AppStoreContext';
@@ -337,10 +336,12 @@ export function Files() {
     [conversation?.conversationPath]
   );
 
+  // Track if we're viewing the active conversation (for streaming indicator logic)
+  const isLeftPaneActiveConversation = isCurrentConversationFile(currentFile);
+
   // Use file watcher to get content and streaming state (left/main pane)
   // Skip for binary files - their viewers fetch their own data
-  // Skip the current active conversation - watching it causes freezes due to rapid updates
-  const isLeftPaneActiveConversation = isCurrentConversationFile(currentFile);
+  // Note: Active conversation is now watched with throttling in ConversationMarkdownViewer
   const {
     content,
     error,
@@ -348,11 +349,10 @@ export function Files() {
     isStreaming,
     connected,
   } = useFileWatcher({
-    path: isCurrentFileBinary || isLeftPaneActiveConversation ? null : currentFile,
+    path: isCurrentFileBinary ? null : currentFile,
   });
 
   // File watcher for right pane (only active when split view is enabled)
-  // Skip watching the current conversation file - it's being actively written to and can cause freezes
   const isRightPaneActiveConversation = isCurrentConversationFile(rightPaneFilePath);
   const {
     content: rightContent,
@@ -360,52 +360,8 @@ export function Files() {
     loading: rightLoading,
     isStreaming: rightIsStreaming,
   } = useFileWatcher({
-    path: isSplit && !isRightFileBinary && !isRightPaneActiveConversation ? rightPaneFilePath : null,
+    path: isSplit && !isRightFileBinary ? rightPaneFilePath : null,
   });
-
-  // Static content fetch for active conversation (since we can't live-watch it)
-  // Fetches once on open and periodically refreshes (every 3 seconds) to show updates
-  const [activeConversationContent, setActiveConversationContent] = useState<string>('');
-  const [activeConversationLoading, setActiveConversationLoading] = useState(false);
-  const activeConversationRefreshRef = useRef<ReturnType<typeof setInterval>>();
-  const activeConversationPathRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    // Only fetch if viewing the active conversation
-    if (!isLeftPaneActiveConversation || !currentFile) {
-      setActiveConversationContent('');
-      setActiveConversationLoading(false);
-      activeConversationPathRef.current = null;
-      clearInterval(activeConversationRefreshRef.current);
-      return;
-    }
-
-    // Set loading immediately when switching to active conversation
-    if (activeConversationPathRef.current !== currentFile) {
-      setActiveConversationLoading(true);
-      setActiveConversationContent('');
-      activeConversationPathRef.current = currentFile;
-    }
-
-    const fetchContent = async () => {
-      try {
-        const result = await fetchFileContent(currentFile);
-        setActiveConversationContent(result.content);
-      } catch (err) {
-        console.error('Failed to fetch active conversation:', err);
-      } finally {
-        setActiveConversationLoading(false);
-      }
-    };
-
-    // Initial fetch
-    fetchContent();
-
-    // Periodic refresh every 3 seconds (slow enough to not cause freezes)
-    activeConversationRefreshRef.current = setInterval(fetchContent, 3000);
-
-    return () => clearInterval(activeConversationRefreshRef.current);
-  }, [isLeftPaneActiveConversation, currentFile]);
 
   // Workspace streaming detection for follow mode and changed files tracking
   const { streamingFile, changedFiles } = useWorkspaceStreaming({
@@ -625,20 +581,10 @@ export function Files() {
     return isJsonl && isInClaudeProjects;
   }, [currentFile]);
 
-  // Effective content: use static fetch for active conversation, file watcher for others
-  const effectiveContent = isLeftPaneActiveConversation ? activeConversationContent : content;
-  // For active conversation, show loading if explicitly loading OR if content is empty (initial state)
-  const effectiveLoading = isLeftPaneActiveConversation
-    ? (activeConversationLoading || !activeConversationContent)
-    : loading;
-  // For active conversation, check if it's actually being written to (via workspace streaming)
-  const isActiveConversationStreaming = isLeftPaneActiveConversation && streamingFile === conversation?.conversationPath;
-  const effectiveIsStreaming = isLeftPaneActiveConversation ? isActiveConversationStreaming : isStreaming;
-
   // Parse frontmatter from content (only for markdown files)
   const { frontmatter, content: markdownContent } = useMemo(
-    () => (isMarkdownFile ? parseFrontmatter(effectiveContent) : { frontmatter: null, content: effectiveContent }),
-    [effectiveContent, isMarkdownFile]
+    () => (isMarkdownFile ? parseFrontmatter(content) : { frontmatter: null, content }),
+    [content, isMarkdownFile]
   );
 
   // Check if right file is markdown
@@ -657,11 +603,11 @@ export function Files() {
   // Auto-scroll to changes during actual streaming (rapid file changes < 1.5s)
   // Uses block-level diffing for markdown, line-level for code files
   useDiffAutoScroll({
-    content: isMarkdownFile ? markdownContent : effectiveContent,
-    isStreaming: effectiveIsStreaming,
+    content: isMarkdownFile ? markdownContent : content,
+    isStreaming,
     scrollContainerRef: leftScrollContainerRef,
     filePath: currentFile ?? undefined,
-    enabled: effectiveIsStreaming && !isLeftPaneActiveConversation, // Disable auto-scroll for active conversation (too jumpy)
+    enabled: isStreaming && !isLeftPaneActiveConversation, // Disable auto-scroll for active conversation (handled by viewer)
   });
 
   // Auto-scroll for right pane (used by Follow AI Edits)
@@ -895,7 +841,7 @@ export function Files() {
     <>
       <Toolbar
         currentFile={currentFile}
-        isStreaming={effectiveIsStreaming}
+        isStreaming={isStreaming}
         connected={connected || isCurrentFileBinary || isLeftPaneActiveConversation}
         recentFiles={appState.recentFiles}
         fontSize={appState.fontSize}
@@ -903,7 +849,7 @@ export function Files() {
         isGitGraph={rightPaneContent?.type === 'git-graph'}
         isWorkingTree={rightPaneContent?.type === 'working-tree'}
         isFollowMode={appState.followStreamingMode}
-        content={effectiveContent}
+        content={content}
         workspacePath={workspacePath}
         conversationPath={conversation?.conversationPath ?? null}
         conversationLoading={conversationLoading}
@@ -970,7 +916,7 @@ export function Files() {
                 onTabPin={pinTab}
               />
 
-              {(activeTab?.type === 'file' || activeTab?.type === 'conversation') && effectiveLoading && !effectiveContent && (
+              {(activeTab?.type === 'file' || activeTab?.type === 'conversation') && loading && !content && (
                 <div className="flex items-center justify-center h-full">
                   <p style={{ color: 'var(--text-secondary)' }}>Loading...</p>
                 </div>
@@ -987,7 +933,7 @@ export function Files() {
                 </div>
               )}
 
-              {(activeTab?.type === 'file' || activeTab?.type === 'conversation') && !effectiveLoading && !error && !currentFile && (
+              {(activeTab?.type === 'file' || activeTab?.type === 'conversation') && !loading && !error && !currentFile && (
                 <div className="flex items-center justify-center h-full">
                   <div className="text-center max-w-md">
                     {recentFilesForEmptyState.length > 0 ? (
@@ -1057,14 +1003,14 @@ export function Files() {
               )}
 
               {/* File and Conversation tab content */}
-              {(activeTab?.type === 'file' || activeTab?.type === 'conversation') && !error && currentFile && effectiveContent && (
+              {(activeTab?.type === 'file' || activeTab?.type === 'conversation') && !error && currentFile && content && (
                 <>
                   {isMarkdownFile && frontmatter && <MetadataBar frontmatter={frontmatter} />}
                   <div className="flex-1 overflow-auto" ref={leftScrollContainerRef}>
                     <ViewerContainer
                       filePath={currentFile}
                       content={markdownContent}
-                      isStreaming={effectiveIsStreaming}
+                      isStreaming={isStreaming}
                       themeClassName={themeClass}
                       fontSize={appState.fontSize}
                       repoPath={workspacePath}

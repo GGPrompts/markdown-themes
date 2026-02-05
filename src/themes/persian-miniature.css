@@ -450,11 +450,32 @@
     var(--shadow-soft);
 }
 
-/* Shiki syntax highlighting */
-.theme-persian-miniature .streamdown-content pre.shiki {
+/* Shiki syntax highlighting - ensure dark background everywhere code is displayed */
+.theme-persian-miniature .streamdown-content pre.shiki,
+.theme-persian-miniature pre.shiki,
+.theme-persian-miniature .shiki,
+.theme-persian-miniature [class*="code"],
+.theme-persian-miniature [class*="file-content"],
+.theme-persian-miniature [class*="preview"] pre,
+.theme-persian-miniature [class*="viewer"],
+.theme-persian-miniature [class*="Viewer"],
+.theme-persian-miniature .json-null,
+.theme-persian-miniature .json-node,
+.theme-persian-miniature [class*="jsonl"],
+.theme-persian-miniature [class*="Jsonl"] {
   background: var(--lapis-deep) !important;
   border: 3px solid var(--gold-leaf);
   box-shadow: var(--shadow-inset), var(--shadow-gold);
+}
+
+/* Ensure nested elements in viewers don't double-border */
+.theme-persian-miniature [class*="viewer"] [class*="viewer"],
+.theme-persian-miniature [class*="Viewer"] [class*="Viewer"],
+.theme-persian-miniature [class*="viewer"] .json-null,
+.theme-persian-miniature [class*="viewer"] .json-node {
+  background: transparent !important;
+  border: none;
+  box-shadow: none;
 }
 
 /* Streamdown specific overrides */

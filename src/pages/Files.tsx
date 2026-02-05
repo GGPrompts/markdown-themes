@@ -394,6 +394,9 @@ export function Files() {
     [rightContent, isRightMarkdownFile]
   );
 
+  // Skip auto-scroll for conversation files (JSONL) - they update too rapidly
+  const isConversationFile = currentFile?.endsWith('.jsonl') && currentFile?.includes('/.claude/projects/');
+
   // Auto-scroll to changes during actual streaming (rapid file changes < 1.5s)
   // Uses block-level diffing for markdown, line-level for code files
   useDiffAutoScroll({
@@ -401,7 +404,7 @@ export function Files() {
     isStreaming,
     scrollContainerRef: leftScrollContainerRef,
     filePath: currentFile ?? undefined,
-    enabled: isStreaming,
+    enabled: isStreaming && !isConversationFile,
   });
 
   // Auto-scroll for right pane (used by Follow AI Edits)

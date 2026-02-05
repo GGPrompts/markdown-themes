@@ -401,20 +401,20 @@
    ======================================== */
 
 .theme-frutiger-aero {
-  /* Shiki base colors */
-  --shiki-foreground: #e8eef3;
+  /* Shiki base colors - dark for glass backgrounds */
+  --shiki-foreground: #1a3a4a;
   --shiki-background: rgba(26, 58, 74, 0.95);
 
-  /* Token colors - Good contrast on dark code bg */
-  --shiki-token-constant: #7ec8f0;           /* Sky blue light for constants */
-  --shiki-token-string: #a5d66a;             /* Grass green light for strings */
-  --shiki-token-comment: #6a8a9a;            /* Muted blue-gray for comments */
-  --shiki-token-keyword: #ffc866;            /* Sunrise orange light for keywords */
-  --shiki-token-parameter: #c5e8f7;          /* Sky pale for parameters */
-  --shiki-token-function: #3a9fd5;           /* Sky blue for functions */
-  --shiki-token-string-expression: #a5d66a;  /* Grass green for string expressions */
-  --shiki-token-punctuation: #9db8c8;        /* Soft blue-gray for punctuation */
-  --shiki-token-link: #7ec8f0;               /* Sky blue light for links */
+  /* Token colors - Darker for contrast on glass/white backgrounds */
+  --shiki-token-constant: #0077a8;           /* Deep sky blue for constants */
+  --shiki-token-string: #4a8c2a;             /* Forest green for strings */
+  --shiki-token-comment: #5a7a8a;            /* Muted blue-gray for comments */
+  --shiki-token-keyword: #c87800;            /* Deep orange for keywords */
+  --shiki-token-parameter: #2a6a8a;          /* Ocean blue for parameters */
+  --shiki-token-function: #0066aa;           /* Deep blue for functions */
+  --shiki-token-string-expression: #4a8c2a;  /* Forest green for string expressions */
+  --shiki-token-punctuation: #4a6a7a;        /* Dark blue-gray for punctuation */
+  --shiki-token-link: #0077a8;               /* Deep sky blue for links */
 }
 
 /* Shiki code blocks styling */

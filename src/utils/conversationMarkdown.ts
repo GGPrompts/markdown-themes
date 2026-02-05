@@ -314,7 +314,8 @@ function formatSummaryMessage(entry: SummaryMessage): string {
  * `);
  */
 export function jsonlToMarkdown(content: string, maxEntries: number = 50): string {
-  if (!content || typeof content !== 'string') {
+  // Early bail-out for empty or very short content
+  if (!content || typeof content !== 'string' || content.length < 10) {
     return '';
   }
 

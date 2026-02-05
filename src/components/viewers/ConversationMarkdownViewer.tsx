@@ -94,7 +94,8 @@ function extractLastLines(content: string, maxLines: number): string {
  * For large files, samples lines and estimates total to avoid UI freeze.
  */
 function extractMetadata(content: string): ConversationMetadata | null {
-  if (!content || !content.trim()) {
+  // Early bail-out for empty or very short content
+  if (!content || content.length < 10) {
     return null;
   }
 
@@ -196,6 +197,10 @@ export function ConversationMarkdownViewer({
   // Wrapped in try-catch to handle malformed JSONL gracefully
   // Uses MAX_MESSAGES to prevent UI freeze on large conversations
   const markdown = useMemo(() => {
+    // Early bail-out for empty or very short content
+    if (!throttledContent || throttledContent.length < 10) {
+      return '';
+    }
     try {
       return jsonlToMarkdown(throttledContent, MAX_MESSAGES);
     } catch (err) {

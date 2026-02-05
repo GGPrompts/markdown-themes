@@ -11,6 +11,7 @@ interface SplitViewProps {
   rightPaneContent?: RightPaneContent | null;
   onCloseRight?: () => void;
   rightIsStreaming?: boolean;
+  rightPaneTabBar?: ReactNode;
 }
 
 export function SplitView({
@@ -23,6 +24,7 @@ export function SplitView({
   rightPaneContent,
   onCloseRight,
   rightIsStreaming,
+  rightPaneTabBar,
 }: SplitViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
@@ -117,12 +119,16 @@ export function SplitView({
           setIsDragOver(false);
         }}
       >
-        {/* Right pane header */}
-        <RightPaneHeader
-          rightPaneContent={rightPaneContent}
-          rightIsStreaming={rightIsStreaming}
-          onClose={onCloseRight}
-        />
+        {/* Right pane header - show tab bar for file content, simple header for others */}
+        {rightPaneContent?.type === 'file' && rightPaneTabBar ? (
+          rightPaneTabBar
+        ) : (
+          <RightPaneHeader
+            rightPaneContent={rightPaneContent}
+            rightIsStreaming={rightIsStreaming}
+            onClose={onCloseRight}
+          />
+        )}
         {rightPane}
       </div>
     </div>

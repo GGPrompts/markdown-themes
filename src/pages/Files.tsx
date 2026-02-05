@@ -9,11 +9,13 @@ import { usePageState } from '../context/PageStateContext';
 import { useAppStore } from '../hooks/useAppStore';
 import { useTabManager } from '../hooks/useTabManager';
 import { useSplitView } from '../hooks/useSplitView';
+import { useRightPaneTabs } from '../hooks/useRightPaneTabs';
 import { Toolbar } from '../components/Toolbar';
 import { ViewerContainer } from '../components/ViewerContainer';
 import { MetadataBar } from '../components/MetadataBar';
 import { Sidebar } from '../components/Sidebar';
 import { TabBar } from '../components/TabBar';
+import { RightPaneTabBar } from '../components/RightPaneTabBar';
 import { SplitView } from '../components/SplitView';
 import { GitGraph, WorkingTree, MultiRepoView } from '../components/git';
 import { DiffViewer } from '../components/viewers/DiffViewer';
@@ -237,6 +239,28 @@ export function Files() {
     onStateChange: handleSplitStateChange,
   });
 
+  // Right pane tabs state with persistence
+  const handleRightPaneTabsStateChange = useCallback(
+    (tabs: Parameters<typeof setFilesState>[0]['rightPaneTabs'], activeTabId: string | null) => {
+      setFilesState({ rightPaneTabs: tabs, rightActiveTabId: activeTabId });
+    },
+    [setFilesState]
+  );
+
+  const {
+    tabs: rightPaneTabs,
+    activeTabId: rightActiveTabId,
+    activeTab: rightActiveTab,
+    openTab: openRightTab,
+    pinTab: pinRightTab,
+    closeTab: closeRightTab,
+    setActiveTab: setRightActiveTab,
+  } = useRightPaneTabs({
+    initialTabs: filesState.rightPaneTabs,
+    initialActiveTabId: filesState.rightActiveTabId,
+    onStateChange: handleRightPaneTabsStateChange,
+  });
+
   // Binary file types that have dedicated viewers fetching their own content
   // Skip file watcher for these to avoid binary data leaking to markdown renderer
   const BINARY_EXTENSIONS = new Set([
@@ -251,7 +275,12 @@ export function Files() {
   ]);
   const currentFileExt = currentFile?.split('.').pop()?.toLowerCase();
   const isCurrentFileBinary = currentFileExt ? BINARY_EXTENSIONS.has(currentFileExt) : false;
-  const rightFileExt = rightFile?.split('.').pop()?.toLowerCase();
+
+  // Derive the actual right pane file path: use active tab if file mode, otherwise rightFile from split view
+  const rightPaneFilePath = rightPaneContent?.type === 'file' && rightActiveTab
+    ? rightActiveTab.path
+    : rightFile;
+  const rightFileExt = rightPaneFilePath?.split('.').pop()?.toLowerCase();
   const isRightFileBinary = rightFileExt ? BINARY_EXTENSIONS.has(rightFileExt) : false;
 
   // Use file watcher to get content and streaming state (left/main pane)
@@ -273,7 +302,7 @@ export function Files() {
     loading: rightLoading,
     isStreaming: rightIsStreaming,
   } = useFileWatcher({
-    path: isSplit && !isRightFileBinary ? rightFile : null,
+    path: isSplit && !isRightFileBinary ? rightPaneFilePath : null,
   });
 
   // Workspace streaming detection for follow mode and changed files tracking
@@ -290,7 +319,7 @@ export function Files() {
     if (!appState.followStreamingMode || !streamingFile) return;
 
     // Only auto-open if the streaming file is different from current right pane file
-    if (streamingFile !== rightFile) {
+    if (streamingFile !== rightPaneFilePath) {
       // Filter out noisy files that aren't useful to watch
       const fileName = streamingFile.split('/').pop() || '';
       const ext = fileName.split('.').pop()?.toLowerCase() || '';
@@ -348,14 +377,17 @@ export function Files() {
         return;
       }
 
-      // Open streaming file in right pane (enables split if needed)
+      // Open streaming file in right pane tabs (enables split if needed)
       if (!isSplit) {
         toggleSplit();
       }
+      // Use setRightPaneFile to ensure rightPaneContent is set to file mode
       setRightPaneFile(streamingFile);
+      // Open as a tab (preview mode for AI edits)
+      openRightTab(streamingFile, true);
       addRecentFile(streamingFile);
     }
-  }, [appState.followStreamingMode, streamingFile, rightFile, isSplit, toggleSplit, setRightPaneFile, addRecentFile]);
+  }, [appState.followStreamingMode, streamingFile, rightPaneFilePath, isSplit, toggleSplit, setRightPaneFile, openRightTab, addRecentFile]);
 
   // NOTE: Auto-open tabs feature disabled - was causing crashes when combined
   // with right pane streaming. The right pane already shows the streaming file.
@@ -383,10 +415,10 @@ export function Files() {
 
   // Check if right file is markdown
   const isRightMarkdownFile = useMemo(() => {
-    if (!rightFile) return false;
-    const ext = rightFile.split('.').pop()?.toLowerCase();
+    if (!rightPaneFilePath) return false;
+    const ext = rightPaneFilePath.split('.').pop()?.toLowerCase();
     return ext === 'md' || ext === 'markdown' || ext === 'mdx';
-  }, [rightFile]);
+  }, [rightPaneFilePath]);
 
   // Parse frontmatter from right content (only for markdown files)
   const { frontmatter: rightFrontmatter, content: rightMarkdownContent } = useMemo(
@@ -410,7 +442,7 @@ export function Files() {
     content: isRightMarkdownFile ? rightMarkdownContent : rightContent,
     isStreaming: rightIsStreaming || appState.followStreamingMode,
     scrollContainerRef: rightScrollContainerRef,
-    filePath: rightFile ?? undefined,
+    filePath: rightPaneFilePath ?? undefined,
     enabled: rightIsStreaming || appState.followStreamingMode,
   });
 
@@ -448,24 +480,28 @@ export function Files() {
   // Handle file selection for right pane (in split view mode)
   const handleRightFileSelect = useCallback(
     (path: string) => {
-      setRightFile(path);
+      // Ensure right pane is in file mode and open as tab
+      setRightPaneFile(path);
+      openRightTab(path, true); // preview mode
       addRecentFile(path);
     },
-    [setRightFile, addRecentFile]
+    [setRightPaneFile, openRightTab, addRecentFile]
   );
 
   // Handle drop to right pane (drag-and-drop from tabs)
   const handleDropToRight = useCallback(
     (path: string) => {
       // Don't do anything if dropping the same file
-      if (path === rightFile) return;
-      setRightFile(path);
+      if (path === rightPaneFilePath) return;
+      // Ensure right pane is in file mode and open as pinned tab
+      setRightPaneFile(path);
+      openRightTab(path, false); // pinned mode (dragging = intentional)
       addRecentFile(path);
     },
-    [rightFile, setRightFile, addRecentFile]
+    [rightPaneFilePath, setRightPaneFile, openRightTab, addRecentFile]
   );
 
-  // Handle closing the right pane file
+  // Handle closing the right pane file (close all tabs)
   const handleCloseRight = useCallback(() => {
     setRightFile(null);
   }, [setRightFile]);
@@ -644,6 +680,15 @@ export function Files() {
           rightPaneContent={rightPaneContent}
           onCloseRight={handleCloseRight}
           rightIsStreaming={rightIsStreaming}
+          rightPaneTabBar={
+            <RightPaneTabBar
+              tabs={rightPaneTabs}
+              activeTabId={rightActiveTabId}
+              onTabSelect={setRightActiveTab}
+              onTabClose={closeRightTab}
+              onTabPin={pinRightTab}
+            />
+          }
           leftPane={
             <div className="flex-1 flex flex-col overflow-hidden">
               <TabBar
@@ -788,12 +833,12 @@ export function Files() {
                     </div>
                   )}
 
-                  {!rightLoading && !rightError && (
+                  {!rightLoading && !rightError && rightPaneFilePath && (
                     <>
                       {isRightMarkdownFile && rightFrontmatter && <MetadataBar frontmatter={rightFrontmatter} />}
                       <div className="flex-1 overflow-auto" ref={rightScrollContainerRef}>
                         <ViewerContainer
-                          filePath={rightFile!}
+                          filePath={rightPaneFilePath}
                           content={rightMarkdownContent}
                           isStreaming={rightIsStreaming}
                           themeClassName={themeClass}

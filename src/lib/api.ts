@@ -230,6 +230,11 @@ export async function queueToChat(command: string): Promise<void> {
     ws.onerror = (err) => {
       reject(err);
     };
+    ws.onclose = (event) => {
+      if (!event.wasClean) {
+        reject(new Error(`WebSocket closed unexpectedly: ${event.code}`));
+      }
+    };
   });
 }
 
@@ -248,6 +253,11 @@ export async function pasteToTerminal(content: string): Promise<void> {
     };
     ws.onerror = (err) => {
       reject(err);
+    };
+    ws.onclose = (event) => {
+      if (!event.wasClean) {
+        reject(new Error(`WebSocket closed unexpectedly: ${event.code}`));
+      }
     };
   });
 }
@@ -424,7 +434,7 @@ export async function archiveConversation(
 
   // Generate the archived filename with timestamp
   const fileName = sourcePath.split('/').pop() || 'conversation.jsonl';
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 23);
   const archivedFileName = `${timestamp}_${fileName}`;
   const fullDestPath = destPath.endsWith('/')
     ? `${destPath}${archivedFileName}`

@@ -3,6 +3,7 @@ import { Clock, ChevronLeft, GitCommit, FileDiff, Loader2 } from 'lucide-react';
 import { useFileWatcher } from '../hooks/useFileWatcher';
 import { useWorkspaceStreaming } from '../hooks/useWorkspaceStreaming';
 import { useDiffAutoScroll } from '../hooks/useDiffAutoScroll';
+import { useCurrentConversation } from '../hooks/useCurrentConversation';
 import { useWorkspaceContext } from '../context/WorkspaceContext';
 import { usePageState } from '../context/PageStateContext';
 import { useAppStore } from '../hooks/useAppStore';
@@ -280,6 +281,9 @@ export function Files() {
     workspacePath,
     enabled: true, // Always enabled to track changed files for the Changed filter
   });
+
+  // Current conversation detection for "View Conversation" button
+  const { conversation, isLoading: conversationLoading } = useCurrentConversation();
 
   // Auto-open streaming file when follow mode is enabled (opens in right pane)
   useEffect(() => {
@@ -593,6 +597,13 @@ export function Files() {
     setRightPaneFile(hotkeysPath);
   }, [workspacePath, isSplit, toggleSplit, setRightPaneFile]);
 
+  // Handle view conversation button - open conversation JSONL file
+  const handleViewConversation = useCallback(() => {
+    if (!conversation?.conversationPath) return;
+    openTab(conversation.conversationPath, false); // Open as pinned tab
+    addRecentFile(conversation.conversationPath);
+  }, [conversation, openTab, addRecentFile]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -670,6 +681,8 @@ export function Files() {
         isFollowMode={appState.followStreamingMode}
         content={content}
         workspacePath={workspacePath}
+        conversationPath={conversation?.conversationPath ?? null}
+        conversationLoading={conversationLoading}
         onFileSelect={handleFileSelect}
         onFontSizeChange={handleFontSizeChange}
         onSplitToggle={toggleSplit}
@@ -677,6 +690,7 @@ export function Files() {
         onWorkingTreeToggle={handleWorkingTreeToggle}
         onFollowModeToggle={toggleFollowMode}
         onHotkeysClick={handleHotkeysClick}
+        onViewConversation={handleViewConversation}
       />
 
       <div className="flex-1 flex overflow-hidden">

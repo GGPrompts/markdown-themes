@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Columns, Copy, AtSign, MessageSquare, Check, GitBranch, GitPullRequestDraft, Keyboard, Crosshair } from 'lucide-react';
+import { Columns, Copy, AtSign, MessageSquare, MessageCircle, Check, GitBranch, GitPullRequestDraft, Keyboard, Crosshair, Loader2 } from 'lucide-react';
 import { queueToChat } from '../lib/api';
 
 interface ToolbarProps {
@@ -14,6 +14,8 @@ interface ToolbarProps {
   isFollowMode?: boolean;
   content?: string;
   workspacePath?: string | null;
+  conversationPath?: string | null;
+  conversationLoading?: boolean;
   onFileSelect: (path: string) => void;
   onFontSizeChange?: (size: number) => void;
   onSplitToggle?: () => void;
@@ -21,6 +23,7 @@ interface ToolbarProps {
   onWorkingTreeToggle?: () => void;
   onFollowModeToggle?: () => void;
   onHotkeysClick?: () => void;
+  onViewConversation?: () => void;
 }
 
 export function Toolbar({
@@ -35,6 +38,8 @@ export function Toolbar({
   isFollowMode = false,
   content,
   workspacePath,
+  conversationPath,
+  conversationLoading = false,
   onFileSelect,
   onFontSizeChange,
   onSplitToggle,
@@ -42,6 +47,7 @@ export function Toolbar({
   onWorkingTreeToggle,
   onFollowModeToggle,
   onHotkeysClick,
+  onViewConversation,
 }: ToolbarProps) {
   const [showRecentFiles, setShowRecentFiles] = useState(false);
   const [showPathInput, setShowPathInput] = useState(false);
@@ -315,6 +321,27 @@ export function Toolbar({
         </div>
 
         <div className="flex items-center gap-4">
+          {/* View current conversation */}
+          <button
+            type="button"
+            onClick={onViewConversation}
+            disabled={!conversationPath || conversationLoading}
+            className="w-8 h-8 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              borderRadius: 'var(--radius)',
+              backgroundColor: 'var(--bg-primary)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border)',
+            }}
+            title={conversationLoading ? 'Loading conversation...' : conversationPath ? 'View current conversation' : 'No conversation found'}
+          >
+            {conversationLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <MessageCircle className="w-4 h-4" />
+            )}
+          </button>
+
           {/* Follow streaming mode toggle */}
           <button
             type="button"

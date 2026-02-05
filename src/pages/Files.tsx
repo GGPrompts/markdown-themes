@@ -368,18 +368,27 @@ export function Files() {
   const [activeConversationContent, setActiveConversationContent] = useState<string>('');
   const [activeConversationLoading, setActiveConversationLoading] = useState(false);
   const activeConversationRefreshRef = useRef<ReturnType<typeof setInterval>>();
+  const activeConversationPathRef = useRef<string | null>(null);
 
   useEffect(() => {
     // Only fetch if viewing the active conversation
     if (!isLeftPaneActiveConversation || !currentFile) {
       setActiveConversationContent('');
+      setActiveConversationLoading(false);
+      activeConversationPathRef.current = null;
       clearInterval(activeConversationRefreshRef.current);
       return;
     }
 
+    // Set loading immediately when switching to active conversation
+    if (activeConversationPathRef.current !== currentFile) {
+      setActiveConversationLoading(true);
+      setActiveConversationContent('');
+      activeConversationPathRef.current = currentFile;
+    }
+
     const fetchContent = async () => {
       try {
-        setActiveConversationLoading(true);
         const result = await fetchFileContent(currentFile);
         setActiveConversationContent(result.content);
       } catch (err) {
@@ -618,8 +627,13 @@ export function Files() {
 
   // Effective content: use static fetch for active conversation, file watcher for others
   const effectiveContent = isLeftPaneActiveConversation ? activeConversationContent : content;
-  const effectiveLoading = isLeftPaneActiveConversation ? activeConversationLoading : loading;
-  const effectiveIsStreaming = isLeftPaneActiveConversation ? true : isStreaming; // Active conversation is always "streaming"
+  // For active conversation, show loading if explicitly loading OR if content is empty (initial state)
+  const effectiveLoading = isLeftPaneActiveConversation
+    ? (activeConversationLoading || !activeConversationContent)
+    : loading;
+  // For active conversation, check if it's actually being written to (via workspace streaming)
+  const isActiveConversationStreaming = isLeftPaneActiveConversation && streamingFile === conversation?.conversationPath;
+  const effectiveIsStreaming = isLeftPaneActiveConversation ? isActiveConversationStreaming : isStreaming;
 
   // Parse frontmatter from content (only for markdown files)
   const { frontmatter, content: markdownContent } = useMemo(

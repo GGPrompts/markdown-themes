@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Columns, Copy, AtSign, MessageSquare, MessageCircle, Check, GitBranch, GitPullRequestDraft, Keyboard, Crosshair, Loader2, Archive, Users, Bot } from 'lucide-react';
+import { Columns, Copy, AtSign, MessageSquare, MessageCircle, Check, Keyboard, Crosshair, Loader2, Archive, Users, Bot } from 'lucide-react';
 import { queueToChat } from '../lib/api';
 
 interface ToolbarProps {
@@ -9,8 +9,6 @@ interface ToolbarProps {
   recentFiles?: string[];
   fontSize?: number;
   isSplit?: boolean;
-  isGitGraph?: boolean;
-  isWorkingTree?: boolean;
   /** Whether the chat panel (third column) is open */
   isChatPanelOpen?: boolean;
   isFollowMode?: boolean;
@@ -25,8 +23,6 @@ interface ToolbarProps {
   onFileSelect: (path: string) => void;
   onFontSizeChange?: (size: number) => void;
   onSplitToggle?: () => void;
-  onGitGraphToggle?: () => void;
-  onWorkingTreeToggle?: () => void;
   /** Toggle the chat panel (third column) */
   onChatPanelToggle?: () => void;
   onFollowModeToggle?: () => void;
@@ -43,8 +39,6 @@ export function Toolbar({
   recentFiles = [],
   fontSize = 100,
   isSplit = false,
-  isGitGraph = false,
-  isWorkingTree = false,
   isChatPanelOpen = false,
   isFollowMode = false,
   content,
@@ -56,8 +50,6 @@ export function Toolbar({
   onFileSelect,
   onFontSizeChange,
   onSplitToggle,
-  onGitGraphToggle,
-  onWorkingTreeToggle,
   onChatPanelToggle,
   onFollowModeToggle,
   onHotkeysClick,
@@ -351,9 +343,7 @@ export function Toolbar({
               )}
             </div>
           )}
-        </div>
 
-        <div className="flex items-center gap-4">
           {/* View current conversation */}
           <button
             type="button"
@@ -374,7 +364,9 @@ export function Toolbar({
               <MessageCircle className="w-4 h-4" />
             )}
           </button>
+        </div>
 
+        <div className="flex items-center gap-4">
           {/* Follow streaming mode toggle */}
           <button
             type="button"
@@ -407,38 +399,6 @@ export function Toolbar({
               <span>{activeSubagentCount}</span>
             </div>
           )}
-
-          {/* Git graph toggle */}
-          <button
-            type="button"
-            onClick={onGitGraphToggle}
-            className="w-8 h-8 flex items-center justify-center transition-colors"
-            style={{
-              borderRadius: 'var(--radius)',
-              backgroundColor: isGitGraph ? 'var(--accent)' : 'var(--bg-primary)',
-              color: isGitGraph ? 'var(--bg-primary)' : 'var(--text-primary)',
-              border: '1px solid var(--border)',
-            }}
-            title={isGitGraph ? 'Close git graph (Ctrl+G)' : 'Show git graph (Ctrl+G)'}
-          >
-            <GitBranch className="w-4 h-4" />
-          </button>
-
-          {/* Working tree toggle */}
-          <button
-            type="button"
-            onClick={onWorkingTreeToggle}
-            className="w-8 h-8 flex items-center justify-center transition-colors"
-            style={{
-              borderRadius: 'var(--radius)',
-              backgroundColor: isWorkingTree ? 'var(--accent)' : 'var(--bg-primary)',
-              color: isWorkingTree ? 'var(--bg-primary)' : 'var(--text-primary)',
-              border: '1px solid var(--border)',
-            }}
-            title={isWorkingTree ? 'Close working tree (Ctrl+Shift+G)' : 'Show working tree (Ctrl+Shift+G)'}
-          >
-            <GitPullRequestDraft className="w-4 h-4" />
-          </button>
 
           {/* AI Chat panel toggle */}
           <button

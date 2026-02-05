@@ -939,8 +939,6 @@ export function Files() {
         recentFiles={appState.recentFiles}
         fontSize={appState.fontSize}
         isSplit={isSplit}
-        isGitGraph={rightPaneContent?.type === 'git-graph'}
-        isWorkingTree={rightPaneContent?.type === 'working-tree'}
         isChatPanelOpen={chatPanelOpen}
         isFollowMode={appState.followStreamingMode}
         content={content}
@@ -952,8 +950,6 @@ export function Files() {
         onFileSelect={handleFileSelect}
         onFontSizeChange={handleFontSizeChange}
         onSplitToggle={toggleSplit}
-        onGitGraphToggle={handleGitGraphToggle}
-        onWorkingTreeToggle={handleWorkingTreeToggle}
         onChatPanelToggle={handleChatPanelToggle}
         onFollowModeToggle={toggleFollowMode}
         onHotkeysClick={handleHotkeysClick}
@@ -992,6 +988,10 @@ export function Files() {
           rightPaneContent={rightPaneContent}
           onCloseRight={handleCloseRight}
           rightIsStreaming={rightIsStreaming}
+          isGitGraph={rightPaneContent?.type === 'git-graph'}
+          isWorkingTree={rightPaneContent?.type === 'working-tree'}
+          onGitGraphToggle={handleGitGraphToggle}
+          onWorkingTreeToggle={handleWorkingTreeToggle}
           rightPaneTabBar={
             <RightPaneTabBar
               tabs={rightPaneTabs}

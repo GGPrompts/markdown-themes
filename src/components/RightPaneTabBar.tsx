@@ -114,12 +114,7 @@ export function RightPaneTabBar({ tabs, activeTabId, onTabSelect, onTabClose, on
 
   return (
     <div
-      className="flex items-end overflow-x-auto"
-      style={{
-        backgroundColor: 'var(--bg-secondary)',
-        borderBottom: '1px solid var(--border)',
-        minHeight: '36px',
-      }}
+      className="flex items-end overflow-x-auto flex-1 min-w-0"
     >
       {tabs.map((tab) => (
         <TabItem

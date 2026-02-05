@@ -45,7 +45,7 @@ type GitCommit struct {
 	Author        string   `json:"author"`
 	AuthorEmail   string   `json:"authorEmail"`
 	Date          string   `json:"date"`
-	ParentHashes  []string `json:"parentHashes"`
+	ParentHashes  []string `json:"parents"`
 	Refs          []string `json:"refs,omitempty"`
 	IsMerge       bool     `json:"isMerge"`
 }

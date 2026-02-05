@@ -1,4 +1,5 @@
 import { useRef, useCallback, useState, type ReactNode } from 'react';
+import { GitBranch, GitPullRequestDraft } from 'lucide-react';
 import type { RightPaneContent } from '../hooks/useSplitView';
 
 interface SplitViewProps {
@@ -13,6 +14,10 @@ interface SplitViewProps {
   onCloseRight?: () => void;
   rightIsStreaming?: boolean;
   rightPaneTabBar?: ReactNode;
+  isGitGraph?: boolean;
+  isWorkingTree?: boolean;
+  onGitGraphToggle?: () => void;
+  onWorkingTreeToggle?: () => void;
 }
 
 export function SplitView({
@@ -27,6 +32,10 @@ export function SplitView({
   onCloseRight,
   rightIsStreaming,
   rightPaneTabBar,
+  isGitGraph = false,
+  isWorkingTree = false,
+  onGitGraphToggle,
+  onWorkingTreeToggle,
 }: SplitViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
@@ -158,12 +167,31 @@ export function SplitView({
       >
         {/* Right pane header - show tab bar for file content, simple header for others */}
         {rightPaneContent?.type === 'file' && rightPaneTabBar ? (
-          rightPaneTabBar
+          <div
+            className="flex items-end"
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              borderBottom: '1px solid var(--border)',
+              minHeight: '36px',
+            }}
+          >
+            {rightPaneTabBar}
+            <RightPaneActions
+              isGitGraph={isGitGraph}
+              isWorkingTree={isWorkingTree}
+              onGitGraphToggle={onGitGraphToggle}
+              onWorkingTreeToggle={onWorkingTreeToggle}
+            />
+          </div>
         ) : (
           <RightPaneHeader
             rightPaneContent={rightPaneContent}
             rightIsStreaming={rightIsStreaming}
             onClose={onCloseRight}
+            isGitGraph={isGitGraph}
+            isWorkingTree={isWorkingTree}
+            onGitGraphToggle={onGitGraphToggle}
+            onWorkingTreeToggle={onWorkingTreeToggle}
           />
         )}
         {rightPane}
@@ -201,14 +229,85 @@ function getHeaderTitle(content: RightPaneContent | null | undefined): { title: 
   }
 }
 
+function RightPaneActions({
+  isGitGraph = false,
+  isWorkingTree = false,
+  onGitGraphToggle,
+  onWorkingTreeToggle,
+}: {
+  isGitGraph?: boolean;
+  isWorkingTree?: boolean;
+  onGitGraphToggle?: () => void;
+  onWorkingTreeToggle?: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-1 px-2 flex-shrink-0">
+      <button
+        onClick={onGitGraphToggle}
+        className="w-6 h-6 flex items-center justify-center rounded transition-colors"
+        style={{
+          backgroundColor: isGitGraph ? 'var(--accent)' : 'transparent',
+          color: isGitGraph ? 'var(--bg-primary)' : 'var(--text-secondary)',
+        }}
+        onMouseEnter={(e) => {
+          if (!isGitGraph) {
+            e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+            e.currentTarget.style.color = 'var(--text-primary)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isGitGraph) {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = 'var(--text-secondary)';
+          }
+        }}
+        title={isGitGraph ? 'Close git graph (Ctrl+G)' : 'Show git graph (Ctrl+G)'}
+      >
+        <GitBranch size={14} />
+      </button>
+      <button
+        onClick={onWorkingTreeToggle}
+        className="w-6 h-6 flex items-center justify-center rounded transition-colors"
+        style={{
+          backgroundColor: isWorkingTree ? 'var(--accent)' : 'transparent',
+          color: isWorkingTree ? 'var(--bg-primary)' : 'var(--text-secondary)',
+        }}
+        onMouseEnter={(e) => {
+          if (!isWorkingTree) {
+            e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+            e.currentTarget.style.color = 'var(--text-primary)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isWorkingTree) {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = 'var(--text-secondary)';
+          }
+        }}
+        title={isWorkingTree ? 'Close working tree (Ctrl+Shift+G)' : 'Show working tree (Ctrl+Shift+G)'}
+      >
+        <GitPullRequestDraft size={14} />
+      </button>
+    </div>
+  );
+}
+
 function RightPaneHeader({
   rightPaneContent,
   rightIsStreaming,
   onClose,
+  isGitGraph = false,
+  isWorkingTree = false,
+  onGitGraphToggle,
+  onWorkingTreeToggle,
 }: {
   rightPaneContent?: RightPaneContent | null;
   rightIsStreaming?: boolean;
   onClose?: () => void;
+  isGitGraph?: boolean;
+  isWorkingTree?: boolean;
+  onGitGraphToggle?: () => void;
+  onWorkingTreeToggle?: () => void;
 }) {
   const { title, subtitle } = getHeaderTitle(rightPaneContent);
   const hasContent = !!rightPaneContent;
@@ -247,6 +346,12 @@ function RightPaneHeader({
               AI writing...
             </span>
           )}
+          <RightPaneActions
+            isGitGraph={isGitGraph}
+            isWorkingTree={isWorkingTree}
+            onGitGraphToggle={onGitGraphToggle}
+            onWorkingTreeToggle={onWorkingTreeToggle}
+          />
           {onClose && (
             <button
               onClick={onClose}
@@ -269,12 +374,20 @@ function RightPaneHeader({
           )}
         </>
       ) : (
-        <span
-          className="flex-1 text-sm"
-          style={{ color: 'var(--text-secondary)' }}
-        >
-          {title}
-        </span>
+        <>
+          <span
+            className="flex-1 text-sm"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            {title}
+          </span>
+          <RightPaneActions
+            isGitGraph={isGitGraph}
+            isWorkingTree={isWorkingTree}
+            onGitGraphToggle={onGitGraphToggle}
+            onWorkingTreeToggle={onWorkingTreeToggle}
+          />
+        </>
       )}
     </div>
   );

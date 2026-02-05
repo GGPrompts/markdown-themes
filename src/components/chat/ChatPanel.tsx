@@ -108,7 +108,7 @@ export function ChatPanel({ cwd, currentFile, currentFileContent: _currentFileCo
     { inputTokens: 0, outputTokens: 0, costUSD: 0 }
   );
 
-  const scale = fontSize / 100;
+  const zoom = fontSize / 100;
 
   // Conversation list view
   if (showList) {
@@ -271,11 +271,7 @@ export function ChatPanel({ cwd, currentFile, currentFileContent: _currentFileCo
       <div
         className="flex-1 min-h-0 overflow-auto py-4"
         ref={scrollContainerRef}
-        style={scale !== 1 ? {
-          transform: `scale(${scale})`,
-          transformOrigin: 'top left',
-          width: `${100 / scale}%`,
-        } : undefined}
+        style={zoom !== 1 ? { zoom } : undefined}
       >
         {activeConversation?.messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full px-6 text-center">

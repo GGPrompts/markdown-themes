@@ -252,7 +252,7 @@ export function useTabManager(options: UseTabManagerOptions = {}): UseTabManager
     // Create a unique identifier for this diff
     const diffId = `${base.substring(0, 7)}:${file}`;
 
-    // Check if this diff is already open
+    // Check if this exact diff is already open
     const existingDiffTab = currentTabs.find(
       (t) => t.type === 'diff' && t.diffData?.base === base && t.diffData?.file === file
     );
@@ -261,17 +261,28 @@ export function useTabManager(options: UseTabManagerOptions = {}): UseTabManager
       return;
     }
 
-    // Create new diff tab (always pinned, never preview)
+    // Create new diff tab as preview (replaces previous unpinned diff tab)
     const newTab: Tab = {
       id: generateTabId(),
       path: diffId, // Used for display purposes
-      isPreview: false,
-      isPinned: true,
+      isPreview: true,
+      isPinned: false,
       type: 'diff',
       diffData: { base, file, head },
     };
 
-    setTabs((prevTabs) => [...prevTabs, newTab]);
+    setTabs((prevTabs) => {
+      // Find an existing unpinned diff tab to replace
+      const existingPreviewDiffIndex = prevTabs.findIndex(
+        (t) => t.type === 'diff' && !t.isPinned
+      );
+      if (existingPreviewDiffIndex >= 0) {
+        const newTabs = [...prevTabs];
+        newTabs[existingPreviewDiffIndex] = newTab;
+        return newTabs;
+      }
+      return [...prevTabs, newTab];
+    });
     setActiveTabId(newTab.id);
   }, []);
 

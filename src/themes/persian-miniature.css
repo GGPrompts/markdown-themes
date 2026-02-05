@@ -324,9 +324,9 @@
     inset 0 0 0 12px var(--vermillion);
 }
 
-/* Code Blocks - On lapis background like precious gems */
+/* Code Blocks - Parchment background with illuminated border */
 .theme-persian-miniature .prose pre {
-  background: var(--lapis-deep);
+  background: var(--parchment);
   border: 3px solid var(--gold-leaf);
   box-shadow: var(--shadow-inset), var(--shadow-gold);
   padding: 1.5rem;
@@ -347,7 +347,7 @@
 
 .theme-persian-miniature .prose pre code {
   font-family: var(--font-mono);
-  color: #fff8e8;
+  color: var(--lapis-deep);
   background: transparent;
 }
 

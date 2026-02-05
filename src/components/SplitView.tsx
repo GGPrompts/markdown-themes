@@ -7,7 +7,8 @@ interface SplitViewProps {
   onSplitRatioChange: (ratio: number) => void;
   leftPane: ReactNode;
   rightPane: ReactNode;
-  onDropToRight?: (path: string) => void;
+  onDropToRight?: (path: string, fromPane: 'left' | 'right' | null) => void;
+  onDropToLeft?: (path: string, fromPane: 'left' | 'right' | null) => void;
   rightPaneContent?: RightPaneContent | null;
   onCloseRight?: () => void;
   rightIsStreaming?: boolean;
@@ -21,6 +22,7 @@ export function SplitView({
   leftPane,
   rightPane,
   onDropToRight,
+  onDropToLeft,
   rightPaneContent,
   onCloseRight,
   rightIsStreaming,
@@ -29,6 +31,17 @@ export function SplitView({
   const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isLeftDragOver, setIsLeftDragOver] = useState(false);
+
+  // Parse drag data to extract pane source and path
+  const parseDragData = (data: string): { fromPane: 'left' | 'right' | null; path: string } => {
+    if (data.startsWith('left:')) {
+      return { fromPane: 'left', path: data.slice(5) };
+    } else if (data.startsWith('right:')) {
+      return { fromPane: 'right', path: data.slice(6) };
+    }
+    return { fromPane: null, path: data };
+  };
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -67,7 +80,30 @@ export function SplitView({
       {/* Left pane */}
       <div
         className="flex flex-col overflow-hidden"
-        style={{ width: `${splitRatio * 100}%` }}
+        style={{
+          width: `${splitRatio * 100}%`,
+          outline: isLeftDragOver ? '2px dashed var(--accent)' : 'none',
+          outlineOffset: '-2px',
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          setIsLeftDragOver(true);
+        }}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+            setIsLeftDragOver(false);
+          }
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          const data = e.dataTransfer.getData('text/plain');
+          if (data && onDropToLeft) {
+            const { fromPane, path } = parseDragData(data);
+            onDropToLeft(path, fromPane);
+          }
+          setIsLeftDragOver(false);
+        }}
       >
         {leftPane}
       </div>
@@ -112,9 +148,10 @@ export function SplitView({
         }}
         onDrop={(e) => {
           e.preventDefault();
-          const path = e.dataTransfer.getData('text/plain');
-          if (path && onDropToRight) {
-            onDropToRight(path);
+          const data = e.dataTransfer.getData('text/plain');
+          if (data && onDropToRight) {
+            const { fromPane, path } = parseDragData(data);
+            onDropToRight(path, fromPane);
           }
           setIsDragOver(false);
         }}

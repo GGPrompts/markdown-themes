@@ -568,15 +568,41 @@ export function Files() {
 
   // Handle drop to right pane (drag-and-drop from tabs)
   const handleDropToRight = useCallback(
-    (path: string) => {
-      // Don't do anything if dropping the same file
-      if (path === rightPaneFilePath) return;
+    (path: string, fromPane: 'left' | 'right' | null) => {
+      // Don't do anything if dropping the same file or from right pane
+      if (path === rightPaneFilePath || fromPane === 'right') return;
+      // If dragging from left pane, close the left tab (transfer, not duplicate)
+      if (fromPane === 'left') {
+        const leftTab = tabs.find((t) => t.path === path);
+        if (leftTab) {
+          closeTab(leftTab.id);
+        }
+      }
       // Ensure right pane is in file mode and open as pinned tab
       setRightPaneFile(path);
       openRightTab(path, false); // pinned mode (dragging = intentional)
       addRecentFile(path);
     },
-    [rightPaneFilePath, setRightPaneFile, openRightTab, addRecentFile]
+    [rightPaneFilePath, tabs, closeTab, setRightPaneFile, openRightTab, addRecentFile]
+  );
+
+  // Handle drop to left pane (drag-and-drop from right pane tabs)
+  const handleDropToLeft = useCallback(
+    (path: string, fromPane: 'left' | 'right' | null) => {
+      // Don't do anything if dropping from left pane
+      if (fromPane === 'left') return;
+      // If dragging from right pane, close the right tab (transfer, not duplicate)
+      if (fromPane === 'right') {
+        const rightTab = rightPaneTabs.find((t) => t.path === path);
+        if (rightTab) {
+          closeRightTab(rightTab.id);
+        }
+      }
+      // Open as pinned tab in left pane
+      openTab(path, false);
+      addRecentFile(path);
+    },
+    [rightPaneTabs, closeRightTab, openTab, addRecentFile]
   );
 
   // Handle closing the right pane file (close all tabs)
@@ -755,6 +781,7 @@ export function Files() {
           splitRatio={splitRatio}
           onSplitRatioChange={setSplitRatio}
           onDropToRight={handleDropToRight}
+          onDropToLeft={handleDropToLeft}
           rightPaneContent={rightPaneContent}
           onCloseRight={handleCloseRight}
           rightIsStreaming={rightIsStreaming}

@@ -20,8 +20,20 @@ interface TabItemProps {
 
 function TabItem({ tab, isActive, onSelect, onClose, onPin }: TabItemProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const displayName = tab.path.split('/').pop() ?? tab.path.split('\\').pop() ?? tab.path;
+
+  const handleDragStart = (e: React.DragEvent) => {
+    // Include pane source so drop handler can close from origin
+    e.dataTransfer.setData('text/plain', `right:${tab.path}`);
+    e.dataTransfer.effectAllowed = 'move';
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+  };
 
   const handleDoubleClick = () => {
     if (tab.isPreview) {
@@ -39,6 +51,9 @@ function TabItem({ tab, isActive, onSelect, onClose, onPin }: TabItemProps) {
 
   return (
     <div
+      draggable
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
       className="group flex items-center gap-1 px-3 py-1.5 text-sm cursor-pointer select-none min-w-0 max-w-[180px] transition-colors"
       style={{
         backgroundColor: isActive
@@ -48,6 +63,7 @@ function TabItem({ tab, isActive, onSelect, onClose, onPin }: TabItemProps) {
             : 'transparent',
         borderBottom: isActive ? '2px solid var(--accent)' : '2px solid transparent',
         color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+        opacity: isDragging ? 0.5 : 1,
       }}
       onClick={onSelect}
       onDoubleClick={handleDoubleClick}

@@ -9,6 +9,8 @@ interface TabBarProps {
   onTabSelect: (id: string) => void;
   onTabClose: (id: string) => void;
   onTabPin: (id: string) => void;
+  /** Which pane this tab bar is in - used for drag transfer between panes */
+  pane?: 'left' | 'right';
 }
 
 interface TabItemProps {
@@ -17,9 +19,10 @@ interface TabItemProps {
   onSelect: () => void;
   onClose: () => void;
   onPin: () => void;
+  pane: 'left' | 'right';
 }
 
-function TabItem({ tab, isActive, onSelect, onClose, onPin }: TabItemProps) {
+function TabItem({ tab, isActive, onSelect, onClose, onPin, pane }: TabItemProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -49,7 +52,8 @@ function TabItem({ tab, isActive, onSelect, onClose, onPin }: TabItemProps) {
       e.preventDefault();
       return;
     }
-    e.dataTransfer.setData('text/plain', tab.path);
+    // Include pane source so drop handler can close from origin
+    e.dataTransfer.setData('text/plain', `${pane}:${tab.path}`);
     e.dataTransfer.effectAllowed = 'move';
     setIsDragging(true);
   };
@@ -119,7 +123,7 @@ function TabItem({ tab, isActive, onSelect, onClose, onPin }: TabItemProps) {
   );
 }
 
-export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin }: TabBarProps) {
+export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, pane = 'left' }: TabBarProps) {
   if (tabs.length === 0) {
     return null;
   }
@@ -141,6 +145,7 @@ export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin }:
           onSelect={() => onTabSelect(tab.id)}
           onClose={() => onTabClose(tab.id)}
           onPin={() => onTabPin(tab.id)}
+          pane={pane}
         />
       ))}
     </div>

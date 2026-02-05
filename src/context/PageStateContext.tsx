@@ -4,13 +4,24 @@ import type { RightPaneContent } from '../hooks/useSplitView';
 
 const STORAGE_KEY = 'markdown-themes-page-state';
 
+interface RightPaneTab {
+  id: string;
+  path: string;
+  isPreview: boolean;
+  isPinned: boolean;
+}
+
 interface FilesPageState {
   tabs: Tab[];
   activeTabId: string | null;
   isSplit: boolean;
   splitRatio: number;
   rightPaneContent: RightPaneContent | null;
+  rightPaneTabs: RightPaneTab[];
+  rightActiveTabId: string | null;
 }
+
+export type { RightPaneTab };
 
 interface PromptsPageState {
   currentFile: string | null;
@@ -39,6 +50,8 @@ const defaultState: PageState = {
     isSplit: false,
     splitRatio: 0.5,
     rightPaneContent: null,
+    rightPaneTabs: [],
+    rightActiveTabId: null,
   },
   prompts: {
     currentFile: null,
@@ -59,6 +72,8 @@ function loadPageState(): PageState {
         isSplit: parsed.files?.isSplit ?? defaultState.files.isSplit,
         splitRatio: parsed.files?.splitRatio ?? defaultState.files.splitRatio,
         rightPaneContent: parsed.files?.rightPaneContent ?? defaultState.files.rightPaneContent,
+        rightPaneTabs: parsed.files?.rightPaneTabs ?? defaultState.files.rightPaneTabs,
+        rightActiveTabId: parsed.files?.rightActiveTabId ?? defaultState.files.rightActiveTabId,
       },
       prompts: {
         currentFile: parsed.prompts?.currentFile ?? defaultState.prompts.currentFile,

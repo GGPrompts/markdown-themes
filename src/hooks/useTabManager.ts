@@ -7,6 +7,11 @@ export interface DiffData {
   file: string;  // file path within repo
 }
 
+export interface TabMetadata {
+  /** Tab was auto-opened by Follow AI Edits mode */
+  autoOpened?: boolean;
+}
+
 export interface Tab {
   id: string;
   path: string;
@@ -14,6 +19,7 @@ export interface Tab {
   isPinned: boolean;
   type: 'file' | 'diff';
   diffData?: DiffData;
+  metadata?: TabMetadata;
 }
 
 interface UseTabManagerOptions {
@@ -22,14 +28,20 @@ interface UseTabManagerOptions {
   onStateChange?: (tabs: Tab[], activeTabId: string | null) => void;
 }
 
+interface OpenTabOptions {
+  preview?: boolean;
+  metadata?: TabMetadata;
+}
+
 interface UseTabManagerResult {
   tabs: Tab[];
   activeTabId: string | null;
   activeTab: Tab | null;
-  openTab: (path: string, preview?: boolean) => void;
+  openTab: (path: string, options?: boolean | OpenTabOptions) => void;
   openDiffTab: (base: string, file: string, head?: string) => void;
   pinTab: (id: string) => void;
   closeTab: (id: string) => void;
+  closeTabsWithMetadata: (predicate: (metadata: TabMetadata | undefined) => boolean) => void;
   setActiveTab: (id: string) => void;
 }
 
@@ -68,7 +80,13 @@ export function useTabManager(options: UseTabManagerOptions = {}): UseTabManager
     [tabs, activeTabId]
   );
 
-  const openTab = useCallback((path: string, preview = true) => {
+  const openTab = useCallback((path: string, optionsOrPreview: boolean | OpenTabOptions = true) => {
+    // Support both legacy boolean and new options object
+    const options: OpenTabOptions = typeof optionsOrPreview === 'boolean'
+      ? { preview: optionsOrPreview }
+      : optionsOrPreview;
+    const { preview = true, metadata } = options;
+
     // Use ref to get current tabs without dependency
     const currentTabs = tabsRef.current;
 
@@ -86,6 +104,13 @@ export function useTabManager(options: UseTabManagerOptions = {}): UseTabManager
       return;
     }
 
+    // Check if file is already open as an auto-opened tab
+    const existingAutoTab = currentTabs.find((t) => t.type === 'file' && t.path === path && t.metadata?.autoOpened);
+    if (existingAutoTab) {
+      setActiveTabId(existingAutoTab.id);
+      return;
+    }
+
     if (preview) {
       // Replace existing preview tab or create new one
       const newTab: Tab = {
@@ -94,10 +119,16 @@ export function useTabManager(options: UseTabManagerOptions = {}): UseTabManager
         isPreview: true,
         isPinned: false,
         type: 'file',
+        metadata,
       };
 
       setTabs((prevTabs) => {
-        const existingPreviewIndex = prevTabs.findIndex((t) => t.isPreview && t.type === 'file');
+        // For auto-opened tabs, don't replace existing preview tabs - add new ones
+        if (metadata?.autoOpened) {
+          return [...prevTabs, newTab];
+        }
+
+        const existingPreviewIndex = prevTabs.findIndex((t) => t.isPreview && t.type === 'file' && !t.metadata?.autoOpened);
         if (existingPreviewIndex >= 0) {
           // Replace existing preview tab
           const newTabs = [...prevTabs];
@@ -120,6 +151,7 @@ export function useTabManager(options: UseTabManagerOptions = {}): UseTabManager
             ...newTabs[previewTabIndex],
             isPreview: false,
             isPinned: true,
+            metadata: undefined, // Clear auto-opened metadata when pinning
           };
           setActiveTabId(prevTabs[previewTabIndex].id);
           return newTabs;
@@ -172,6 +204,27 @@ export function useTabManager(options: UseTabManagerOptions = {}): UseTabManager
     setActiveTabId(id);
   }, []);
 
+  const closeTabsWithMetadata = useCallback((predicate: (metadata: TabMetadata | undefined) => boolean) => {
+    setTabs((prevTabs) => {
+      const tabsToClose = prevTabs.filter((t) => predicate(t.metadata));
+      if (tabsToClose.length === 0) return prevTabs;
+
+      const tabIdsToClose = new Set(tabsToClose.map((t) => t.id));
+      const newTabs = prevTabs.filter((t) => !tabIdsToClose.has(t.id));
+
+      // Update active tab if we're closing the active one
+      setActiveTabId((currentActiveId) => {
+        if (!currentActiveId || !tabIdsToClose.has(currentActiveId)) return currentActiveId;
+        if (newTabs.length === 0) return null;
+
+        // Find the first remaining tab
+        return newTabs[0].id;
+      });
+
+      return newTabs;
+    });
+  }, []);
+
   const openDiffTab = useCallback((base: string, file: string, head?: string) => {
     const currentTabs = tabsRef.current;
 
@@ -209,6 +262,7 @@ export function useTabManager(options: UseTabManagerOptions = {}): UseTabManager
     openDiffTab,
     pinTab,
     closeTab,
+    closeTabsWithMetadata,
     setActiveTab,
   };
 }

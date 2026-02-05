@@ -20,6 +20,8 @@ const API_BASE = 'http://localhost:8129';
 interface WorkingTreeProps {
   repoPath: string;
   onFileSelect?: (path: string) => void;
+  /** Called after a successful commit with the list of files that are no longer changed */
+  onCommitSuccess?: (committedFiles: string[]) => void;
 }
 
 /**
@@ -83,7 +85,7 @@ function useGitStatus(repoPath: string) {
   return { repo, loading, error: debouncedError, refetch: fetchStatus };
 }
 
-export function WorkingTree({ repoPath, onFileSelect }: WorkingTreeProps) {
+export function WorkingTree({ repoPath, onFileSelect, onCommitSuccess }: WorkingTreeProps) {
   const { repo, loading, error, refetch } = useGitStatus(repoPath);
 
   // Derive parent directory for git operations
@@ -150,8 +152,15 @@ export function WorkingTree({ repoPath, onFileSelect }: WorkingTreeProps) {
   };
 
   const handleCommit = async (message: string) => {
+    // Capture staged files before commit to report what was committed
+    const stagedPaths = repo?.staged.map((f) => `${repoPath}/${f.path}`) || [];
     await commit(message);
     refetch();
+
+    // Notify parent about committed files
+    if (onCommitSuccess && stagedPaths.length > 0) {
+      onCommitSuccess(stagedPaths);
+    }
   };
 
   const handleStageAll = async () => {

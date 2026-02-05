@@ -463,17 +463,16 @@ export function Files() {
     });
   }, [appState.followStreamingMode, isSplit, changedFiles, rightPaneTabs, openRightTab]);
 
-  // Handle commit success - close auto-opened tabs for committed files
+  // Handle commit success - close tabs for committed files (review queue cleanup)
+  // Right pane tabs act as a review queue; committed files are "done" and removed
   const handleCommitSuccess = useCallback((committedFiles: string[]) => {
     const committedSet = new Set(committedFiles);
 
-    // Find and close tabs in the right pane that were auto-opened and are now committed
-    const tabsToClose = rightPaneTabs.filter(
-      (t) => t.isPreview && committedSet.has(t.path)
-    );
+    // Find and close ALL tabs in the right pane for committed files (preview or pinned)
+    const tabsToClose = rightPaneTabs.filter((t) => committedSet.has(t.path));
     tabsToClose.forEach((t) => closeRightTab(t.id));
 
-    // Remove from tracking ref
+    // Remove from auto-opened tracking ref
     committedFiles.forEach((f) => autoOpenedFilesRef.current.delete(f));
   }, [rightPaneTabs, closeRightTab]);
 

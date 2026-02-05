@@ -55,6 +55,42 @@ interface SummaryMessage {
 type ConversationEntry = UserMessage | AssistantMessage | SummaryMessage | { type: string };
 
 /**
+ * Check if a user message is actual user input vs internal/meta messages.
+ */
+function isRealUserMessage(entry: UserMessage & { isMeta?: boolean }): boolean {
+  // Skip meta messages (system caveats, etc.)
+  if (entry.isMeta) return false;
+
+  const content = entry.message?.content;
+  if (!content) return false;
+
+  // Handle string content
+  if (typeof content === 'string') {
+    const trimmed = content.trim();
+    // Skip empty messages
+    if (!trimmed) return false;
+    // Skip command invocations
+    if (trimmed.startsWith('<command-name>') || trimmed.startsWith('<command-message>')) return false;
+    // Skip empty local command outputs
+    if (trimmed === '<local-command-stdout></local-command-stdout>') return false;
+    // Skip local command caveats
+    if (trimmed.startsWith('<local-command-caveat>')) return false;
+    return true;
+  }
+
+  // Handle array content (tool_result blocks are not real user input)
+  if (Array.isArray(content)) {
+    // If it's only tool_result blocks, skip it
+    const hasNonToolResult = content.some(
+      (block) => block.type !== 'tool_result'
+    );
+    return hasNonToolResult;
+  }
+
+  return true;
+}
+
+/**
  * Parse JSONL content into conversation entries.
  * Filters for user/assistant/summary types only.
  */
@@ -67,8 +103,13 @@ function parseConversationEntries(content: string): ConversationEntry[] {
     if (!trimmed) continue;
 
     try {
-      const parsed = JSON.parse(trimmed) as ConversationEntry;
-      if (parsed.type === 'user' || parsed.type === 'assistant' || parsed.type === 'summary') {
+      const parsed = JSON.parse(trimmed) as ConversationEntry & { isMeta?: boolean };
+      if (parsed.type === 'user') {
+        // Filter out internal/meta user messages
+        if (isRealUserMessage(parsed as UserMessage & { isMeta?: boolean })) {
+          entries.push(parsed);
+        }
+      } else if (parsed.type === 'assistant' || parsed.type === 'summary') {
         entries.push(parsed);
       }
     } catch {

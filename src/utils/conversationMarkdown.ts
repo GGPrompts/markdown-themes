@@ -212,6 +212,7 @@ function formatSummaryMessage(entry: SummaryMessage): string {
  * Transform JSONL conversation content to markdown.
  *
  * @param content JSONL string from Claude Code conversation logs
+ * @param maxEntries Maximum number of messages to show (default 50, 0 for unlimited)
  * @returns Formatted markdown string
  *
  * @example
@@ -220,15 +221,23 @@ function formatSummaryMessage(entry: SummaryMessage): string {
  * {"type":"assistant","message":{"content":[{"type":"text","text":"Looking..."}]}}
  * `);
  */
-export function jsonlToMarkdown(content: string): string {
+export function jsonlToMarkdown(content: string, maxEntries: number = 50): string {
   if (!content || typeof content !== 'string') {
     return '';
   }
 
-  const entries = parseConversationEntries(content);
+  let entries = parseConversationEntries(content);
 
   if (entries.length === 0) {
     return '';
+  }
+
+  // Limit to most recent entries to prevent performance issues
+  const totalEntries = entries.length;
+  let truncationNote = '';
+  if (maxEntries > 0 && entries.length > maxEntries) {
+    entries = entries.slice(-maxEntries);
+    truncationNote = `*Showing last ${maxEntries} of ${totalEntries} messages...*\n\n---\n\n`;
   }
 
   const formattedParts: string[] = [];
@@ -249,5 +258,5 @@ export function jsonlToMarkdown(content: string): string {
     }
   }
 
-  return formattedParts.join('\n\n---\n\n');
+  return truncationNote + formattedParts.join('\n\n---\n\n');
 }

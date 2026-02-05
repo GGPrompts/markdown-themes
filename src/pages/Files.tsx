@@ -306,7 +306,6 @@ export function Files() {
     setRightPaneFile,
     setRightPaneGitGraph,
     setRightPaneWorkingTree,
-    setRightPaneChat,
   } = useSplitView({
     initialState: {
       isSplit: filesState.isSplit,
@@ -355,6 +354,47 @@ export function Files() {
       toggleSplit();
     }
   }, [rightPaneTabs.length, rightPaneContent?.type, isSplit, setRightFile, toggleSplit]);
+
+  // Chat panel state (third column, independent of split view)
+  const [chatPanelOpen, setChatPanelOpen] = useState(filesState.chatPanelOpen);
+  const [chatPanelWidth, setChatPanelWidth] = useState(filesState.chatPanelWidth);
+  const chatResizeRef = useRef<HTMLDivElement>(null);
+
+  // Persist chat panel state changes
+  useEffect(() => {
+    setFilesState({ chatPanelOpen, chatPanelWidth });
+  }, [chatPanelOpen, chatPanelWidth, setFilesState]);
+
+  // Toggle chat panel
+  const toggleChatPanel = useCallback(() => {
+    setChatPanelOpen((prev) => !prev);
+  }, []);
+
+  // Handle chat panel resize
+  const handleChatResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = chatPanelWidth;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      // Calculate new width (dragging left increases width, right decreases)
+      const deltaX = startX - moveEvent.clientX;
+      const newWidth = Math.max(280, Math.min(800, startWidth + deltaX));
+      setChatPanelWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [chatPanelWidth]);
 
   const currentFileExt = currentFile?.split('.').pop()?.toLowerCase();
   const isCurrentFileBinary = currentFileExt ? BINARY_EXTENSIONS.has(currentFileExt) : false;
@@ -766,17 +806,10 @@ export function Files() {
     }
   }, [rightPaneContent, isSplit, toggleSplit, setRightFile, setRightPaneWorkingTree]);
 
-  // Handle chat toggle
-  const handleChatToggle = useCallback(() => {
-    if (rightPaneContent?.type === 'chat') {
-      setRightFile(null);
-    } else {
-      if (!isSplit) {
-        toggleSplit();
-      }
-      setRightPaneChat();
-    }
-  }, [rightPaneContent, isSplit, toggleSplit, setRightFile, setRightPaneChat]);
+  // Handle chat panel toggle (now a separate third column)
+  const handleChatPanelToggle = useCallback(() => {
+    toggleChatPanel();
+  }, [toggleChatPanel]);
 
   // Handle hotkeys button - open HOTKEYS.md in right pane
   const handleHotkeysClick = useCallback(async () => {
@@ -870,10 +903,10 @@ export function Files() {
         return;
       }
 
-      // Ctrl/Cmd + Shift + C - Toggle AI chat
+      // Ctrl/Cmd + Shift + C - Toggle AI chat panel
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
         e.preventDefault();
-        handleChatToggle();
+        handleChatPanelToggle();
         return;
       }
 
@@ -895,7 +928,7 @@ export function Files() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSplit, handleGitGraphToggle, handleWorkingTreeToggle, handleChatToggle, handleHotkeysClick]);
+  }, [toggleSplit, handleGitGraphToggle, handleWorkingTreeToggle, handleChatPanelToggle, handleHotkeysClick]);
 
   return (
     <>
@@ -908,7 +941,7 @@ export function Files() {
         isSplit={isSplit}
         isGitGraph={rightPaneContent?.type === 'git-graph'}
         isWorkingTree={rightPaneContent?.type === 'working-tree'}
-        isChat={rightPaneContent?.type === 'chat'}
+        isChatPanelOpen={chatPanelOpen}
         isFollowMode={appState.followStreamingMode}
         content={content}
         workspacePath={workspacePath}
@@ -921,7 +954,7 @@ export function Files() {
         onSplitToggle={toggleSplit}
         onGitGraphToggle={handleGitGraphToggle}
         onWorkingTreeToggle={handleWorkingTreeToggle}
-        onChatToggle={handleChatToggle}
+        onChatPanelToggle={handleChatPanelToggle}
         onFollowModeToggle={toggleFollowMode}
         onHotkeysClick={handleHotkeysClick}
         onViewConversation={handleViewConversation}
@@ -1179,16 +1212,6 @@ export function Files() {
                 />
               )}
 
-              {/* AI Chat content type */}
-              {rightPaneContent?.type === 'chat' && (
-                <ChatPanel
-                  cwd={workspacePath}
-                  currentFile={currentFile}
-                  currentFileContent={content}
-                  fontSize={appState.fontSize}
-                />
-              )}
-
               {/* Commit content type - placeholder */}
               {rightPaneContent?.type === 'commit' && (
                 <div className="flex items-center justify-center h-full">
@@ -1209,6 +1232,34 @@ export function Files() {
             </div>
           }
         />
+
+        {/* Chat Panel - Third column, independent of split view */}
+        {chatPanelOpen && (
+          <>
+            {/* Resize handle for chat panel */}
+            <div
+              ref={chatResizeRef}
+              className="w-1 flex-shrink-0 relative group cursor-col-resize"
+              style={{ backgroundColor: 'var(--border)' }}
+              onMouseDown={handleChatResizeMouseDown}
+            >
+              <div className="absolute inset-y-0 left-0 right-0 group-hover:bg-[var(--accent)] transition-colors" />
+            </div>
+
+            {/* Chat panel */}
+            <div
+              className="flex flex-col overflow-hidden"
+              style={{ width: `${chatPanelWidth}px`, flexShrink: 0 }}
+            >
+              <ChatPanel
+                cwd={workspacePath}
+                currentFile={currentFile}
+                currentFileContent={content}
+                fontSize={appState.fontSize}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {/* Archive Modal */}

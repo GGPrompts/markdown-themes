@@ -1,13 +1,12 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 
-// Right pane content types
+// Right pane content types (chat is now a separate third panel)
 export type RightPaneContent =
   | { type: 'file'; path: string }
   | { type: 'git-graph' }
   | { type: 'working-tree' }
   | { type: 'diff'; base: string; head?: string; file?: string }
-  | { type: 'commit'; hash: string }
-  | { type: 'chat' };
+  | { type: 'commit'; hash: string };
 
 interface SplitViewState {
   isSplit: boolean;
@@ -38,7 +37,6 @@ interface UseSplitViewResult {
   setRightPaneWorkingTree: () => void;
   setRightPaneDiff: (base: string, head?: string, file?: string) => void;
   setRightPaneCommit: (hash: string) => void;
-  setRightPaneChat: () => void;
   clearRightPane: () => void;
 }
 
@@ -108,10 +106,6 @@ export function useSplitView(options: UseSplitViewOptions = {}): UseSplitViewRes
     setRightPaneContentState({ type: 'commit', hash });
   }, []);
 
-  const setRightPaneChat = useCallback(() => {
-    setRightPaneContentState({ type: 'chat' });
-  }, []);
-
   const clearRightPane = useCallback(() => {
     setRightPaneContentState(null);
   }, []);
@@ -134,7 +128,6 @@ export function useSplitView(options: UseSplitViewOptions = {}): UseSplitViewRes
     setRightPaneWorkingTree,
     setRightPaneDiff,
     setRightPaneCommit,
-    setRightPaneChat,
     clearRightPane,
   };
 }

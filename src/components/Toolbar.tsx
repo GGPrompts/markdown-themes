@@ -11,7 +11,8 @@ interface ToolbarProps {
   isSplit?: boolean;
   isGitGraph?: boolean;
   isWorkingTree?: boolean;
-  isChat?: boolean;
+  /** Whether the chat panel (third column) is open */
+  isChatPanelOpen?: boolean;
   isFollowMode?: boolean;
   content?: string;
   workspacePath?: string | null;
@@ -26,7 +27,8 @@ interface ToolbarProps {
   onSplitToggle?: () => void;
   onGitGraphToggle?: () => void;
   onWorkingTreeToggle?: () => void;
-  onChatToggle?: () => void;
+  /** Toggle the chat panel (third column) */
+  onChatPanelToggle?: () => void;
   onFollowModeToggle?: () => void;
   onHotkeysClick?: () => void;
   onViewConversation?: () => void;
@@ -43,7 +45,7 @@ export function Toolbar({
   isSplit = false,
   isGitGraph = false,
   isWorkingTree = false,
-  isChat = false,
+  isChatPanelOpen = false,
   isFollowMode = false,
   content,
   workspacePath,
@@ -56,7 +58,7 @@ export function Toolbar({
   onSplitToggle,
   onGitGraphToggle,
   onWorkingTreeToggle,
-  onChatToggle,
+  onChatPanelToggle,
   onFollowModeToggle,
   onHotkeysClick,
   onViewConversation,
@@ -438,18 +440,18 @@ export function Toolbar({
             <GitPullRequestDraft className="w-4 h-4" />
           </button>
 
-          {/* AI Chat toggle */}
+          {/* AI Chat panel toggle */}
           <button
             type="button"
-            onClick={onChatToggle}
+            onClick={onChatPanelToggle}
             className="w-8 h-8 flex items-center justify-center transition-colors"
             style={{
               borderRadius: 'var(--radius)',
-              backgroundColor: isChat ? 'var(--accent)' : 'var(--bg-primary)',
-              color: isChat ? 'var(--bg-primary)' : 'var(--text-primary)',
+              backgroundColor: isChatPanelOpen ? 'var(--accent)' : 'var(--bg-primary)',
+              color: isChatPanelOpen ? 'var(--bg-primary)' : 'var(--text-primary)',
               border: '1px solid var(--border)',
             }}
-            title={isChat ? 'Close AI chat (Ctrl+Shift+C)' : 'Open AI chat (Ctrl+Shift+C)'}
+            title={isChatPanelOpen ? 'Close AI chat panel (Ctrl+Shift+C)' : 'Open AI chat panel (Ctrl+Shift+C)'}
           >
             <Bot className="w-4 h-4" />
           </button>

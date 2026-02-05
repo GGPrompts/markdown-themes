@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -87,6 +89,15 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 	// Add session resumption if provided
 	if req.ClaudeSessionID != "" {
 		args = append(args, "--resume", req.ClaudeSessionID)
+	}
+
+	// Add MCP config if available
+	if home, err := os.UserHomeDir(); err == nil {
+		mcpConfigPath := filepath.Join(home, ".claude", "mcp.json")
+		if _, err := os.Stat(mcpConfigPath); err == nil {
+			args = append([]string{"--mcp-config", mcpConfigPath}, args...)
+			log.Printf("[Chat] Using MCP config: %s", mcpConfigPath)
+		}
 	}
 
 	cmd := exec.Command("claude", args...)

@@ -7,11 +7,17 @@ interface UseRightPaneTabsOptions {
   onStateChange?: (tabs: RightPaneTab[], activeTabId: string | null) => void;
 }
 
+interface OpenTabOptions {
+  preview?: boolean;
+  /** If true, add as new tab instead of replacing existing preview */
+  addNew?: boolean;
+}
+
 interface UseRightPaneTabsResult {
   tabs: RightPaneTab[];
   activeTabId: string | null;
   activeTab: RightPaneTab | null;
-  openTab: (path: string, preview?: boolean) => void;
+  openTab: (path: string, options?: boolean | OpenTabOptions) => void;
   pinTab: (id: string) => void;
   closeTab: (id: string) => void;
   setActiveTab: (id: string) => void;
@@ -52,7 +58,13 @@ export function useRightPaneTabs(options: UseRightPaneTabsOptions = {}): UseRigh
     [tabs, activeTabId]
   );
 
-  const openTab = useCallback((path: string, preview = true) => {
+  const openTab = useCallback((path: string, optionsOrPreview: boolean | OpenTabOptions = true) => {
+    // Support both legacy boolean and new options object
+    const options: OpenTabOptions = typeof optionsOrPreview === 'boolean'
+      ? { preview: optionsOrPreview }
+      : optionsOrPreview;
+    const { preview = true, addNew = false } = options;
+
     const currentTabs = tabsRef.current;
 
     // Check if file is already open in a pinned tab
@@ -79,6 +91,11 @@ export function useRightPaneTabs(options: UseRightPaneTabsOptions = {}): UseRigh
       };
 
       setTabs((prevTabs) => {
+        // If addNew is true, always add as new tab (for Follow AI Edits)
+        if (addNew) {
+          return [...prevTabs, newTab];
+        }
+
         const existingPreviewIndex = prevTabs.findIndex((t) => t.isPreview);
         if (existingPreviewIndex >= 0) {
           // Replace existing preview tab

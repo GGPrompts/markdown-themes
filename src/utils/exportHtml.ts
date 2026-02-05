@@ -914,6 +914,628 @@ body::before {
   color: #ff6b9d;
 }
 `,
+  'circuit-board': `
+:root {
+  --bg-primary: #0F2D1A;
+  --bg-secondary: #1A472A;
+  --text-primary: #F5F5F0;
+  --text-secondary: #C8C8C0;
+  --accent: #B87333;
+  --accent-hover: #D4956A;
+  --border: #8B5A2B;
+  --font-body: 'JetBrains Mono', 'Consolas', monospace;
+  --font-heading: 'Share Tech Mono', 'Courier New', monospace;
+  --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+  --radius: 0;
+}
+
+.prose h1, .prose h2, .prose h3 {
+  color: #B87333;
+  font-family: 'Share Tech Mono', monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.prose code {
+  background: #2D2D2D;
+  color: #33FF33;
+  border: 1px solid #B87333;
+}
+
+.prose pre {
+  background: #2D2D2D;
+  border: 1px solid #B87333;
+}
+`,
+  byzantine: `
+:root {
+  --bg-primary: #1a1410;
+  --bg-secondary: #2a2218;
+  --text-primary: #f5f0e1;
+  --text-secondary: rgba(245, 240, 225, 0.75);
+  --accent: #d4a012;
+  --accent-hover: #f0c848;
+  --border: rgba(212, 160, 18, 0.4);
+  --font-body: 'Cormorant Garamond', 'Palatino Linotype', serif;
+  --font-heading: 'Cinzel', 'Trajan Pro', serif;
+  --font-mono: 'Fira Code', 'Consolas', monospace;
+  --radius: 2px;
+}
+
+.prose h1, .prose h2, .prose h3 {
+  color: var(--accent);
+  font-family: 'Cinzel', serif;
+  text-shadow: 0 0 10px rgba(212, 160, 18, 0.3);
+}
+
+.prose blockquote {
+  border-left: 4px solid var(--accent);
+  background: rgba(212, 160, 18, 0.1);
+}
+
+.prose code {
+  background: #1c1812;
+  color: var(--accent);
+}
+
+.prose pre {
+  background: #1c1812;
+  border: 1px solid var(--accent);
+}
+`,
+  editorial: `
+:root {
+  --bg-primary: #FAF8F5;
+  --bg-secondary: #F5F2ED;
+  --text-primary: #1A1A1A;
+  --text-secondary: #4A4A4A;
+  --accent: #8B0000;
+  --accent-hover: #A31515;
+  --border: #D4D0C8;
+  --font-body: 'Source Serif 4', Georgia, serif;
+  --font-heading: 'Playfair Display', Georgia, serif;
+  --font-mono: 'Courier Prime', Courier, monospace;
+  --radius: 0;
+}
+
+.prose h1 {
+  font-size: 2.5rem;
+  border-bottom: 2px solid var(--accent);
+}
+
+.prose h1::first-letter {
+  font-size: 4rem;
+  float: left;
+  line-height: 1;
+  margin-right: 0.5rem;
+  color: var(--accent);
+}
+
+.prose blockquote {
+  border-left: 3px solid var(--accent);
+  font-style: italic;
+}
+`,
+  'persian-miniature': `
+:root {
+  --bg-primary: #f5ece0;
+  --bg-secondary: #e8dcc8;
+  --text-primary: #0f2442;
+  --text-secondary: rgba(15, 36, 66, 0.75);
+  --accent: #d4a84b;
+  --accent-hover: #f0c75e;
+  --border: #d4a84b;
+  --font-body: 'Cormorant Garamond', Georgia, serif;
+  --font-heading: 'Cinzel', 'Palatino Linotype', serif;
+  --font-mono: 'Cousine', 'Courier New', monospace;
+  --radius: 0;
+}
+
+.prose h1, .prose h2, .prose h3 {
+  color: var(--accent);
+  font-family: 'Cinzel Decorative', serif;
+  border-bottom: 2px solid var(--accent);
+}
+
+.prose blockquote {
+  border: 2px solid var(--accent);
+  background: rgba(212, 168, 75, 0.1);
+}
+
+.prose code {
+  background: #0f2442;
+  color: #f0c75e;
+}
+
+.prose pre {
+  background: #0f2442;
+  color: #f5ece0;
+  border: 2px solid var(--accent);
+}
+`,
+  'concrete-brutalist': `
+:root {
+  --bg-primary: #2D2D28;
+  --bg-secondary: #4A4A42;
+  --text-primary: #F5F5F0;
+  --text-secondary: #C4C4BC;
+  --accent: #F4A100;
+  --accent-hover: #FFB81C;
+  --border: #6B6A5E;
+  --font-body: 'IBM Plex Sans', Arial, sans-serif;
+  --font-heading: 'Oswald', Impact, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+  --radius: 0;
+}
+
+.prose h1, .prose h2 {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.prose blockquote {
+  border-left: 8px solid var(--accent);
+  background: #4A4A42;
+}
+
+.prose code {
+  background: #1C1C1A;
+  color: var(--accent);
+}
+
+.prose pre {
+  background: #1C1C1A;
+  border-left: 4px solid var(--accent);
+}
+`,
+  windows31: `
+:root {
+  --bg-primary: #C0C0C0;
+  --bg-secondary: #FFFFFF;
+  --text-primary: #000000;
+  --text-secondary: #808080;
+  --accent: #000080;
+  --accent-hover: #0000FF;
+  --border: #808080;
+  --font-body: 'Segoe UI', Tahoma, sans-serif;
+  --font-heading: 'Segoe UI', Tahoma, sans-serif;
+  --font-mono: 'Consolas', 'Courier New', monospace;
+  --radius: 0;
+}
+
+.prose {
+  background: var(--bg-secondary);
+  border: 2px solid;
+  border-color: #FFFFFF #808080 #808080 #FFFFFF;
+  box-shadow: inset 1px 1px 0 #DFDFDF, inset -1px -1px 0 #808080;
+  padding: 2rem;
+}
+
+.prose h1, .prose h2, .prose h3 {
+  color: var(--accent);
+}
+
+.prose code {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+}
+
+.prose pre {
+  background: var(--bg-secondary);
+  border: 2px solid;
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+}
+`,
+  'retro-terminal': `
+:root {
+  --bg-primary: #000a00;
+  --bg-secondary: #001100;
+  --text-primary: #33ff33;
+  --text-secondary: #00cc00;
+  --accent: #00ff00;
+  --accent-hover: #33ff33;
+  --border: #009900;
+  --font-body: 'IBM Plex Mono', monospace;
+  --font-heading: 'VT323', monospace;
+  --font-mono: 'Fira Code', 'IBM Plex Mono', monospace;
+  --radius: 0;
+}
+
+.prose {
+  text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+}
+
+.prose h1, .prose h2 {
+  font-family: 'VT323', monospace;
+  text-shadow: 0 0 10px var(--accent);
+}
+
+.prose code {
+  background: var(--bg-secondary);
+  color: var(--accent);
+  text-shadow: 0 0 5px var(--accent);
+}
+
+.prose pre {
+  background: var(--bg-primary);
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+}
+
+.prose a {
+  color: #ffb000;
+}
+`,
+  'swiss-international': `
+:root {
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F5F5F5;
+  --text-primary: #000000;
+  --text-secondary: #404040;
+  --accent: #E30613;
+  --accent-hover: #B80510;
+  --border: #D4D4D4;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+  --radius: 0;
+}
+
+.prose h1 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  border-left: 4px solid var(--accent);
+  padding-left: 1rem;
+}
+
+.prose h2 {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.prose blockquote {
+  border-left: 4px solid var(--accent);
+  background: var(--bg-secondary);
+}
+
+.prose a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+`,
+  'air-traffic-control': `
+:root {
+  --bg-primary: #0a0f0a;
+  --bg-secondary: #0a100a;
+  --text-primary: #00ff66;
+  --text-secondary: #00cc52;
+  --accent: #00ff66;
+  --accent-hover: #66ffaa;
+  --border: rgba(0, 255, 102, 0.2);
+  --font-body: 'IBM Plex Mono', Consolas, monospace;
+  --font-heading: 'Orbitron', 'Arial Black', sans-serif;
+  --font-mono: 'Share Tech Mono', 'IBM Plex Mono', monospace;
+  --radius: 0;
+}
+
+.prose {
+  text-shadow: 0 0 3px rgba(0, 255, 102, 0.5);
+}
+
+.prose h1, .prose h2 {
+  font-family: 'Orbitron', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  text-shadow: 0 0 10px rgba(0, 255, 102, 0.6);
+}
+
+.prose code {
+  background: #000000;
+  color: var(--accent);
+  border: 1px solid var(--border);
+}
+
+.prose pre {
+  background: #000000;
+  border: 1px solid var(--accent);
+  box-shadow: 0 0 15px rgba(0, 255, 102, 0.2);
+}
+
+.prose a {
+  color: #ffaa00;
+}
+`,
+  'japanese-zen': `
+:root {
+  --bg-primary: #F5F2EB;
+  --bg-secondary: #FAFAF7;
+  --text-primary: #2D2D2D;
+  --text-secondary: #4D4D4D;
+  --accent: #8B9A6B;
+  --accent-hover: #6B7A4B;
+  --border: #D4D4D4;
+  --font-body: 'Noto Serif JP', Georgia, serif;
+  --font-heading: 'Noto Serif JP', Georgia, serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius: 2px;
+}
+
+.prose h1, .prose h2 {
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  color: var(--text-primary);
+}
+
+.prose blockquote {
+  border-left: 2px solid var(--accent);
+  background: transparent;
+  font-style: italic;
+}
+
+.prose hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+
+.prose code {
+  background: #EDE8DE;
+}
+
+.prose pre {
+  background: #EDE8DE;
+  border: 1px solid var(--border);
+}
+`,
+  'de-stijl': `
+:root {
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F8F8F8;
+  --text-primary: #000000;
+  --text-secondary: #333333;
+  --accent: #D40920;
+  --accent-hover: #B00718;
+  --border: #000000;
+  --font-body: 'Work Sans', 'Helvetica Neue', sans-serif;
+  --font-heading: 'Work Sans', 'Helvetica Neue', sans-serif;
+  --font-mono: 'IBM Plex Mono', Consolas, monospace;
+  --radius: 0;
+}
+
+.prose h1 {
+  border-left: 8px solid var(--accent);
+  padding-left: 1rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.prose h2 {
+  border-left: 4px solid #1356A2;
+  padding-left: 0.75rem;
+  font-weight: 700;
+}
+
+.prose blockquote {
+  border: 4px solid #000000;
+  border-left: 8px solid #F7D117;
+  background: #F8F8F8;
+}
+
+.prose code {
+  background: #F8F8F8;
+  border: 2px solid #000000;
+}
+
+.prose pre {
+  background: #F8F8F8;
+  border: 4px solid #000000;
+  box-shadow: 4px 4px 0 #000000;
+}
+`,
+  constructivism: `
+:root {
+  --bg-primary: #E8E4DC;
+  --bg-secondary: #F5F5F0;
+  --text-primary: #0A0A0A;
+  --text-secondary: #4A4A4A;
+  --accent: #CC0000;
+  --accent-hover: #E52222;
+  --border: #0A0A0A;
+  --font-body: 'Roboto Condensed', 'Arial Narrow', sans-serif;
+  --font-heading: 'Oswald', 'Arial Narrow', sans-serif;
+  --font-mono: 'Share Tech Mono', 'Courier New', monospace;
+  --radius: 0;
+}
+
+.prose h1, .prose h2 {
+  font-family: 'Bebas Neue', Impact, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+}
+
+.prose blockquote {
+  border-left: 8px solid var(--accent);
+  background: #F5F5F0;
+  transform: skewX(-2deg);
+}
+
+.prose code {
+  background: #0A0A0A;
+  color: #F5F5F0;
+}
+
+.prose pre {
+  background: #0A0A0A;
+  color: #F5F5F0;
+  border-left: 4px solid var(--accent);
+}
+`,
+  letterpress: `
+:root {
+  --bg-primary: #F5ECD7;
+  --bg-secondary: #E8DCC6;
+  --text-primary: #2A2520;
+  --text-secondary: #3D3229;
+  --accent: #8B0000;
+  --accent-hover: #722F37;
+  --border: #3D3229;
+  --font-body: 'Lora', Georgia, serif;
+  --font-heading: 'Playfair Display', Georgia, serif;
+  --font-mono: 'EB Garamond', 'Times New Roman', serif;
+  --radius: 0;
+}
+
+.prose h1, .prose h2 {
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.1), -1px -1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.prose blockquote {
+  border-left: 4px solid var(--accent);
+  background: rgba(139, 0, 0, 0.05);
+}
+
+.prose code {
+  background: #EDE4D0;
+  color: var(--accent);
+}
+
+.prose pre {
+  background: #EDE4D0;
+  border: 1px solid var(--border);
+}
+`,
+  risograph: `
+:root {
+  --bg-primary: #F5F0E1;
+  --bg-secondary: #FDF6E3;
+  --text-primary: #1A1A2E;
+  --text-secondary: #3D3D5C;
+  --accent: #FF006E;
+  --accent-hover: #FF3D8E;
+  --border: #1A1A2E;
+  --font-body: 'DM Sans', 'Helvetica Neue', sans-serif;
+  --font-heading: 'Space Mono', 'Courier New', monospace;
+  --font-mono: 'Space Mono', 'Courier New', monospace;
+  --radius: 0;
+}
+
+.prose h1, .prose h2 {
+  font-family: 'Space Mono', monospace;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.prose blockquote {
+  border: 3px solid var(--accent);
+  background: #FDF6E3;
+  box-shadow: 3px 3px 0 #2EC4B6;
+}
+
+.prose code {
+  background: #FDF6E3;
+  border: 2px solid var(--border);
+}
+
+.prose pre {
+  background: #FDF6E3;
+  border: 3px solid var(--border);
+  box-shadow: 4px 4px 0 var(--accent);
+}
+`,
+  'art-nouveau': `
+:root {
+  --bg-primary: #F5F0E6;
+  --bg-secondary: #FFFEF5;
+  --text-primary: #2D2A26;
+  --text-secondary: #524F4A;
+  --accent: #C9A227;
+  --accent-hover: #E0C35C;
+  --border: rgba(201, 162, 39, 0.3);
+  --font-body: 'Cormorant Garamond', Georgia, serif;
+  --font-heading: 'Playfair Display', Georgia, serif;
+  --font-mono: 'Fira Code', monospace;
+  --radius: 8px;
+}
+
+.prose h1, .prose h2 {
+  color: var(--accent);
+  font-style: italic;
+}
+
+.prose h1::first-letter {
+  font-size: 3rem;
+  float: left;
+  line-height: 1;
+  margin-right: 0.5rem;
+  color: #6B2D3C;
+}
+
+.prose blockquote {
+  border-left: 4px solid var(--accent);
+  background: rgba(201, 162, 39, 0.1);
+  border-radius: 0 8px 8px 0;
+}
+
+.prose code {
+  background: #EDE5D8;
+}
+
+.prose pre {
+  background: #EDE5D8;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+}
+`,
+  'frutiger-aero': `
+:root {
+  --bg-primary: #e8f4fc;
+  --bg-secondary: rgba(255, 255, 255, 0.8);
+  --text-primary: #1a3a4a;
+  --text-secondary: #4a6a7a;
+  --accent: #3a9fd5;
+  --accent-hover: #7ec8f0;
+  --border: rgba(255, 255, 255, 0.9);
+  --font-body: 'Source Sans Pro', 'Segoe UI', sans-serif;
+  --font-heading: 'Source Sans Pro', 'Segoe UI', sans-serif;
+  --font-mono: Consolas, Monaco, monospace;
+  --radius: 12px;
+}
+
+body {
+  background: linear-gradient(180deg, #1a6fa5 0%, #3a9fd5 30%, #7ec8f0 60%, #c5e8f7 100%);
+}
+
+.prose {
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 80, 140, 0.15);
+}
+
+.prose h1, .prose h2 {
+  color: var(--accent);
+}
+
+.prose blockquote {
+  background: rgba(255, 255, 255, 0.9);
+  border-left: 4px solid var(--accent);
+  border-radius: 0 12px 12px 0;
+}
+
+.prose code {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
+}
+
+.prose pre {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 80, 140, 0.1);
+}
+`,
 };
 
 // Google Fonts URLs for each theme
@@ -960,6 +1582,54 @@ const themeFonts: Record<ThemeId | 'default', string[]> = {
   ],
   'pixel-art': [
     'https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap',
+  ],
+  'circuit-board': [
+    'https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Share+Tech+Mono&family=Orbitron:wght@400;500;600&display=swap',
+  ],
+  byzantine: [
+    'https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Fira+Code:wght@400;500&display=swap',
+  ],
+  editorial: [
+    'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Courier+Prime:wght@400;700&display=swap',
+  ],
+  'persian-miniature': [
+    'https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Cousine:wght@400;700&display=swap',
+  ],
+  'concrete-brutalist': [
+    'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap',
+  ],
+  windows31: [
+    'https://fonts.googleapis.com/css2?family=VT323&display=swap',
+  ],
+  'retro-terminal': [
+    'https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@400;500;600;700&family=Fira+Code:wght@400;500;600;700&display=swap',
+  ],
+  'swiss-international': [
+    'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap',
+  ],
+  'air-traffic-control': [
+    'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700;800&family=Share+Tech+Mono&display=swap',
+  ],
+  'japanese-zen': [
+    'https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap',
+  ],
+  'de-stijl': [
+    'https://fonts.googleapis.com/css2?family=Archivo+Black&family=Work+Sans:wght@400;500;600;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap',
+  ],
+  constructivism: [
+    'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@400;500;600;700&family=Roboto+Condensed:wght@400;500;600;700&family=Share+Tech+Mono&display=swap',
+  ],
+  letterpress: [
+    'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap',
+  ],
+  risograph: [
+    'https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;600;700&display=swap',
+  ],
+  'art-nouveau': [
+    'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Fira+Code:wght@400;500&display=swap',
+  ],
+  'frutiger-aero': [
+    'https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&display=swap',
   ],
 };
 

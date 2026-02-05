@@ -25,7 +25,7 @@ import { parseFrontmatter } from '../utils/frontmatter';
 import { themes } from '../themes';
 import type { ArchivedConversation } from '../context/AppStoreContext';
 
-const API_BASE = 'http://localhost:8129';
+const API_BASE = 'http://localhost:8130';
 
 // Binary file types that have dedicated viewers fetching their own content
 // Skip file watcher for these to avoid binary data leaking to markdown renderer
@@ -397,7 +397,6 @@ export function Files() {
   });
 
   // File watcher for right pane (only active when split view is enabled)
-  const isRightPaneActiveConversation = isCurrentConversationFile(rightPaneFilePath);
   const {
     content: rightContent,
     error: rightError,
@@ -501,8 +500,8 @@ export function Files() {
       }
       // Use setRightPaneFile to ensure rightPaneContent is set to file mode
       setRightPaneFile(streamingFile);
-      // Open as a tab (preview mode for AI edits)
-      openRightTab(streamingFile, true);
+      // Open as a tab with addNew so it adds new tabs instead of replacing
+      openRightTab(streamingFile, { preview: true, addNew: true });
       addRecentFile(streamingFile);
     }
   }, [appState.followStreamingMode, streamingFile, rightPaneFilePath, isSplit, toggleSplit, setRightPaneFile, openRightTab, addRecentFile, wasRecentlyClosed, shouldAutoOpen]);
@@ -640,6 +639,8 @@ export function Files() {
     scrollContainerRef: rightScrollContainerRef,
     filePath: rightPaneFilePath ?? undefined,
     enabled: rightIsStreaming || appState.followStreamingMode,
+    // Scroll to bottom on initial load when in follow mode (Claude likely writing at end)
+    scrollToBottomOnInitial: appState.followStreamingMode,
   });
 
   // Get recent files for empty state (limit to 6)
@@ -970,7 +971,7 @@ export function Files() {
                   <div className="text-center">
                     <p className="text-red-500 mb-2">{error}</p>
                     <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                      Make sure TabzChrome backend is running on port 8129
+                      Make sure the backend is running on port 8130
                     </p>
                   </div>
                 </div>
@@ -1129,6 +1130,7 @@ export function Files() {
                 isGitRepo ? (
                   <WorkingTree
                     repoPath={workspacePath}
+                    fontSize={appState.fontSize}
                     onFileSelect={(path) => {
                       // Open the file in the left pane
                       handleFileSelect(path);
@@ -1138,6 +1140,7 @@ export function Files() {
                 ) : (
                   <MultiRepoView
                     projectsDir={workspacePath}
+                    fontSize={appState.fontSize}
                     onFileSelect={(path) => {
                       // Open the file in the left pane
                       handleFileSelect(path);

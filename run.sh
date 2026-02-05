@@ -96,10 +96,9 @@ run_dev() {
     echo -e "${BLUE}Press Ctrl+C to stop${NC}"
     echo ""
 
-    # Run backend in background
-    cd backend && ./markdown-themes-backend &
+    # Run backend in background (subshell so cd doesn't affect main shell)
+    (cd backend && ./markdown-themes-backend) &
     BACKEND_PID=$!
-    cd ..
 
     # Trap to kill backend when script exits
     trap "kill $BACKEND_PID 2>/dev/null" EXIT

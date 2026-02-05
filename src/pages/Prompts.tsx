@@ -270,7 +270,7 @@ export function Prompts() {
               <div className="text-center">
                 <p className="text-red-500 mb-2">{error}</p>
                 <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                  Make sure TabzChrome backend is running on port 8129
+                  Make sure the backend is running on port 8130
                 </p>
               </div>
             </div>

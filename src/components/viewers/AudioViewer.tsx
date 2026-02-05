@@ -4,7 +4,7 @@ interface AudioViewerProps {
   filePath: string;
 }
 
-const API_BASE = 'http://localhost:8129';
+const API_BASE = 'http://localhost:8130';
 
 // Pre-generate random heights for waveform bars (stable across renders)
 const WAVEFORM_BARS = 20;

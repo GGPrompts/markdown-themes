@@ -216,7 +216,7 @@ export function useFileWatcher({
             }
           }, delay);
         } else if (reconnectAttemptRef.current >= maxReconnectAttempts) {
-          setError('Lost connection to TabzChrome. Please ensure the backend is running.');
+          setError('Lost connection to backend. Please ensure the backend is running on port 8130.');
           setPendingLoad(false);
         }
       };
@@ -231,7 +231,7 @@ export function useFileWatcher({
       if (!mountedRef.current) return;
 
       setError(
-        `Failed to connect to TabzChrome: ${err instanceof Error ? err.message : 'Unknown error'}`
+        `Failed to connect to backend: ${err instanceof Error ? err.message : 'Unknown error'}`
       );
       setPendingLoad(false);
       setConnected(false);

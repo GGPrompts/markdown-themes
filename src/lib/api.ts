@@ -1,10 +1,9 @@
 /**
- * TabzChrome API Client
+ * Backend API Client
  *
- * Handles communication with the TabzChrome backend server.
+ * Handles communication with the Go backend server.
  */
 
-// Backend URL - use Go backend (8130) or TabzChrome (8129)
 const API_BASE = 'http://localhost:8130';
 const WS_URL = 'ws://localhost:8130/ws';
 

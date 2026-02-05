@@ -10,6 +10,8 @@ interface MultiRepoViewProps {
   projectsDir: string;
   /** Callback when a file is clicked in a repo card */
   onFileSelect?: (path: string) => void;
+  /** Font size percentage for zoom (default: 100) */
+  fontSize?: number;
 }
 
 // Loading skeleton component
@@ -41,7 +43,7 @@ function RepoSkeleton() {
   );
 }
 
-export function MultiRepoView({ projectsDir, onFileSelect }: MultiRepoViewProps) {
+export function MultiRepoView({ projectsDir, onFileSelect, fontSize = 100 }: MultiRepoViewProps) {
   const { data, loading, error, refetch } = useGitRepos(projectsDir);
 
   // Bulk operations
@@ -237,7 +239,7 @@ export function MultiRepoView({ projectsDir, onFileSelect }: MultiRepoViewProps)
   }, [searchQuery, loading, refetch, filteredRepos, focusedIndex, toggleExpand]);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" style={{ zoom: fontSize / 100 }}>
       {/* Header */}
       <div
         className="flex items-center gap-4 px-4 py-2"

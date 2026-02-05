@@ -17,7 +17,7 @@ interface FileContextMenuProps {
   isLoadingAudio?: boolean;
 }
 
-const API_BASE = 'http://localhost:8129';
+const API_BASE = 'http://localhost:8130';
 
 /**
  * Escape a string for safe use in a shell command.

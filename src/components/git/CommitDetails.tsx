@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Loader2, Copy, Check, FileText, FilePlus, FileMinus, FileEdit, Terminal } from 'lucide-react';
 import { getAuthToken } from '../../lib/api';
 
-const API_BASE = 'http://localhost:8129';
+const API_BASE = 'http://localhost:8130';
 
 interface CommitFile {
   status: 'A' | 'M' | 'D' | 'R' | string;

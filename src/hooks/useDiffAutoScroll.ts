@@ -27,6 +27,8 @@ interface UseDiffAutoScrollOptions {
   enabled?: boolean;
   /** Debounce delay in ms before scrolling (default: 150) */
   debounceMs?: number;
+  /** Scroll to bottom on initial content load while streaming (default: false) */
+  scrollToBottomOnInitial?: boolean;
 }
 
 /**
@@ -88,12 +90,14 @@ export function useDiffAutoScroll({
   filePath,
   enabled = true,
   debounceMs = 50,
+  scrollToBottomOnInitial = false,
 }: UseDiffAutoScrollOptions) {
   const useLineDiff = isCodeFile(filePath);
   const prevContentRef = useRef<string>('');
   const userScrolledRef = useRef(false);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastScrollTimeRef = useRef(0);
+  const hasScrolledInitialRef = useRef(false);
 
   // Detect user scroll to pause auto-scroll
   useEffect(() => {
@@ -113,12 +117,19 @@ export function useDiffAutoScroll({
     return () => container.removeEventListener('scroll', handleScroll);
   }, [scrollContainerRef, isStreaming]);
 
-  // Reset user scroll flag when streaming stops
+  // Reset user scroll flag and initial scroll flag when streaming stops
   useEffect(() => {
     if (!isStreaming) {
       userScrolledRef.current = false;
+      hasScrolledInitialRef.current = false;
     }
   }, [isStreaming]);
+
+  // Reset initial scroll flag when file changes
+  useEffect(() => {
+    hasScrolledInitialRef.current = false;
+    prevContentRef.current = '';
+  }, [filePath]);
 
   // Main effect: detect changes and scroll
   useEffect(() => {
@@ -137,8 +148,25 @@ export function useDiffAutoScroll({
     const prevContent = prevContentRef.current;
     prevContentRef.current = content;
 
-    // Skip if no previous content (initial load)
-    if (!prevContent) return;
+    // Handle initial content load
+    if (!prevContent) {
+      // If scrollToBottomOnInitial is enabled and we haven't scrolled yet, scroll to bottom
+      if (scrollToBottomOnInitial && !hasScrolledInitialRef.current && content) {
+        hasScrolledInitialRef.current = true;
+        // Small delay to let DOM render
+        setTimeout(() => {
+          const container = scrollContainerRef.current;
+          if (container) {
+            lastScrollTimeRef.current = Date.now();
+            container.scrollTo({
+              top: container.scrollHeight + SCROLL_BUFFER_PX,
+              behavior: 'smooth',
+            });
+          }
+        }, 100);
+      }
+      return;
+    }
 
     // Skip if content unchanged
     if (prevContent === content) return;

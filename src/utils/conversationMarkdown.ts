@@ -125,7 +125,7 @@ function parseConversationEntries(content: string, maxLines: number = 0): Conver
 
   // For large files, extract only the tail to avoid splitting entire content
   const contentToSplit = maxLines > 0 ? extractLastLines(content, maxLines) : content;
-  const lines = contentToSplit.split('\n');
+  let lines = contentToSplit.split('\n');
 
   // Truncate lines BEFORE parsing to reduce cost on large files
   // Take from the end to get most recent messages

@@ -3,7 +3,7 @@ interface PdfViewerProps {
   fontSize?: number;
 }
 
-const API_BASE = 'http://localhost:8129';
+const API_BASE = 'http://localhost:8130';
 
 export function PdfViewer({ filePath }: PdfViewerProps) {
   const fileName = filePath.split('/').pop() || 'Document';

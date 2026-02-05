@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 
-const API_BASE = 'http://localhost:8129';
+const API_BASE = 'http://localhost:8130';
 
 // Common pane IDs to try when no pane is specified
 // TabzChrome panes use tmux format %N, which gets sanitized to _N in state files

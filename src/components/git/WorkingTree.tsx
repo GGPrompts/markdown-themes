@@ -15,13 +15,15 @@ import { ChangesTree } from './ChangesTree';
 import { CommitForm } from './CommitForm';
 import type { GitRepo, GitFile } from '../../hooks/useGitRepos';
 
-const API_BASE = 'http://localhost:8129';
+const API_BASE = 'http://localhost:8130';
 
 interface WorkingTreeProps {
   repoPath: string;
   onFileSelect?: (path: string) => void;
   /** Called after a successful commit with the list of files that are no longer changed */
   onCommitSuccess?: (committedFiles: string[]) => void;
+  /** Font size percentage for zoom (default: 100) */
+  fontSize?: number;
 }
 
 /**
@@ -85,7 +87,7 @@ function useGitStatus(repoPath: string) {
   return { repo, loading, error: debouncedError, refetch: fetchStatus };
 }
 
-export function WorkingTree({ repoPath, onFileSelect, onCommitSuccess }: WorkingTreeProps) {
+export function WorkingTree({ repoPath, onFileSelect, onCommitSuccess, fontSize = 100 }: WorkingTreeProps) {
   const { repo, loading, error, refetch } = useGitStatus(repoPath);
 
   // Derive parent directory for git operations
@@ -236,7 +238,7 @@ export function WorkingTree({ repoPath, onFileSelect, onCommitSuccess }: Working
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden" style={{ zoom: fontSize / 100 }}>
       {/* Header */}
       <div
         className="flex items-center gap-3 px-4 py-3 shrink-0"

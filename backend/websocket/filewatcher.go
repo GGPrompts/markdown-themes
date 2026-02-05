@@ -123,13 +123,25 @@ func isWatchableFile(ext string) bool {
 
 func (fw *FileWatcher) handleFileChange(path string, clients map[*Client]bool, op fsnotify.Op) {
 	if op&fsnotify.Remove != 0 {
-		// File deleted
-		for client := range clients {
-			fw.hub.SendToClient(client, map[string]interface{}{
-				"type": "file-deleted",
-				"path": path,
-			})
-		}
+		// File deleted - but wait briefly for atomic writes (editors often delete then recreate)
+		go func() {
+			time.Sleep(100 * time.Millisecond)
+
+			// Check if file came back (atomic write)
+			if _, err := os.Stat(path); err == nil {
+				// File exists again, treat as a write instead
+				fw.handleFileChange(path, clients, fsnotify.Write)
+				return
+			}
+
+			// File is really gone
+			for client := range clients {
+				fw.hub.SendToClient(client, map[string]interface{}{
+					"type": "file-deleted",
+					"path": path,
+				})
+			}
+		}()
 		return
 	}
 

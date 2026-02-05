@@ -7,7 +7,7 @@ interface ImageViewerProps {
 
 type ZoomMode = 'fit' | '100' | 'custom';
 
-const API_BASE = 'http://localhost:8129';
+const API_BASE = 'http://localhost:8130';
 
 export function ImageViewer({ filePath }: ImageViewerProps) {
   const [zoom, setZoom] = useState(100);

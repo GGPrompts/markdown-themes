@@ -4,7 +4,7 @@ import { calculateGraphLayout, type Commit, type GraphLayout } from '../../lib/g
 import { GitGraphCanvas } from './GitGraphCanvas';
 import { GitGraphRow } from './GitGraphRow';
 
-const API_BASE = 'http://localhost:8129';
+const API_BASE = 'http://localhost:8130';
 const ROW_HEIGHT = 40;
 const RAIL_WIDTH = 20;
 const NODE_RADIUS = 6;

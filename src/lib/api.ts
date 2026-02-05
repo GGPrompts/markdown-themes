@@ -72,6 +72,7 @@ export interface FileTreeNode {
   children?: FileTreeNode[];
   modified?: string;
   size?: number;
+  isGitRepo?: boolean;
 }
 
 /**

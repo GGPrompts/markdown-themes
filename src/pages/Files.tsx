@@ -284,12 +284,7 @@ export function Files() {
   }, [tabs, closeTab]);
 
   // Get workspace from global context
-  const { workspacePath, fileTree } = useWorkspaceContext();
-
-  // Check if workspace is a git repo by looking for .git directory at root
-  const isGitRepo = useMemo(() => {
-    return fileTree.some((f) => f.name === '.git' && f.isDirectory);
-  }, [fileTree]);
+  const { workspacePath, fileTree, isGitRepo } = useWorkspaceContext();
 
   // Split view state with initial state from context
   const handleSplitStateChange = useCallback(

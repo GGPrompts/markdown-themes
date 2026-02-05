@@ -14,6 +14,8 @@ interface WorkspaceContextValue {
   fileTree: FileTreeNode[];
   loading: boolean;
   error: string | null;
+  /** Whether the workspace root is a git repository */
+  isGitRepo: boolean;
   openWorkspace: (path: string) => Promise<boolean>;
   closeWorkspace: () => void;
   refreshWorkspace: () => Promise<void>;
@@ -117,6 +119,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [fileTree, setFileTree] = useState<FileTreeNode[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isGitRepo, setIsGitRepo] = useState(false);
   const [loadedPaths, setLoadedPaths] = useState<Set<string>>(new Set());
   const [loadingPaths, setLoadingPaths] = useState<Set<string>>(new Set());
 
@@ -139,12 +142,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
       setFileTree(sorted);
       setWorkspacePath(path);
+      setIsGitRepo(apiTree.isGitRepo === true);
       return true;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       setError(`Failed to read workspace: ${message}`);
       setFileTree([]);
       setWorkspacePath(null);
+      setIsGitRepo(false);
       return false;
     } finally {
       setLoading(false);
@@ -167,6 +172,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     setWorkspacePath(null);
     setFileTree([]);
     setError(null);
+    setIsGitRepo(false);
     setLoadedPaths(new Set());
     setLoadingPaths(new Set());
     saveLastWorkspace(null);
@@ -293,6 +299,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         fileTree,
         loading,
         error,
+        isGitRepo,
         openWorkspace,
         closeWorkspace,
         refreshWorkspace,

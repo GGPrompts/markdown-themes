@@ -72,13 +72,15 @@ export function ConversationMarkdownViewer({
   useEffect(() => {
     // Only scroll once on initial content load, not during streaming updates
     if (markdown && !hasScrolledRef.current && containerRef.current) {
-      // Use setTimeout to ensure content is rendered
-      setTimeout(() => {
-        if (containerRef.current) {
-          containerRef.current.scrollTop = containerRef.current.scrollHeight;
-          hasScrolledRef.current = true;
-        }
-      }, 50);
+      hasScrolledRef.current = true;
+      // Double rAF ensures layout is complete before scrolling
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (containerRef.current) {
+            containerRef.current.scrollTop = containerRef.current.scrollHeight;
+          }
+        });
+      });
     }
   }, [markdown]);
 

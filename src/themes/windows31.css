@@ -32,8 +32,8 @@
   --bg-primary: var(--vga-light-gray);
   --bg-secondary: var(--vga-white);
   --text-primary: var(--vga-black);
-  --text-secondary: var(--vga-dark-gray);
-  --text-muted: var(--vga-dark-gray);
+  --text-secondary: var(--vga-white);
+  --text-muted: var(--vga-light-gray);
   --accent: var(--vga-dark-blue);
   --accent-hover: var(--vga-blue);
   --accent-secondary: var(--vga-dark-cyan);

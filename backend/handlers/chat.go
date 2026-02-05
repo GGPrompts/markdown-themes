@@ -81,6 +81,7 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 	args := []string{
 		"--model", model,
 		"--output-format", "stream-json",
+		"--verbose",
 		"-p", lastUserMessage,
 	}
 

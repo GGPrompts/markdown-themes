@@ -754,7 +754,8 @@ export function Files() {
       toggleSplit();
     }
     setRightPaneFile(hotkeysPath);
-  }, [workspacePath, isSplit, toggleSplit, setRightPaneFile]);
+    openRightTab(hotkeysPath, false); // Open as pinned tab
+  }, [workspacePath, isSplit, toggleSplit, setRightPaneFile, openRightTab]);
 
   // Handle view conversation button - open conversation JSONL file
   const handleViewConversation = useCallback(() => {

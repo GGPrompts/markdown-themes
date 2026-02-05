@@ -305,13 +305,15 @@ export function Files() {
   });
 
   // File watcher for right pane (only active when split view is enabled)
+  // Skip watching the current conversation file - it's being actively written to and can cause freezes
+  const isCurrentConversation = rightPaneFilePath === conversation?.conversationPath;
   const {
     content: rightContent,
     error: rightError,
     loading: rightLoading,
     isStreaming: rightIsStreaming,
   } = useFileWatcher({
-    path: isSplit && !isRightFileBinary ? rightPaneFilePath : null,
+    path: isSplit && !isRightFileBinary && !isCurrentConversation ? rightPaneFilePath : null,
   });
 
   // Workspace streaming detection for follow mode and changed files tracking
@@ -580,6 +582,8 @@ export function Files() {
     (path: string, fromPane: 'left' | 'right' | null) => {
       // Don't do anything if dropping the same file or from right pane
       if (path === rightPaneFilePath || fromPane === 'right') return;
+      // Don't allow dropping the current conversation - it's actively being written to
+      if (path === conversation?.conversationPath) return;
       // If dragging from left pane, close the left tab (transfer, not duplicate)
       if (fromPane === 'left') {
         const leftTab = tabs.find((t) => t.path === path);
@@ -592,7 +596,7 @@ export function Files() {
       openRightTab(path, false); // pinned mode (dragging = intentional)
       addRecentFile(path);
     },
-    [rightPaneFilePath, tabs, closeTab, setRightPaneFile, openRightTab, addRecentFile]
+    [rightPaneFilePath, conversation?.conversationPath, tabs, closeTab, setRightPaneFile, openRightTab, addRecentFile]
   );
 
   // Handle drop to left pane (drag-and-drop from right pane tabs)

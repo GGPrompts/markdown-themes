@@ -15,6 +15,7 @@ export const CLAUDE_CODE_PATTERNS = [
   'CLAUDE.md',        // Project instructions
   '.mcp.json',        // MCP server config
   '.claudeignore',    // Ignore patterns
+  '.jsonl',           // Conversation logs (in ~/.claude/projects/)
 ];
 
 /**
@@ -92,13 +93,14 @@ export const FILTERS: FilterDefinition[] = [
     name: 'Claude Code',
     patterns: CLAUDE_CODE_PATTERNS,
     homePaths: {
-      // Specific subdirectories to include (excludes heavy dirs like debug, paste-cache, shell-snapshots, session-env, todos, tasks, projects)
+      // Specific subdirectories to include (excludes heavy dirs like debug, paste-cache, shell-snapshots, session-env, todos, tasks)
       relativePaths: [
         '.claude/commands',
         '.claude/hooks',
         '.claude/ide',
         '.claude/mcp',
         '.claude/plugins',
+        '.claude/projects',   // Conversation JSONL logs
         '.claude/skills',
         '.claude/settings.json',
         '.claude/settings.local.json',

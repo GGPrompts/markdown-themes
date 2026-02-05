@@ -5,6 +5,7 @@ import { ImageViewer } from './viewers/ImageViewer';
 import { CsvViewer } from './viewers/CsvViewer';
 import { JsonViewer } from './viewers/JsonViewer';
 import { JsonlViewer } from './viewers/JsonlViewer';
+import { ConversationMarkdownViewer } from './viewers/ConversationMarkdownViewer';
 import { AudioViewer } from './viewers/AudioViewer';
 import { VideoViewer } from './viewers/VideoViewer';
 import { SvgViewer } from './viewers/SvgViewer';
@@ -22,7 +23,7 @@ interface ViewerContainerProps {
   repoPath?: string | null;
 }
 
-type ViewerType = 'markdown' | 'code' | 'image' | 'csv' | 'json' | 'jsonl' | 'audio' | 'video' | 'svg' | 'pdf' | 'prompty';
+type ViewerType = 'markdown' | 'code' | 'image' | 'csv' | 'json' | 'jsonl' | 'convlog' | 'audio' | 'video' | 'svg' | 'pdf' | 'prompty';
 
 // Extensions for each viewer type
 const markdownExtensions = new Set(['md', 'markdown', 'mdx']);
@@ -30,6 +31,7 @@ const imageExtensions = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'ico', 'bm
 const csvExtensions = new Set(['csv', 'tsv']);
 const jsonExtensions = new Set(['json', 'jsonc', 'json5']);
 const jsonlExtensions = new Set(['jsonl', 'ndjson']);
+const convlogExtensions = new Set(['convlog']);
 const audioExtensions = new Set(['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac', 'wma']);
 const videoExtensions = new Set(['mp4', 'webm', 'mov', 'ogg', 'mkv', 'm4v', 'avi']);
 const svgExtensions = new Set(['svg']);
@@ -58,6 +60,16 @@ function getViewerType(filePath: string): ViewerType {
 
   if (jsonExtensions.has(ext)) {
     return 'json';
+  }
+
+  // Check for conversation logs (.convlog or JSONL files in ~/.claude/projects/)
+  if (convlogExtensions.has(ext)) {
+    return 'convlog';
+  }
+
+  // JSONL files from Claude projects directory are conversation logs
+  if (jsonlExtensions.has(ext) && filePath.includes('/.claude/projects/')) {
+    return 'convlog';
   }
 
   if (jsonlExtensions.has(ext)) {
@@ -118,6 +130,17 @@ export function ViewerContainer({
 
     case 'jsonl':
       return <JsonlViewer content={content} fontSize={fontSize} />;
+
+    case 'convlog':
+      return (
+        <ConversationMarkdownViewer
+          content={content}
+          filePath={filePath}
+          fontSize={fontSize}
+          themeClassName={themeClassName}
+          isStreaming={isStreaming}
+        />
+      );
 
     case 'audio':
       return <AudioViewer filePath={filePath} />;

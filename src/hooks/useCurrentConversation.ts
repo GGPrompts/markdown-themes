@@ -2,8 +2,8 @@ import { useState, useCallback, useEffect } from 'react';
 
 const API_BASE = 'http://localhost:8129';
 
-// Common tmux pane IDs to try when no pane is specified
-const DEFAULT_PANES = ['%0', '%1', '%2', '%3'];
+// Common pane IDs to try when no pane is specified (TabzChrome panes start at 1)
+const DEFAULT_PANES = ['1', '2', '3', '4'];
 
 export interface ConversationInfo {
   sessionId: string;
@@ -24,8 +24,8 @@ interface UseCurrentConversationResult {
  * Fetch Claude conversation info for a specific pane
  */
 async function fetchConversationForPane(pane: string): Promise<ConversationInfo | null> {
-  // Pane IDs like %0, %1 are already URL-safe (% followed by digit)
-  const response = await fetch(`${API_BASE}/api/claude/session?pane=${pane}`);
+  // Pane IDs like %0 must be URL-encoded (% -> %25)
+  const response = await fetch(`${API_BASE}/api/claude/session?pane=${encodeURIComponent(pane)}`);
 
   if (!response.ok) {
     if (response.status === 404) {

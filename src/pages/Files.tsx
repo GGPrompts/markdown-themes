@@ -304,6 +304,9 @@ export function Files() {
     path: isCurrentFileBinary ? null : currentFile,
   });
 
+  // Current conversation detection for "View Conversation" button
+  const { conversation, isLoading: conversationLoading } = useCurrentConversation();
+
   // File watcher for right pane (only active when split view is enabled)
   // Skip watching the current conversation file - it's being actively written to and can cause freezes
   const isCurrentConversation = rightPaneFilePath === conversation?.conversationPath;
@@ -321,9 +324,6 @@ export function Files() {
     workspacePath,
     enabled: true, // Always enabled to track changed files for the Changed filter
   });
-
-  // Current conversation detection for "View Conversation" button
-  const { conversation, isLoading: conversationLoading } = useCurrentConversation();
 
   // Auto-open streaming file when follow mode is enabled (opens in right pane)
   useEffect(() => {

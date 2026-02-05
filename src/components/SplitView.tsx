@@ -195,6 +195,8 @@ function getHeaderTitle(content: RightPaneContent | null | undefined): { title: 
       const hash = content.hash.substring(0, 8);
       return { title: `Commit ${hash}` };
     }
+    case 'chat':
+      return { title: 'AI Chat' };
   }
 }
 

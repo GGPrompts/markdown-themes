@@ -13,7 +13,7 @@ interface ChatPanelProps {
   fontSize?: number;
 }
 
-export function ChatPanel({ cwd, currentFile, currentFileContent, fontSize = 100 }: ChatPanelProps) {
+export function ChatPanel({ cwd, currentFile, currentFileContent: _currentFileContent, fontSize = 100 }: ChatPanelProps) {
   const {
     conversations,
     activeConversation,

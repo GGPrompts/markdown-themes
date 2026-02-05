@@ -32,8 +32,8 @@
   --bg-primary: var(--vga-light-gray);
   --bg-secondary: var(--vga-white);
   --text-primary: var(--vga-black);
-  --text-secondary: var(--vga-white);
-  --text-muted: var(--vga-light-gray);
+  --text-secondary: var(--vga-dark-gray);
+  --text-muted: var(--vga-dark-gray);
   --accent: var(--vga-dark-blue);
   --accent-hover: var(--vga-blue);
   --accent-secondary: var(--vga-dark-cyan);
@@ -99,13 +99,15 @@
   letter-spacing: 0.02em;
 }
 
-/* Landing page description text - needs contrast on teal desktop */
-.theme-windows31 .landing-subtitle,
-.theme-windows31 .landing-description,
-.theme-windows31 [class*="landing"] p,
-.theme-windows31 [class*="hero"] p {
-  color: var(--vga-white);
-  text-shadow: 1px 1px 0 var(--vga-black);
+/* Main content areas get gray window background (authentic Win 3.1 look) */
+.theme-windows31 > main,
+.theme-windows31 > div:not(:empty) {
+  background: var(--vga-light-gray);
+  border: 2px solid;
+  border-color: var(--bevel-light) var(--bevel-shadow) var(--bevel-shadow) var(--bevel-light);
+  padding: 8px;
+  margin: 24px 8px 8px 8px;
+  box-shadow: var(--shadow-window);
 }
 
 /* Header needs higher z-index for dropdowns */

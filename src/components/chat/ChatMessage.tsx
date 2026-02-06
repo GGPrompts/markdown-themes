@@ -10,6 +10,8 @@ import type { ChatMessage as ChatMessageType, ModelUsage, ContentSegment } from 
 
 interface ChatMessageProps {
   message: ChatMessageType;
+  /** Set of tool segment IDs that should be initially expanded */
+  recentToolIds?: Set<string>;
 }
 
 // Helper to get CSS variable value from computed style
@@ -52,9 +54,17 @@ const codePlugin = createCodePlugin({
 });
 
 /** Inline collapsible tool card */
-function ToolCard({ segment, isRunning }: { segment: ContentSegment & { type: 'tool' }; isRunning?: boolean }) {
-  const [expanded, setExpanded] = useState(false);
+function ToolCard({ segment, isRunning, initialExpanded = false }: { segment: ContentSegment & { type: 'tool' }; isRunning?: boolean; initialExpanded?: boolean }) {
+  const [expanded, setExpanded] = useState(initialExpanded);
+  const [userToggled, setUserToggled] = useState(false);
   const hasInput = segment.input.length > 0;
+
+  // Sync with initialExpanded when it changes, unless user manually toggled
+  useEffect(() => {
+    if (!userToggled) {
+      setExpanded(initialExpanded);
+    }
+  }, [initialExpanded, userToggled]);
 
   let formattedInput = segment.input;
   if (hasInput) {
@@ -75,7 +85,7 @@ function ToolCard({ segment, isRunning }: { segment: ContentSegment & { type: 't
       }}
     >
       <button
-        onClick={() => hasInput && setExpanded(!expanded)}
+        onClick={() => { if (hasInput) { setUserToggled(true); setExpanded(!expanded); } }}
         className="flex items-center gap-1.5 w-full px-3 py-1.5 text-left"
         style={{ color: 'var(--text-secondary)', cursor: hasInput ? 'pointer' : 'default' }}
       >
@@ -109,7 +119,7 @@ function ToolCard({ segment, isRunning }: { segment: ContentSegment & { type: 't
   );
 }
 
-export const ChatMessageComponent = memo(function ChatMessageComponent({ message }: ChatMessageProps) {
+export const ChatMessageComponent = memo(function ChatMessageComponent({ message, recentToolIds }: ChatMessageProps) {
   const [copied, setCopied] = useState(false);
   const [toolsExpanded, setToolsExpanded] = useState(false);
   const [thinkingExpanded, setThinkingExpanded] = useState(false);
@@ -369,7 +379,8 @@ export const ChatMessageComponent = memo(function ChatMessageComponent({ message
               if (seg.type === 'tool') {
                 const isLastSegment = i === message.segments!.length - 1;
                 const isRunning = message.isStreaming && isLastSegment;
-                return <ToolCard key={i} segment={seg} isRunning={isRunning} />;
+                const shouldExpand = isRunning || (recentToolIds ? recentToolIds.has(seg.id) : false);
+                return <ToolCard key={i} segment={seg} isRunning={isRunning} initialExpanded={shouldExpand} />;
               }
               return null;
             })}

@@ -388,6 +388,28 @@ export function ChatPanel({ currentFile, fontSize = 100 }: ChatPanelProps) {
     );
   }
 
+  // Compute the 3 most recent tool segment IDs across all messages
+  const recentToolIds = useMemo(() => {
+    const messages = activeConversation?.messages;
+    if (!messages) return new Set<string>();
+
+    // Collect all tool segment IDs in order, across all messages
+    const allToolIds: string[] = [];
+    for (const msg of messages) {
+      if (msg.segments) {
+        for (const seg of msg.segments) {
+          if (seg.type === 'tool') {
+            allToolIds.push(seg.id);
+          }
+        }
+      }
+    }
+
+    // Take the last 3
+    const recent = allToolIds.slice(-3);
+    return new Set(recent);
+  }, [activeConversation?.messages]);
+
   // Active conversation view
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -507,7 +529,7 @@ export function ChatPanel({ currentFile, fontSize = 100 }: ChatPanelProps) {
         )}
 
         {activeConversation?.messages.map((msg) => (
-          <ChatMessageComponent key={msg.id} message={msg} />
+          <ChatMessageComponent key={msg.id} message={msg} recentToolIds={recentToolIds} />
         ))}
       </div>
 

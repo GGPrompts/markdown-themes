@@ -158,7 +158,6 @@ export const MarkdownViewer = forwardRef<MarkdownViewerHandle, MarkdownViewerPro
     const textSecondary = cssColorToHex(getCssVar(themeEl, '--text-secondary') || '#a0a0a0', bgPrimary);
     const accent = cssColorToHex(getCssVar(themeEl, '--accent') || '#3b82f6', bgPrimary);
     const border = cssColorToHex(getCssVar(themeEl, '--border') || '#404040', bgPrimary);
-    const fontBody = getCssVar(themeEl, '--font-body') || 'system-ui, sans-serif';
     const isDark = isDarkColor(bgPrimary);
 
     // Generate contrasting text color for colored pie/journey slices.

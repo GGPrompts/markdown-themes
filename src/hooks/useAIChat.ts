@@ -43,6 +43,7 @@ export interface ChatMessage {
   thinking?: string;
   usage?: TokenUsage;
   modelUsage?: ModelUsage;
+  lastCallUsage?: TokenUsage;
   claudeSessionId?: string;
   costUSD?: number;
   durationMs?: number;
@@ -156,6 +157,7 @@ function toStoredMessage(conversationId: string, m: ChatMessage): StoredMessage 
     thinking: m.thinking,
     usage: m.usage as Record<string, unknown> | undefined,
     modelUsage: m.modelUsage as Record<string, unknown> | undefined,
+    lastCallUsage: m.lastCallUsage as Record<string, unknown> | undefined,
     claudeSessionId: m.claudeSessionId,
     costUSD: m.costUSD,
     durationMs: m.durationMs,
@@ -189,6 +191,7 @@ function fromStoredMessage(m: StoredMessage): ChatMessage {
     thinking: m.thinking,
     usage: m.usage as TokenUsage | undefined,
     modelUsage: m.modelUsage as ModelUsage | undefined,
+    lastCallUsage: m.lastCallUsage as TokenUsage | undefined,
     claudeSessionId: m.claudeSessionId,
     costUSD: m.costUSD,
     durationMs: m.durationMs,
@@ -651,17 +654,22 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
             } else if (modelKeys.length > 1) {
               // Match the configured model to avoid picking subagent usage
               const configuredModel = currentSettings?.model || '';
-              const matched = modelKeys.find(k =>
-                k === configuredModel || k.includes(configuredModel)
-              );
+              const matched = configuredModel
+                ? modelKeys.find(k => k === configuredModel || k.includes(configuredModel))
+                : undefined;
               if (matched) {
                 modelUsage = usageMap[matched];
               } else {
-                // Fallback: pick the model with the largest contextWindow (primary model)
+                // Fallback: pick the model with the most total input tokens
+                // (primary model processes the full conversation, subagents see less)
                 modelUsage = Object.values(usageMap).reduce((best, cur) => {
-                  const bestCtx = (best?.contextWindow as number) || 0;
-                  const curCtx = (cur?.contextWindow as number) || 0;
-                  return curCtx > bestCtx ? cur : best;
+                  const bestTotal = ((best?.inputTokens as number) || 0)
+                    + ((best?.cacheReadInputTokens as number) || 0)
+                    + ((best?.cacheCreationInputTokens as number) || 0);
+                  const curTotal = ((cur?.inputTokens as number) || 0)
+                    + ((cur?.cacheReadInputTokens as number) || 0)
+                    + ((cur?.cacheCreationInputTokens as number) || 0);
+                  return curTotal > bestTotal ? cur : best;
                 });
               }
             }
@@ -683,6 +691,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
               isStreaming: false,
               ...(event.usage != null ? { usage: event.usage as TokenUsage } : {}),
               ...(modelUsage != null ? { modelUsage: modelUsage as ChatMessage['modelUsage'] } : {}),
+              ...(event.lastCallUsage != null ? { lastCallUsage: event.lastCallUsage as TokenUsage } : {}),
               ...(event.claudeSessionId ? { claudeSessionId: event.claudeSessionId as string } : {}),
               ...(event.costUSD != null ? { costUSD: event.costUSD as number } : {}),
               ...(event.durationMs != null ? { durationMs: event.durationMs as number } : {}),

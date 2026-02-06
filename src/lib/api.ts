@@ -489,6 +489,7 @@ export interface StoredMessage {
   thinking?: string;
   usage?: Record<string, unknown>;
   modelUsage?: Record<string, unknown>;
+  lastCallUsage?: Record<string, unknown>;
   claudeSessionId?: string;
   costUSD?: number;
   durationMs?: number;

@@ -384,6 +384,7 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 		var claudeSessionID string
 		var accumulatedContent string
 		var currentBlockType string // tracks "text", "thinking", "tool_use"
+		var lastMessageStopUsage map[string]interface{}
 
 		for scanner.Scan() {
 			line := scanner.Text()
@@ -551,6 +552,9 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 
 			case "message_stop":
 				usage, _ := event["usage"].(map[string]interface{})
+				if usage != nil {
+					lastMessageStopUsage = usage
+				}
 				if sid, ok := event["session_id"].(string); ok && sid != "" {
 					claudeSessionID = sid
 				}
@@ -572,7 +576,7 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 				costUSD, _ := event["total_cost_usd"].(float64)
 				duration, _ := event["duration_ms"].(float64)
 
-				buf.appendEvent(map[string]interface{}{
+				doneEvent := map[string]interface{}{
 					"type":            "done",
 					"done":            true,
 					"content":         accumulatedContent,
@@ -582,7 +586,11 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 					"conversationId":  convID,
 					"costUSD":         costUSD,
 					"durationMs":      duration,
-				})
+				}
+				if lastMessageStopUsage != nil {
+					doneEvent["lastCallUsage"] = lastMessageStopUsage
+				}
+				buf.appendEvent(doneEvent)
 			}
 		}
 

@@ -176,7 +176,6 @@ export const ChatMessageComponent = memo(function ChatMessageComponent({ message
     const textSecondary = cssColorToHex(getCssVar(element, '--text-secondary') || '#a0a0a0', bgPrimary);
     const accent = cssColorToHex(getCssVar(element, '--accent') || '#3b82f6', bgPrimary);
     const border = cssColorToHex(getCssVar(element, '--border') || '#404040', bgPrimary);
-    const fontBody = getCssVar(element, '--font-body') || 'system-ui, sans-serif';
     const isDark = isDarkColor(bgPrimary);
 
     // Generate contrasting text color for colored pie/journey slices.

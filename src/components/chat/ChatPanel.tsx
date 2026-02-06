@@ -26,10 +26,16 @@ function getContextPercent(conversation: Conversation | null): { percent: number
       const mu = msg.modelUsage as ModelUsage;
       const contextWindow = mu.contextWindow || DEFAULT_CONTEXT_LIMIT;
       const maxOutput = mu.maxOutputTokens || 0;
-      // Total input = non-cached + cached portions (all occupy context window)
-      const totalInput = (mu.inputTokens || 0)
-        + (mu.cacheReadInputTokens || 0)
-        + (mu.cacheCreationInputTokens || 0);
+      // Prefer per-call usage from lastCallUsage (accurate single API call)
+      // over modelUsage which sums tokens across all API calls in a turn
+      const lcu = msg.lastCallUsage;
+      const totalInput = lcu
+        ? (lcu.input_tokens || 0)
+          + (lcu.cache_read_input_tokens || 0)
+          + (lcu.cache_creation_input_tokens || 0)
+        : (mu.inputTokens || 0)
+          + (mu.cacheReadInputTokens || 0)
+          + (mu.cacheCreationInputTokens || 0);
       if (totalInput === 0) continue;
       // Effective context = full window minus reserved output tokens (matches Claude Code behavior)
       const effectiveWindow = maxOutput > 0 ? contextWindow - maxOutput : contextWindow;

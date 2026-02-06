@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useRef, useCallback, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
 import { codeToHtml, bundledLanguages } from 'shiki';
 import { createCssVariablesTheme } from 'shiki';
 import { useGitDiff, type GitDiffLineType, type DeletedLine } from '../../hooks/useGitDiff';
@@ -448,12 +449,12 @@ export function CodeViewer({ content, filePath, fontSize = 100, isStreaming = fa
 
 /**
  * Scrollbar-style diff markers overlay.
- * Renders colored tick marks on the right edge of the scroll container's
- * scrollbar track, showing where diffs are located (like VS Code's minimap markers).
+ * Renders colored tick marks on the scrollbar track, showing where diffs
+ * are located (like VS Code's minimap markers).
  *
- * Uses position:sticky so the markers stay fixed in the viewport while
- * content scrolls beneath them. The marker container floats right and
- * overlaps the scrollbar track area.
+ * Uses createPortal to render onto document.body with position:fixed,
+ * aligned to the scroll container's bounding rect. This avoids coordinate
+ * issues from CSS zoom applied to the CodeViewer content.
  */
 function ScrollbarMarkers({
   changedLines,
@@ -466,20 +467,20 @@ function ScrollbarMarkers({
   totalLines: number;
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
 }) {
-  const [containerHeight, setContainerHeight] = useState(0);
+  const [containerRect, setContainerRect] = useState<DOMRect | null>(null);
 
-  // Track the scroll container's visible height so markers map to the scrollbar track
+  // Track the scroll container's bounding rect for fixed positioning
   useEffect(() => {
     const el = scrollContainerRef?.current;
     if (!el) return;
 
-    const updateHeight = () => {
-      setContainerHeight(el.clientHeight);
+    const updateRect = () => {
+      setContainerRect(el.getBoundingClientRect());
     };
 
-    updateHeight();
+    updateRect();
 
-    const observer = new ResizeObserver(updateHeight);
+    const observer = new ResizeObserver(updateRect);
     observer.observe(el);
     return () => observer.disconnect();
   }, [scrollContainerRef]);
@@ -487,11 +488,13 @@ function ScrollbarMarkers({
   const handleClick = useCallback((e: ReactMouseEvent<HTMLDivElement>) => {
     const lineNum = e.currentTarget.dataset.markerLine;
     if (!lineNum) return;
-    const target = document.querySelector(`[data-line="${lineNum}"]`);
+    const container = scrollContainerRef?.current;
+    if (!container) return;
+    const target = container.querySelector(`[data-line="${lineNum}"]`);
     if (target) {
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-  }, []);
+  }, [scrollContainerRef]);
 
   // Build marker entries from changedLines and deletedLines
   const markers = useMemo(() => {
@@ -510,66 +513,56 @@ function ScrollbarMarkers({
     return result;
   }, [changedLines, deletedLines]);
 
-  if (markers.length === 0 || totalLines === 0 || containerHeight === 0) return null;
+  if (!containerRect || markers.length === 0 || totalLines === 0 || containerRect.height === 0) return null;
 
-  return (
+  const markerWidth = 8;
+
+  return createPortal(
     <div
-      className="scrollbar-markers-sticky"
+      className="scrollbar-diff-markers"
       style={{
-        position: 'sticky',
-        top: 0,
-        float: 'right',
-        width: 0,
-        height: 0,
-        overflow: 'visible',
-        zIndex: 10,
+        position: 'fixed',
+        top: containerRect.top,
+        left: containerRect.right - markerWidth,
+        width: markerWidth,
+        height: containerRect.height,
         pointerEvents: 'none',
+        zIndex: 50,
       }}
     >
-      <div
-        className="scrollbar-markers"
-        style={{
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          width: '8px',
-          height: `${containerHeight}px`,
-          pointerEvents: 'none',
-        }}
-      >
-        {markers.map((marker, idx) => {
-          const topPx = ((marker.line - 1) / totalLines) * containerHeight;
-          let color: string;
-          if (marker.type === 'added') {
-            color = 'rgba(34, 197, 94, 0.75)';
-          } else if (marker.type === 'modified') {
-            color = 'rgba(250, 204, 21, 0.75)';
-          } else {
-            color = 'rgba(239, 68, 68, 0.75)';
-          }
+      {markers.map((marker, idx) => {
+        const topPx = ((marker.line - 1) / totalLines) * containerRect.height;
+        let color: string;
+        if (marker.type === 'added') {
+          color = 'rgba(34, 197, 94, 0.75)';
+        } else if (marker.type === 'modified') {
+          color = 'rgba(250, 204, 21, 0.75)';
+        } else {
+          color = 'rgba(239, 68, 68, 0.75)';
+        }
 
-          return (
-            <div
-              key={`${marker.type}-${marker.line}-${idx}`}
-              data-marker-line={marker.line}
-              onClick={handleClick}
-              style={{
-                position: 'absolute',
-                top: `${topPx}px`,
-                right: 0,
-                width: '8px',
-                height: '3px',
-                backgroundColor: color,
-                borderRadius: '1px',
-                pointerEvents: 'auto',
-                cursor: 'pointer',
-              }}
-              title={`Line ${marker.line} (${marker.type})`}
-            />
-          );
-        })}
-      </div>
-    </div>
+        return (
+          <div
+            key={`${marker.type}-${marker.line}-${idx}`}
+            data-marker-line={marker.line}
+            onClick={handleClick}
+            style={{
+              position: 'absolute',
+              top: topPx,
+              left: 0,
+              width: markerWidth,
+              height: 3,
+              backgroundColor: color,
+              borderRadius: 1,
+              pointerEvents: 'auto',
+              cursor: 'pointer',
+            }}
+            title={`Line ${marker.line} (${marker.type})`}
+          />
+        );
+      })}
+    </div>,
+    document.body
   );
 }
 

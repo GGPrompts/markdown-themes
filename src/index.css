@@ -202,6 +202,18 @@ body {
 [data-streamdown="mermaid-block"] {
   background: var(--bg-primary);
   width: 100%;
+  /* Reset all inherited text properties so mermaid SVG text matches what
+     mermaid measured during layout. Theme .prose rules (font-family,
+     letter-spacing, text-transform, font-size, font-weight) cascade into
+     SVG via inheritance, causing text to render wider than the node boxes
+     mermaid sized with its defaults. Use !important to beat higher-
+     specificity theme selectors like .theme-cyberpunk .prose { ... }. */
+  font-family: "trebuchet ms", verdana, arial, sans-serif !important;
+  letter-spacing: normal !important;
+  word-spacing: normal !important;
+  text-transform: none !important;
+  font-size: 16px !important;
+  font-weight: normal !important;
 }
 
 /* Allow mermaid SVG to scale naturally.

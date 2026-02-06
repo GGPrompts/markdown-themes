@@ -8,6 +8,7 @@ import { useSubagentWatcher, type ActiveSubagent } from '../hooks/useSubagentWat
 import { useWorkspaceContext } from '../context/WorkspaceContext';
 import { usePageState } from '../context/PageStateContext';
 import { useAppStore } from '../hooks/useAppStore';
+import { useAIChatContext } from '../context/AIChatContext';
 import { useTabManager } from '../hooks/useTabManager';
 import { useSplitView } from '../hooks/useSplitView';
 import { useRightPaneTabs } from '../hooks/useRightPaneTabs';
@@ -369,6 +370,14 @@ export function Files() {
   const toggleChatPanel = useCallback(() => {
     setChatPanelOpen((prev) => !prev);
   }, []);
+
+  // AI Chat integration for "Send to Chat"
+  const { sendToChat } = useAIChatContext();
+  const handleSendToChat = useCallback((content: string) => {
+    // Open chat panel if not already open
+    setChatPanelOpen(true);
+    sendToChat(content);
+  }, [sendToChat]);
 
   // Handle chat panel resize
   const handleChatResizeMouseDown = useCallback((e: React.MouseEvent) => {
@@ -956,6 +965,7 @@ export function Files() {
         onFollowModeToggle={toggleFollowMode}
         onViewConversation={handleViewConversation}
         onArchiveClick={handleArchiveClick}
+        onSendToChat={handleSendToChat}
       />
 
       <div className="flex-1 flex overflow-hidden">
@@ -977,6 +987,7 @@ export function Files() {
             isFavorite={isFavorite}
             searchInputRef={searchInputRef}
             changedFiles={changedFiles}
+            onSendToChat={handleSendToChat}
           />
         )}
 
@@ -1111,6 +1122,7 @@ export function Files() {
                       themeClassName={themeClass}
                       fontSize={appState.fontSize}
                       repoPath={workspacePath}
+                      onSendToChat={handleSendToChat}
                     />
                   </div>
                 </>
@@ -1158,6 +1170,7 @@ export function Files() {
                           themeClassName={themeClass}
                           fontSize={appState.fontSize}
                           repoPath={workspacePath}
+                          onSendToChat={handleSendToChat}
                         />
                       </div>
                     </>

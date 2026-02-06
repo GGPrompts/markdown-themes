@@ -22,6 +22,8 @@ interface ViewerContainerProps {
   fontSize?: number;
   /** Repository root path for git diff highlighting */
   repoPath?: string | null;
+  /** Callback to send content to AI Chat */
+  onSendToChat?: (content: string) => void;
 }
 
 type ViewerType = 'markdown' | 'code' | 'image' | 'csv' | 'json' | 'jsonl' | 'convlog' | 'audio' | 'video' | 'svg' | 'pdf' | 'prompty' | 'binary';
@@ -166,6 +168,7 @@ export function ViewerContainer({
   themeClassName = '',
   fontSize = 100,
   repoPath = null,
+  onSendToChat,
 }: ViewerContainerProps) {
   const viewerType = useMemo(() => getViewerType(filePath, content), [filePath, content]);
 
@@ -224,6 +227,7 @@ export function ViewerContainer({
           path={filePath}
           fontSize={fontSize}
           isStreaming={isStreaming}
+          onSendToChat={onSendToChat}
         />
       );
 

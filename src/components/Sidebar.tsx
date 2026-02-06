@@ -5,7 +5,7 @@ import { FILTERS, type FilterId } from '../lib/filters';
 import { getFileIconInfo } from '../utils/fileIcons';
 import type { FavoriteItem } from '../context/AppStoreContext';
 import { FileContextMenu } from './FileContextMenu';
-import { queueToChat, fetchFileContent, pasteToTerminal, readAloud, fetchGitStatus, type GitStatusMap, type GitStatus } from '../lib/api';
+import { fetchFileContent, pasteToTerminal, readAloud, fetchGitStatus, type GitStatusMap, type GitStatus } from '../lib/api';
 
 /**
  * Check if a path looks like a "projects directory" (contains repos, not a repo itself).
@@ -50,6 +50,8 @@ interface SidebarProps {
   searchInputRef?: React.RefObject<HTMLInputElement | null>;
   /** Set of files changed via WebSocket during this session (for "Changed" filter) */
   changedFiles?: Set<string>;
+  /** Callback to send content to AI Chat */
+  onSendToChat?: (content: string) => void;
 }
 
 interface TreeItemProps {
@@ -486,7 +488,7 @@ function filterTreeBySearch<T extends FileTreeNode>(nodes: T[], query: string): 
 const MIN_SIDEBAR_WIDTH = 150;
 const MAX_SIDEBAR_WIDTH = 400;
 
-export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSplit, width = 250, onWidthChange, onWidthChangeEnd, onFileSelect, onFileDoubleClick, onRightFileSelect, favorites, toggleFavorite, isFavorite, searchInputRef, changedFiles }: SidebarProps) {
+export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSplit, width = 250, onWidthChange, onWidthChangeEnd, onFileSelect, onFileDoubleClick, onRightFileSelect, favorites, toggleFavorite, isFavorite, searchInputRef, changedFiles, onSendToChat }: SidebarProps) {
   const workspaceName = workspacePath?.split('/').pop() ?? workspacePath?.split('\\').pop() ?? 'Workspace';
 
   // Get lazy loading state from workspace context
@@ -573,16 +575,16 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
   }, []);
 
   const handleSendToChat = useCallback(async () => {
-    if (contextMenu.isDirectory) return;
+    if (contextMenu.isDirectory || !onSendToChat) return;
     try {
       const fileContent = await fetchFileContent(contextMenu.filePath);
       // Format as markdown code block with file path
       const message = `\`\`\`${contextMenu.fileName}\n${fileContent.content}\n\`\`\``;
-      await queueToChat(message);
+      onSendToChat(message);
     } catch (err) {
       console.error('Failed to send to chat:', err);
     }
-  }, [contextMenu.filePath, contextMenu.fileName, contextMenu.isDirectory]);
+  }, [contextMenu.filePath, contextMenu.fileName, contextMenu.isDirectory, onSendToChat]);
 
   const handlePasteToTerminal = useCallback(async () => {
     if (contextMenu.isDirectory) return;

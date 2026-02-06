@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { Columns, Copy, AtSign, MessageSquare, MessageCircle, Check, Crosshair, Loader2, Archive, Users, Bot } from 'lucide-react';
-import { queueToChat } from '../lib/api';
 
 interface ToolbarProps {
   currentFile: string | null;
@@ -29,6 +28,8 @@ interface ToolbarProps {
   onViewConversation?: () => void;
   /** Callback when archive button is clicked */
   onArchiveClick?: () => void;
+  /** Callback to send content to AI Chat */
+  onSendToChat?: (content: string) => void;
 }
 
 export function Toolbar({
@@ -53,6 +54,7 @@ export function Toolbar({
   onFollowModeToggle,
   onViewConversation,
   onArchiveClick,
+  onSendToChat,
 }: ToolbarProps) {
   const [showRecentFiles, setShowRecentFiles] = useState(false);
   const [showPathInput, setShowPathInput] = useState(false);
@@ -139,15 +141,10 @@ export function Toolbar({
     }
   };
 
-  // Send content to TabzChrome sidepanel chat
-  const handleSendToChat = async () => {
+  // Send content to AI Chat
+  const handleSendToChat = () => {
     if (!content) return;
-    try {
-      await queueToChat(content);
-    } catch (err) {
-      console.error('Failed to send to chat:', err);
-      // TODO: Show user notification (toast) when chat send fails
-    }
+    onSendToChat?.(content);
   };
 
   return (
@@ -317,7 +314,7 @@ export function Toolbar({
                   color: 'var(--text-primary)',
                   border: '1px solid var(--border)',
                 }}
-                title="Send content to TabzChrome chat"
+                title="Send to AI Chat"
               >
                 <MessageSquare className="w-4 h-4" />
               </button>

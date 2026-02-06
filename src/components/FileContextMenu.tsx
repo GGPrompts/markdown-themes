@@ -39,7 +39,7 @@ function escapeShellArg(arg: string): string {
  * - **Copy Path**: Copy the file/folder path to clipboard
  * - **Copy @Path**: Copy path with @ prefix (for Claude references)
  * - **Toggle Favorite**: Add/remove from favorites
- * - **Send to Chat**: Queue file content to TabzChrome sidebar chat (files only)
+ * - **Send to Chat**: Send file content to AI Chat (files only)
  * - **Paste to Terminal**: Paste file content directly to active terminal (files only)
  * - **Read Aloud**: TTS playback of file content (files only)
  * - **Edit**: Open file in $EDITOR via TabzChrome spawn API (files only)

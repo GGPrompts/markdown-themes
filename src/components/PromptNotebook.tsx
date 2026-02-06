@@ -12,7 +12,6 @@ import {
   ExternalLink,
   MessageSquare,
 } from 'lucide-react';
-import { queueToChat } from '../lib/api';
 import {
   parsePrompty,
   getFieldProgress,
@@ -29,6 +28,7 @@ interface PromptNotebookProps {
   path?: string;  // Used for display purposes
   fontSize?: number;
   isStreaming?: boolean;
+  onSendToChat?: (content: string) => void;
 }
 
 // Create a single CSS variables theme - colors defined in each theme's CSS
@@ -47,6 +47,7 @@ export function PromptNotebook({
   path: _path,  // eslint-disable-line @typescript-eslint/no-unused-vars
   fontSize = 100,
   isStreaming = false,
+  onSendToChat,
 }: PromptNotebookProps) {
   const [variableValues, setVariableValues] = useState<Record<string, string>>({});
   const [activeFieldIndex, setActiveFieldIndex] = useState<number | null>(null);
@@ -142,18 +143,13 @@ export function PromptNotebook({
     setTimeout(() => setCopyStatus('idle'), 2000);
   };
 
-  // Send processed content to TabzChrome chat
-  const handleSendToChat = async () => {
+  // Send processed content to AI Chat
+  const handleSendToChat = () => {
+    if (!onSendToChat) return;
     const processed = getPromptForSending(content, variableValues);
-    try {
-      await queueToChat(processed);
-      setSendStatus('sent');
-      setTimeout(() => setSendStatus('idle'), 2000);
-    } catch (err) {
-      console.error('Failed to send to chat:', err);
-      setSendStatus('error');
-      setTimeout(() => setSendStatus('idle'), 2000);
-    }
+    onSendToChat(processed);
+    setSendStatus('sent');
+    setTimeout(() => setSendStatus('idle'), 2000);
   };
 
   // Helper to render text with inline fields
@@ -306,7 +302,7 @@ export function PromptNotebook({
                 : 'var(--text-primary)',
             border: '1px solid var(--border)',
           }}
-          title="Send prompt to TabzChrome chat"
+          title="Send prompt to AI Chat"
         >
           {sendStatus === 'sent' ? <Check size={16} /> : <MessageSquare size={16} />}
           {sendStatus === 'sent' ? 'Sent!' : sendStatus === 'error' ? 'Failed' : 'Send to Chat'}

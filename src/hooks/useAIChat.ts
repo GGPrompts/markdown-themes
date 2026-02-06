@@ -83,6 +83,7 @@ export interface UseAIChatResult {
   isGenerating: boolean;
   error: string | null;
   sendMessage: (content: string) => Promise<void>;
+  sendToChat: (content: string) => void;
   stopGeneration: () => void;
   newConversation: () => Conversation;
   setActiveConversation: (id: string) => void;
@@ -687,6 +688,20 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
     }
   }, [updateMessage, flushSave, saveToBackend]);
 
+  const sendToChat = useCallback((content: string) => {
+    const conv = newConversation();
+    // Set the title based on content
+    const title = generateTitle(content);
+    setConversations(prev =>
+      prev.map(c => c.id === conv.id ? { ...c, title } : c)
+    );
+    // Send the message in the new conversation
+    // Use setTimeout to ensure state is settled before sending
+    setTimeout(() => {
+      sendMessage(content);
+    }, 0);
+  }, [newConversation, sendMessage]);
+
   return useMemo(() => ({
     conversations,
     activeConversation,
@@ -694,6 +709,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
     isGenerating,
     error,
     sendMessage,
+    sendToChat,
     stopGeneration,
     newConversation,
     setActiveConversation,
@@ -708,6 +724,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
     isGenerating,
     error,
     sendMessage,
+    sendToChat,
     stopGeneration,
     newConversation,
     setActiveConversation,

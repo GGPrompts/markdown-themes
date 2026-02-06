@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Folder, BookOpen } from 'lucide-react';
+import { Folder } from 'lucide-react';
 
 interface NavigationCard {
   icon: React.ComponentType<{ className?: string }>;
@@ -14,12 +14,6 @@ const navigationCards: NavigationCard[] = [
     title: 'Files',
     description: 'Browse and view files with themes',
     route: '/files',
-  },
-  {
-    icon: BookOpen,
-    title: 'Prompt Notebook',
-    description: 'Create and manage prompts',
-    route: '/prompts',
   },
 ];
 

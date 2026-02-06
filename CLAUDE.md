@@ -38,6 +38,7 @@ backend/                       # Go backend server
 │   ├── files.go               # File tree, content, git status APIs
 │   ├── git.go                 # Git graph, commit details, diff APIs
 │   ├── chat.go                # Claude AI chat SSE proxy with reconnect buffering
+│   ├── claude.go              # Claude CLI session detection helpers
 │   └── conversations.go       # Conversation CRUD REST handlers
 ├── websocket/
 │   ├── hub.go                 # WebSocket connection management
@@ -52,42 +53,63 @@ src/
 ├── index.css                  # Tailwind + CSS variables + modal styles
 ├── lib/
 │   ├── api.ts                 # Backend API client, WebSocket, file operations
-│   └── filters.ts             # File tree filter presets
+│   ├── filters.ts             # File tree filter presets
+│   └── graphLayout.ts         # Git graph rail layout algorithm
 ├── pages/
-│   ├── Files.tsx              # Main markdown viewer with sidebar
-│   └── Prompts.tsx            # Prompty file viewer with library
+│   ├── Landing.tsx            # Home page with navigation cards
+│   └── Files.tsx              # Main markdown viewer with sidebar
 ├── components/
 │   ├── MarkdownViewer.tsx     # Streamdown renderer
 │   ├── Sidebar.tsx            # File tree with search + filters
+│   ├── Toolbar.tsx            # File toolbar (open, copy, send to chat, follow mode)
+│   ├── TabBar.tsx             # Left pane tab bar
+│   ├── RightPaneTabBar.tsx    # Right pane tab bar
+│   ├── SplitView.tsx          # Split view container with drag resize
+│   ├── NavHeader.tsx          # Top navigation bar (Home, Files links + theme/project selectors)
+│   ├── MetadataBar.tsx        # Frontmatter metadata display bar
+│   ├── ViewerContainer.tsx    # File type detection + viewer dispatch
+│   ├── FileContextMenu.tsx    # Right-click context menu for files
 │   ├── FilePickerModal.tsx    # File/folder browser modal
+│   ├── ArchiveModal.tsx       # Conversation archive dialog
+│   ├── ProjectSelector.tsx    # Workspace folder selector dropdown
+│   ├── ThemeSelector.tsx      # Theme picker dropdown
 │   ├── PromptNotebook.tsx     # Prompty renderer with inline fields
-│   ├── PromptLibrary.tsx      # Prompty file browser sidebar
 │   ├── InlineField.tsx        # Editable {{variable}} fields
 │   ├── chat/                  # AI Chat panel (ChatPanel, ChatInput, ChatMessage, ChatSettings)
 │   ├── viewers/               # File type viewers (see Supported File Types)
-│   └── git/                   # Git components (GitGraph, CommitDetails, RepoCard, etc.)
+│   └── git/                   # Git components (GitGraph, WorkingTree, MultiRepoView, etc.)
 ├── context/
 │   ├── AppStoreContext.tsx    # localStorage persistence (theme, recent files, favorites)
 │   ├── AIChatContext.tsx      # App-level AI chat provider (wraps useAIChat)
 │   ├── WorkspaceContext.tsx   # Current workspace path + file tree
-│   └── PageStateContext.tsx   # In-memory page state (tabs, split view, chat tabs, etc.)
+│   └── PageStateContext.tsx   # In-memory page state (tabs, split view, chat tabs)
 ├── hooks/
 │   ├── useAIChat.ts           # AI chat state, SSE streaming, conversation persistence
 │   ├── useFileWatcher.ts      # WebSocket file watching + streaming detection
 │   ├── useWorkspaceStreaming.ts # Workspace-wide streaming detection (Follow AI Edits)
 │   ├── useDiffAutoScroll.ts   # Auto-scroll to changes during streaming
 │   ├── useGitDiff.ts          # Git diff highlighting (additions, modifications, deletions)
+│   ├── useGitOperations.ts    # Git stage/unstage/discard operations
+│   ├── useBulkGitOperations.ts # Bulk git stage/unstage across repos
+│   ├── useGitRepos.ts         # Git repository scanning
 │   ├── useWorkspace.ts        # File tree via backend API
-│   ├── useTabManager.ts       # Tab state management for Files page
+│   ├── useTabManager.ts       # Tab state management for left pane
+│   ├── useRightPaneTabs.ts    # Tab state management for right pane
 │   ├── useSplitView.ts        # Split view state for Files page
-│   ├── useAppStore.ts         # Hook for AppStoreContext
-│   └── useGitRepos.ts         # Git repository scanning
+│   ├── useFileFilter.ts       # File tree filter logic (by extension, git status, etc.)
+│   ├── useCurrentConversation.ts # Active Claude conversation detection
+│   ├── useSubagentWatcher.ts  # Monitor Claude subagent activity
+│   ├── useMouseSpotlight.ts   # Mouse-following spotlight effect (Noir theme)
+│   └── useAppStore.ts         # Hook for AppStoreContext
 ├── utils/
 │   ├── frontmatter.ts         # YAML frontmatter parser
 │   ├── markdownDiff.ts        # Block-level diffing for auto-scroll
-│   └── promptyUtils.ts        # Prompty parsing + variable handling
+│   ├── promptyUtils.ts        # Prompty parsing + variable handling
+│   ├── conversationMarkdown.ts # JSONL conversation to markdown converter
+│   ├── exportHtml.ts          # Export themed markdown as standalone HTML
+│   └── fileIcons.ts           # File extension to icon/color mapping
 └── themes/
-    ├── index.ts               # Theme registry (15 themes)
+    ├── index.ts               # Theme registry (30 themes)
     └── *.css                  # Theme CSS files
 ```
 
@@ -192,8 +214,7 @@ The `PromptNotebook` component renders these with inline editable fields. Fields
 
 ### FilePickerModal
 Reusable modal for browsing and selecting files/folders. Used in:
-- Prompts page header "Open .prompty" button
-- Inline fields for file/folder path variables
+- Inline fields for file/folder path variables in PromptNotebook
 - Supports modes: `file`, `folder`, or `both`
 
 ### Supported File Types
@@ -205,6 +226,8 @@ The app auto-detects file types and renders with appropriate viewers:
 | Prompty | `.prompty` | PromptNotebook with inline fields |
 | Code | `.ts`, `.js`, `.py`, `.css`, etc. | Shiki syntax highlighting |
 | JSON | `.json`, `.jsonc` | Collapsible tree with syntax highlighting |
+| JSONL | `.jsonl`, `.ndjson` | Line-by-line JSON viewer |
+| Conversation | `.jsonl` in `~/.claude/projects/` | ConversationMarkdownViewer |
 | CSV | `.csv`, `.tsv` | Table view |
 | Images | `.png`, `.jpg`, `.gif`, `.webp` | ImageViewer with zoom |
 | SVG | `.svg` | SvgViewer (rendered + source toggle) |
@@ -213,22 +236,23 @@ The app auto-detects file types and renders with appropriate viewers:
 | PDF | `.pdf` | PdfViewer (page navigation) |
 
 ### Page State Persistence
-`PageStateContext` preserves UI state when navigating between pages (Files, Prompts). State is held in memory only—refreshing the page resets it.
+`PageStateContext` preserves UI state when navigating between pages. State is held in memory only—refreshing the page resets it.
 
 | Page | Preserved State |
 |------|-----------------|
 | Files | Open tabs, active tab, split view, split ratio, right pane file, chat tabs, active chat tab |
-| Prompts | Current file, library visibility |
 
 The hooks `useTabManager` and `useSplitView` accept optional `initialState` and `onStateChange` props to sync with the context.
 
+### Send to Chat
+The toolbar and context menu have "Send to Chat" buttons that send content to the built-in AI Chat panel:
+- Toolbar button sends current file content
+- Right-click context menu sends file content as a code block
+- `.prompty` files send the prompt with variables filled in
+- Opens the chat panel and creates a new conversation via `sendToChat()` from `useAIChat`
+
 ### Optional TabzChrome Integration
 Some features require TabzChrome (port 8129) running alongside the Go backend:
-
-**Send to Chat** - Queue content to the TabzChrome sidepanel chat input:
-- Files page: toolbar button sends current file content
-- Prompts page: "Send to Chat" button sends prompt with variables filled in
-- Uses `queueToChat()` which sends `{ type: 'QUEUE_COMMAND', command }` via WebSocket
 
 **Spawn Terminals** - Used by GitGraph's "Gitlogue" button (requires TabzChrome)
 
@@ -294,6 +318,8 @@ The chat panel supports multiple open conversations as tabs:
 | `Ctrl+B` | Toggle sidebar |
 | `Ctrl+\` | Toggle split view |
 | `Ctrl+G` | Toggle git graph |
+| `Ctrl+Shift+G` | Toggle working tree |
+| `Ctrl+Shift+C` | Toggle AI chat panel |
 | `Ctrl+Click` | Open file in right pane (when split) |
 | `Escape` | Clear focus |
 
@@ -315,10 +341,12 @@ Tests use Vitest + React Testing Library. Run `npm run test:run` before committi
 - `src/utils/frontmatter.test.ts` - YAML frontmatter parsing
 - `src/utils/promptyUtils.test.ts` - Prompty variable detection/substitution
 - `src/utils/markdownDiff.test.ts` - Block-level diffing for auto-scroll
+- `src/utils/conversationMarkdown.test.ts` - JSONL conversation to markdown
 - `src/lib/filters.test.ts` - File tree filtering
 - `src/lib/graphLayout.test.ts` - Git graph layout algorithm
 - `src/context/AppStoreContext.test.tsx` - localStorage persistence
 - `src/components/viewers/JsonViewer.test.ts` - JSONC comment stripping
+- `src/components/viewers/JsonlViewer.test.ts` - JSONL line parsing
 - `src/components/viewers/DiffViewer.test.ts` - Unified diff parsing
 
 ## Prerequisites
@@ -336,7 +364,7 @@ Tests use Vitest + React Testing Library. Run `npm run test:run` before committi
 
 3. Open http://localhost:5173 in browser
 
-**Optional**: For TabzChrome features (Send to Chat, Spawn Terminals), also run:
+**Optional**: For TabzChrome features (Spawn Terminals, Edit in editor), also run:
 ```bash
 cd ~/projects/TabzChrome && node backend/server.js
 ```
@@ -351,10 +379,14 @@ cd ~/projects/TabzChrome && node backend/server.js
 
 ## Themes
 
-Available themes (15 total):
+Available themes (30 total, plus Default):
 - dark-academia, cyberpunk, parchment, cosmic, noir
 - nordic, glassmorphism, film-grain, verdant-grove
 - art-deco, knolling, industrial, streamline-moderne, pixel-art
+- circuit-board, byzantine, editorial, persian-miniature
+- concrete-brutalist, windows31, retro-terminal, swiss-international
+- air-traffic-control, japanese-zen, de-stijl, constructivism
+- letterpress, risograph, art-nouveau, frutiger-aero
 
 ### Adding a New Theme
 

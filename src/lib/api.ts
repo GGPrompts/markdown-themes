@@ -216,30 +216,6 @@ export interface SubagentWatchMessage {
 export type SubagentMessage = SubagentStartMessage | SubagentEndMessage;
 
 /**
- * Queue a command/prompt to the TabzChrome sidepanel chat input.
- * Creates a one-shot WebSocket connection to send the message.
- */
-export async function queueToChat(command: string): Promise<void> {
-  const ws = await createWebSocket();
-
-  return new Promise((resolve, reject) => {
-    ws.onopen = () => {
-      ws.send(JSON.stringify({ type: 'QUEUE_COMMAND', command }));
-      ws.close();
-      resolve();
-    };
-    ws.onerror = (err) => {
-      reject(err);
-    };
-    ws.onclose = (event) => {
-      if (!event.wasClean) {
-        reject(new Error(`WebSocket closed unexpectedly: ${event.code}`));
-      }
-    };
-  });
-}
-
-/**
  * Paste content directly to the active terminal in TabzChrome sidepanel.
  * Creates a one-shot WebSocket connection to send the message.
  */

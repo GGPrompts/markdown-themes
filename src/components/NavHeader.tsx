@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Folder, BookOpen, Bot } from 'lucide-react';
+import { Home, Folder, Bot } from 'lucide-react';
 import { ThemeSelector } from './ThemeSelector';
 import { ProjectSelector } from './ProjectSelector';
 import { useAIChatContext } from '../context/AIChatContext';
@@ -24,7 +24,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   { to: '/', label: 'Home', icon: Home, iconOnly: true },
   { to: '/files', label: 'Files', icon: Folder },
-  { to: '/prompts', label: 'Prompts', icon: BookOpen },
 ];
 
 export function NavHeader({

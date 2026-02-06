@@ -4,7 +4,7 @@ import { useAppStore } from './hooks/useAppStore';
 import { useMouseSpotlight } from './hooks/useMouseSpotlight';
 import { useWorkspaceContext } from './context/WorkspaceContext';
 import { NavHeader } from './components/NavHeader';
-import { Landing, Files, Prompts } from './pages';
+import { Landing, Files } from './pages';
 import './index.css';
 
 function App() {
@@ -34,7 +34,6 @@ function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/files" element={<Files />} />
-        <Route path="/prompts" element={<Prompts />} />
       </Routes>
     </div>
   );

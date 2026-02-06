@@ -29,24 +29,14 @@ interface FilesPageState {
 
 export type { RightPaneTab };
 
-interface PromptsPageState {
-  currentFile: string | null;
-  showLibrary: boolean;
-}
-
 interface PageState {
   files: FilesPageState;
-  prompts: PromptsPageState;
 }
 
 interface PageStateContextValue {
   // Files page state
   filesState: FilesPageState;
   setFilesState: (state: Partial<FilesPageState>) => void;
-
-  // Prompts page state
-  promptsState: PromptsPageState;
-  setPromptsState: (state: Partial<PromptsPageState>) => void;
 }
 
 const defaultState: PageState = {
@@ -62,10 +52,6 @@ const defaultState: PageState = {
     chatPanelWidth: 400,
     chatTabs: [],
     activeChatTabId: null,
-  },
-  prompts: {
-    currentFile: null,
-    showLibrary: true,
   },
 };
 
@@ -88,10 +74,6 @@ function loadPageState(): PageState {
         chatPanelWidth: parsed.files?.chatPanelWidth ?? defaultState.files.chatPanelWidth,
         chatTabs: parsed.files?.chatTabs ?? defaultState.files.chatTabs,
         activeChatTabId: parsed.files?.activeChatTabId ?? defaultState.files.activeChatTabId,
-      },
-      prompts: {
-        currentFile: parsed.prompts?.currentFile ?? defaultState.prompts.currentFile,
-        showLibrary: parsed.prompts?.showLibrary ?? defaultState.prompts.showLibrary,
       },
     };
   } catch {
@@ -129,24 +111,11 @@ export function PageStateProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const setPromptsState = useCallback((partial: Partial<PromptsPageState>) => {
-    setState((prev) => {
-      const next = {
-        ...prev,
-        prompts: { ...prev.prompts, ...partial },
-      };
-      savePageState(next);
-      return next;
-    });
-  }, []);
-
   return (
     <PageStateContext.Provider
       value={{
         filesState: state.files,
         setFilesState,
-        promptsState: state.prompts,
-        setPromptsState,
       }}
     >
       {children}

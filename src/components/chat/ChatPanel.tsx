@@ -17,7 +17,7 @@ interface ChatPanelProps {
 
 const DEFAULT_CONTEXT_LIMIT = 200_000;
 
-function getContextPercent(conversation: Conversation | null): number | null {
+function getContextPercent(conversation: Conversation | null): { percent: number; contextWindow: number } | null {
   if (!conversation) return null;
   // Find the latest assistant message with modelUsage data
   for (let i = conversation.messages.length - 1; i >= 0; i--) {
@@ -25,13 +25,16 @@ function getContextPercent(conversation: Conversation | null): number | null {
     if (msg.role === 'assistant' && msg.modelUsage) {
       const mu = msg.modelUsage as ModelUsage;
       const contextWindow = mu.contextWindow || DEFAULT_CONTEXT_LIMIT;
-      // inputTokens is the non-cached portion; cache tokens are separate and additive
+      const maxOutput = mu.maxOutputTokens || 0;
+      // Total input = non-cached + cached portions (all occupy context window)
       const totalInput = (mu.inputTokens || 0)
         + (mu.cacheReadInputTokens || 0)
         + (mu.cacheCreationInputTokens || 0);
-      const total = totalInput + (mu.outputTokens || 0);
-      if (total === 0) continue;
-      return Math.min(Math.round((total / contextWindow) * 100), 100);
+      if (totalInput === 0) continue;
+      // Effective context = full window minus reserved output tokens (matches Claude Code behavior)
+      const effectiveWindow = maxOutput > 0 ? contextWindow - maxOutput : contextWindow;
+      const percent = Math.min(Math.round((totalInput / effectiveWindow) * 100), 100);
+      return { percent, contextWindow };
     }
   }
   return null;
@@ -45,7 +48,7 @@ function getContextColor(percent: number): string {
 }
 
 function getConversationContextPercent(conversation: Conversation): number | null {
-  return getContextPercent(conversation);
+  return getContextPercent(conversation)?.percent ?? null;
 }
 
 /** Check if a conversation is currently streaming */
@@ -246,7 +249,7 @@ export function ChatPanel({ currentFile, fontSize = 100, onViewConversation }: C
     }
   }, [activeConversationId, updateConversationSettings]);
 
-  const contextPercent = backendLoaded ? getContextPercent(activeConversation) : null;
+  const contextInfo = backendLoaded ? getContextPercent(activeConversation) : null;
 
   const zoom = fontSize / 100;
 
@@ -438,16 +441,16 @@ export function ChatPanel({ currentFile, fontSize = 100, onViewConversation }: C
         </span>
 
         {/* Context usage display */}
-        {contextPercent !== null && (
+        {contextInfo !== null && (
           <span
             className="text-xs shrink-0 px-1.5 py-0.5 rounded font-mono"
             style={{
-              color: getContextColor(contextPercent),
+              color: getContextColor(contextInfo.percent),
               backgroundColor: 'var(--bg-primary)',
             }}
-            title={`Context window: ${contextPercent}% of ${(DEFAULT_CONTEXT_LIMIT / 1000).toFixed(0)}k tokens`}
+            title={`Context window: ${contextInfo.percent}% of ${(contextInfo.contextWindow / 1000).toFixed(0)}k tokens`}
           >
-            {contextPercent}%
+            {contextInfo.percent}%
           </span>
         )}
 

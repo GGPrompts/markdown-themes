@@ -37,7 +37,7 @@ type WorkspaceMessage = WorkspaceFileChangeMessage | WorkspaceWatchErrorMessage;
 export function useWorkspaceStreaming({
   workspacePath,
   enabled,
-  streamingTimeout = 1500,
+  streamingTimeout = 3000,
 }: UseWorkspaceStreamingOptions): UseWorkspaceStreamingResult {
   const [streamingFile, setStreamingFile] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);

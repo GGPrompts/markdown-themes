@@ -680,15 +680,15 @@ export function Files() {
   });
 
   // Auto-scroll for right pane (used by Follow AI Edits)
-  // Always enabled when Follow AI mode is on, so we scroll even for slower edits
+  // Only scroll when content is actually changing (rightIsStreaming).
+  // Follow mode controls auto-OPENING files, not auto-scrolling.
+  // Auto-scroll is driven by actual content changes detected via diffing.
   useDiffAutoScroll({
     content: isRightMarkdownFile ? rightMarkdownContent : rightContent,
-    isStreaming: rightIsStreaming || appState.followStreamingMode,
+    isStreaming: rightIsStreaming,
     scrollContainerRef: rightScrollContainerRef,
     filePath: rightPaneFilePath ?? undefined,
-    enabled: rightIsStreaming || appState.followStreamingMode,
-    // Scroll to bottom on initial load when in follow mode (Claude likely writing at end)
-    scrollToBottomOnInitial: appState.followStreamingMode,
+    enabled: rightIsStreaming,
   });
 
   // Get recent files for empty state (limit to 6)

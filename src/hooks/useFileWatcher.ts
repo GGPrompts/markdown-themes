@@ -38,7 +38,7 @@ function shouldIgnoreMessage(data: unknown): boolean {
 
 export function useFileWatcher({
   path,
-  streamingTimeout = 1500,
+  streamingTimeout = 3000,
 }: UseFileWatcherOptions): UseFileWatcherResult {
   const [content, setContent] = useState<string>('');
   const [contentPath, setContentPath] = useState<string | null>(null); // Track which path content belongs to

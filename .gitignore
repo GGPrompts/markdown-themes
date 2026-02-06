@@ -4,6 +4,7 @@ node_modules/
 # Build outputs
 dist/
 target/
+backend/markdown-themes-backend
 
 # IDE
 .vscode/

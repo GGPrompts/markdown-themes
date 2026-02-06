@@ -181,10 +181,63 @@ export const MarkdownViewer = forwardRef<MarkdownViewerHandle, MarkdownViewerPro
       .edgeLabel { color: ${textPrimary} !important; }
       .edgeLabel .label rect { fill: ${bgSecondary} !important; }
       .edgeLabel .label span { background: ${bgSecondary} !important; }
+      .edgeLabel .label text { fill: ${textPrimary} !important; }
+      .edgeLabel .label { fill: ${textPrimary} !important; }
       .cluster-label { color: ${textPrimary} !important; }
       .statediagram-state rect.basic { fill: ${bgSecondary} !important; stroke: ${accent} !important; }
       .statediagram-cluster rect { fill: ${bgPrimary} !important; stroke: ${accent} !important; }
       .divider line, .divider path { stroke: ${border} !important; }
+
+      /* State diagram — transition labels, group text, notes, title */
+      g.stateGroup text { fill: ${textPrimary} !important; }
+      g.stateGroup .state-title { fill: ${textPrimary} !important; }
+      .stateLabel text { fill: ${textPrimary} !important; }
+      .statediagramTitleText { fill: ${textPrimary} !important; }
+      .state-note text { fill: ${textPrimary} !important; }
+      .state-note { fill: ${bgSecondary} !important; stroke: ${accent} !important; }
+      .stateGroup .composit { fill: ${bgPrimary} !important; }
+      .stateGroup .alt-composit { fill: ${bgSecondary} !important; }
+      .transition { stroke: ${textSecondary} !important; }
+
+      /* Sequence diagram — message text, labels, loops, notes */
+      .messageText { fill: ${textPrimary} !important; }
+      .labelText, .labelText > tspan { fill: ${textPrimary} !important; }
+      .loopText, .loopText > tspan { fill: ${textPrimary} !important; }
+      .loopLine { stroke: ${border} !important; }
+      .noteText, .noteText > tspan { fill: ${textPrimary} !important; }
+      .note { fill: ${bgSecondary} !important; stroke: ${accent} !important; }
+      .sequenceNumber { fill: ${textPrimary} !important; }
+      .messageLine0, .messageLine1 { stroke: ${textSecondary} !important; }
+      .labelBox { fill: ${bgSecondary} !important; stroke: ${border} !important; }
+
+      /* Gantt chart — section titles, axis tick text, task text, title */
+      .titleText { fill: ${textPrimary} !important; }
+      .sectionTitle { fill: ${textPrimary} !important; }
+      .sectionTitle0, .sectionTitle1, .sectionTitle2, .sectionTitle3 { fill: ${textPrimary} !important; }
+      .grid .tick text { fill: ${textPrimary} !important; }
+      .taskText { fill: ${textPrimary} !important; }
+      .taskTextOutsideRight, .taskTextOutsideLeft { fill: ${textPrimary} !important; }
+      .taskTextOutside0, .taskTextOutside1, .taskTextOutside2, .taskTextOutside3 { fill: ${textPrimary} !important; }
+
+      /* Pie chart — title, legend, slice labels */
+      .pieTitleText { fill: ${textPrimary} !important; }
+      .legend text { fill: ${textPrimary} !important; }
+      .pieCircle { stroke: ${bgPrimary} !important; }
+
+      /* ER diagram — entity text, relationship labels */
+      .entityBox { fill: ${bgSecondary} !important; stroke: ${accent} !important; }
+      .entityLabel { fill: ${textPrimary} !important; }
+      .relationshipLabel { fill: ${textPrimary} !important; }
+      .relationshipLabelBox { fill: ${bgSecondary} !important; background-color: ${bgSecondary} !important; }
+      .relationshipLine { stroke: ${textSecondary} !important; }
+      .attributeBoxOdd { fill: ${bgSecondary} !important; }
+      .attributeBoxEven { fill: ${bgPrimary} !important; }
+
+      /* Git graph — commit labels, branch labels, tag labels, title */
+      .commit-id, .commit-msg, .branch-label { fill: ${textPrimary} !important; color: ${textPrimary} !important; }
+      .commit-label { fill: ${textPrimary} !important; }
+      .tag-label { fill: ${textPrimary} !important; }
+      .gitTitleText { fill: ${textPrimary} !important; }
 
       /* Journey diagram — override hardcoded .label text { fill: #333 } and
          .face { fill: #FFF8DC }, .mouth/.task-line { stroke: #666 } */
@@ -322,6 +375,13 @@ export const MarkdownViewer = forwardRef<MarkdownViewerHandle, MarkdownViewerPro
           noteBkgColor: bgSecondary,
           noteTextColor: textPrimary,
           noteBorderColor: accent,
+
+          // Git graph — override lightgrey defaults for commit/branch/tag labels
+          commitLabelColor: textPrimary,
+          commitLabelBackground: bgSecondary,
+          tagLabelColor: textPrimary,
+          tagLabelBackground: bgSecondary,
+          tagLabelBorder: accent,
 
           // Journey/Gantt fillTypes — used for .section-type-N and .task-type-N CSS.
           // Without these, base theme derives via hue-rotation from primaryColor

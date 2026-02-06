@@ -343,6 +343,167 @@ body {
   fill: var(--text-primary) !important;
 }
 
+/* ===================================================================
+   Non-node auxiliary text overrides for mermaid diagrams.
+   These ensure ALL text elements (not just node labels) are visible
+   on dark themes by using CSS custom properties.
+   =================================================================== */
+
+/* Edge labels — fill attribute on the SVG text element and
+   background on the label container (flowcharts, state diagrams) */
+[data-streamdown="mermaid-block"] .edgeLabel .label text {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .edgeLabel .label {
+  fill: var(--text-primary) !important;
+}
+
+/* State diagram — group text, state titles, transition labels, notes */
+[data-streamdown="mermaid-block"] g.stateGroup text {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] g.stateGroup .state-title {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .stateLabel text {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .statediagramTitleText {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .state-note {
+  fill: var(--bg-secondary) !important;
+  stroke: var(--accent) !important;
+}
+[data-streamdown="mermaid-block"] .state-note text {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .stateGroup .composit {
+  fill: var(--bg-primary) !important;
+}
+[data-streamdown="mermaid-block"] .stateGroup .alt-composit {
+  fill: var(--bg-secondary) !important;
+}
+[data-streamdown="mermaid-block"] .transition {
+  stroke: var(--text-secondary) !important;
+}
+
+/* Sequence diagram — message text, label text, loop text, notes */
+[data-streamdown="mermaid-block"] .messageText {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .labelText,
+[data-streamdown="mermaid-block"] .labelText > tspan {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .loopText,
+[data-streamdown="mermaid-block"] .loopText > tspan {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .loopLine {
+  stroke: var(--border) !important;
+}
+[data-streamdown="mermaid-block"] .noteText,
+[data-streamdown="mermaid-block"] .noteText > tspan {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .note {
+  fill: var(--bg-secondary) !important;
+  stroke: var(--accent) !important;
+}
+[data-streamdown="mermaid-block"] .sequenceNumber {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .messageLine0,
+[data-streamdown="mermaid-block"] .messageLine1 {
+  stroke: var(--text-secondary) !important;
+}
+[data-streamdown="mermaid-block"] .labelBox {
+  fill: var(--bg-secondary) !important;
+  stroke: var(--border) !important;
+}
+
+/* Gantt chart — section titles, axis tick text, task text, title */
+[data-streamdown="mermaid-block"] .titleText {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .sectionTitle,
+[data-streamdown="mermaid-block"] .sectionTitle0,
+[data-streamdown="mermaid-block"] .sectionTitle1,
+[data-streamdown="mermaid-block"] .sectionTitle2,
+[data-streamdown="mermaid-block"] .sectionTitle3 {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .grid .tick text {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .taskText {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .taskTextOutsideRight,
+[data-streamdown="mermaid-block"] .taskTextOutsideLeft {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .taskTextOutside0,
+[data-streamdown="mermaid-block"] .taskTextOutside1,
+[data-streamdown="mermaid-block"] .taskTextOutside2,
+[data-streamdown="mermaid-block"] .taskTextOutside3 {
+  fill: var(--text-primary) !important;
+}
+
+/* Pie chart — title text, legend text */
+[data-streamdown="mermaid-block"] .pieTitleText {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .legend text {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .pieCircle {
+  stroke: var(--bg-primary) !important;
+}
+
+/* ER diagram — entity box, entity label text, relationship labels */
+[data-streamdown="mermaid-block"] .entityBox {
+  fill: var(--bg-secondary) !important;
+  stroke: var(--accent) !important;
+}
+[data-streamdown="mermaid-block"] .entityLabel {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .relationshipLabel {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .relationshipLabelBox {
+  fill: var(--bg-secondary) !important;
+  background-color: var(--bg-secondary) !important;
+}
+[data-streamdown="mermaid-block"] .relationshipLine {
+  stroke: var(--text-secondary) !important;
+}
+[data-streamdown="mermaid-block"] .attributeBoxOdd {
+  fill: var(--bg-secondary) !important;
+}
+[data-streamdown="mermaid-block"] .attributeBoxEven {
+  fill: var(--bg-primary) !important;
+}
+
+/* Git graph — commit IDs, branch labels, tag labels, title */
+[data-streamdown="mermaid-block"] .commit-id,
+[data-streamdown="mermaid-block"] .commit-msg,
+[data-streamdown="mermaid-block"] .branch-label {
+  fill: var(--text-primary) !important;
+  color: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .commit-label {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .tag-label {
+  fill: var(--text-primary) !important;
+}
+[data-streamdown="mermaid-block"] .gitTitleText {
+  fill: var(--text-primary) !important;
+}
+
 /* Chat message prose - smaller, tighter styles for chat context */
 .chat-message-prose .prose {
   font-size: 0.875rem;

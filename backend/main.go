@@ -10,11 +10,18 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 
+	"markdown-themes-backend/db"
 	"markdown-themes-backend/handlers"
 	"markdown-themes-backend/websocket"
 )
 
 func main() {
+	// Initialize SQLite database
+	if _, err := db.Init(); err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	log.Println("SQLite database initialized")
+
 	// Get port from env or default to 8130
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -67,6 +74,13 @@ func main() {
 		r.Post("/chat", handlers.Chat)
 		r.Get("/chat/process", handlers.ChatProcessStatus)
 		r.Delete("/chat/process", handlers.ChatProcessKill)
+
+		// Conversation persistence (SQLite)
+		r.Get("/chat/conversations", handlers.ConversationsList)
+		r.Post("/chat/conversations", handlers.ConversationCreate)
+		r.Get("/chat/conversations/{id}", handlers.ConversationGet)
+		r.Put("/chat/conversations/{id}", handlers.ConversationUpdate)
+		r.Delete("/chat/conversations/{id}", handlers.ConversationDelete)
 
 		// Git
 		r.Get("/git/repos", handlers.GitRepos)

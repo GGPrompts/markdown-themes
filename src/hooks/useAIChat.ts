@@ -1,4 +1,13 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import {
+  fetchConversations,
+  fetchConversation,
+  createConversation as createConversationAPI,
+  updateConversation as updateConversationAPI,
+  deleteConversationAPI,
+  type StoredConversation,
+  type StoredMessage,
+} from '../lib/api';
 
 const API_BASE = 'http://localhost:8130';
 
@@ -87,7 +96,8 @@ const STORAGE_KEY = 'ai-chat-conversations';
 const ACTIVE_CONV_KEY = 'ai-chat-active-conversation';
 const SAVE_DEBOUNCE_MS = 2000;
 
-function loadConversations(): Conversation[] {
+/** Load conversations from localStorage as fallback */
+function loadConversationsFromStorage(): Conversation[] {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     return data ? JSON.parse(data) : [];
@@ -105,10 +115,74 @@ function generateTitle(content: string): string {
   return firstLine.length > 50 ? firstLine.slice(0, 47) + '...' : firstLine;
 }
 
+/** Convert a Conversation to the StoredConversation format for the API */
+function toStoredConversation(conv: Conversation): StoredConversation {
+  return {
+    id: conv.id,
+    title: conv.title,
+    createdAt: conv.createdAt,
+    updatedAt: conv.updatedAt,
+    cwd: conv.cwd,
+    claudeSessionId: conv.claudeSessionId,
+    settings: conv.settings as Record<string, unknown> | undefined,
+    messages: conv.messages.map(m => toStoredMessage(conv.id, m)),
+  };
+}
+
+/** Convert a ChatMessage to StoredMessage format */
+function toStoredMessage(conversationId: string, m: ChatMessage): StoredMessage {
+  return {
+    id: m.id,
+    conversationId,
+    role: m.role,
+    content: m.content,
+    timestamp: m.timestamp,
+    isStreaming: m.isStreaming,
+    toolUse: m.toolUse as unknown[] | undefined,
+    usage: m.usage as Record<string, unknown> | undefined,
+    modelUsage: m.modelUsage as Record<string, unknown> | undefined,
+    claudeSessionId: m.claudeSessionId,
+    costUSD: m.costUSD,
+    durationMs: m.durationMs,
+  };
+}
+
+/** Convert a StoredConversation from the API to local Conversation format */
+function fromStoredConversation(stored: StoredConversation): Conversation {
+  return {
+    id: stored.id,
+    title: stored.title,
+    createdAt: stored.createdAt,
+    updatedAt: stored.updatedAt,
+    cwd: stored.cwd,
+    claudeSessionId: stored.claudeSessionId,
+    settings: stored.settings as ChatSettings | undefined,
+    messages: (stored.messages || []).map(m => fromStoredMessage(m)),
+  };
+}
+
+/** Convert a StoredMessage to ChatMessage format */
+function fromStoredMessage(m: StoredMessage): ChatMessage {
+  return {
+    id: m.id,
+    role: m.role as 'user' | 'assistant',
+    content: m.content,
+    timestamp: m.timestamp,
+    isStreaming: m.isStreaming,
+    toolUse: m.toolUse as ToolUseEvent[] | undefined,
+    usage: m.usage as TokenUsage | undefined,
+    modelUsage: m.modelUsage as ModelUsage | undefined,
+    claudeSessionId: m.claudeSessionId,
+    costUSD: m.costUSD,
+    durationMs: m.durationMs,
+  };
+}
+
 export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
   const { cwd } = options;
 
-  const [conversations, setConversations] = useState<Conversation[]>(loadConversations);
+  // Start with localStorage data, then hydrate from backend
+  const [conversations, setConversations] = useState<Conversation[]>(loadConversationsFromStorage);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(() => {
     return localStorage.getItem(ACTIVE_CONV_KEY) || null;
   });
@@ -128,9 +202,31 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
   const activeConvIdRef = useRef(activeConversationId);
   activeConvIdRef.current = activeConversationId;
 
-  // Debounced localStorage persistence
+  // Track whether backend is available
+  const backendAvailableRef = useRef(true);
+
+  // Track IDs that have been persisted to backend (avoid duplicate creates)
+  const persistedIdsRef = useRef(new Set<string>());
+
+  // Debounced save (localStorage fallback + backend persistence)
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveDirtyRef = useRef(false);
+
+  /** Save a conversation to the backend (non-blocking) */
+  const saveToBackend = useCallback(async (conv: Conversation) => {
+    if (!backendAvailableRef.current) return;
+    try {
+      const stored = toStoredConversation(conv);
+      if (persistedIdsRef.current.has(conv.id)) {
+        await updateConversationAPI(conv.id, stored);
+      } else {
+        await createConversationAPI(stored);
+        persistedIdsRef.current.add(conv.id);
+      }
+    } catch (err) {
+      console.warn('[useAIChat] Failed to save to backend:', err);
+    }
+  }, []);
 
   const flushSave = useCallback(() => {
     if (saveTimerRef.current) {
@@ -139,10 +235,11 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
     }
     if (saveDirtyRef.current) {
       saveDirtyRef.current = false;
+      // Save to localStorage as fallback/cache
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(conversationsRef.current));
       } catch (err) {
-        console.warn('[useAIChat] Failed to save conversations:', err);
+        console.warn('[useAIChat] Failed to save conversations to localStorage:', err);
       }
     }
   }, []);
@@ -178,6 +275,65 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
     }
   }, [activeConversationId]);
 
+  // Load conversations from backend on mount
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadFromBackend() {
+      try {
+        const items = await fetchConversations();
+
+        if (cancelled) return;
+
+        if (items.length === 0) {
+          // No conversations in backend -- check if we have localStorage data to migrate
+          const localConvs = loadConversationsFromStorage();
+          if (localConvs.length > 0) {
+            console.log('[useAIChat] Migrating %d conversations from localStorage to backend', localConvs.length);
+            // Persist each to backend
+            for (const conv of localConvs) {
+              try {
+                await createConversationAPI(toStoredConversation(conv));
+                persistedIdsRef.current.add(conv.id);
+              } catch (err) {
+                console.warn('[useAIChat] Failed to migrate conversation %s:', conv.id, err);
+              }
+            }
+          }
+          return;
+        }
+
+        // Backend has conversations -- load full data for each
+        const fullConversations: Conversation[] = [];
+        for (const item of items) {
+          try {
+            const stored = await fetchConversation(item.id);
+            fullConversations.push(fromStoredConversation(stored));
+            persistedIdsRef.current.add(item.id);
+          } catch (err) {
+            console.warn('[useAIChat] Failed to load conversation %s:', item.id, err);
+          }
+        }
+
+        if (cancelled) return;
+
+        if (fullConversations.length > 0) {
+          setConversations(fullConversations);
+          // Update localStorage cache
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(fullConversations));
+          } catch { /* ignore */ }
+        }
+      } catch (err) {
+        console.warn('[useAIChat] Backend unavailable, using localStorage:', err);
+        backendAvailableRef.current = false;
+      }
+    }
+
+    loadFromBackend();
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const activeConversation = useMemo(
     () => conversations.find(c => c.id === activeConversationId) ?? null,
     [conversations, activeConversationId]
@@ -194,8 +350,10 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
     };
     setConversations(prev => [conv, ...prev]);
     setActiveConversationId(conv.id);
+    // Persist to backend
+    saveToBackend(conv);
     return conv;
-  }, []);
+  }, [saveToBackend]);
 
   const setActiveConversation = useCallback((id: string) => {
     setActiveConversationId(id);
@@ -204,6 +362,11 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
   const deleteConversation = useCallback((id: string) => {
     setConversations(prev => prev.filter(c => c.id !== id));
     setActiveConversationId(prevId => prevId === id ? null : prevId);
+    // Delete from backend
+    deleteConversationAPI(id).catch(err => {
+      console.warn('[useAIChat] Failed to delete from backend:', err);
+    });
+    persistedIdsRef.current.delete(id);
   }, []);
 
   const endConversation = useCallback(async (id: string) => {
@@ -235,7 +398,12 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
         c.id === id ? { ...c, settings, updatedAt: Date.now() } : c
       )
     );
-  }, []);
+    // Persist settings update to backend
+    const conv = conversationsRef.current.find(c => c.id === id);
+    if (conv) {
+      saveToBackend({ ...conv, settings, updatedAt: Date.now() });
+    }
+  }, [saveToBackend]);
 
   const clearError = useCallback(() => setError(null), []);
 
@@ -291,6 +459,8 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
       conv = newConv;
       setConversations(prev => [newConv, ...prev]);
       setActiveConversationId(newConv.id);
+      // Persist new conversation to backend immediately
+      saveToBackend(newConv);
     }
 
     const userMessage: ChatMessage = {
@@ -459,9 +629,15 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
                   return newConvs;
                 });
 
-                // Flush save immediately on completion
+                // Flush localStorage save immediately on completion
                 saveDirtyRef.current = true;
                 flushSave();
+
+                // Persist completed conversation to backend
+                const updatedConv = conversationsRef.current.find(c => c.id === currentConvId);
+                if (updatedConv) {
+                  saveToBackend(updatedConv);
+                }
                 break;
               }
 
@@ -500,11 +676,16 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
       setIsGenerating(false);
       inFlightRef.current = false;
       abortControllerRef.current = null;
-      // Flush save when streaming ends
+      // Flush localStorage save when streaming ends
       saveDirtyRef.current = true;
       flushSave();
+      // Persist final state to backend
+      const updatedConv = conversationsRef.current.find(c => c.id === currentConvId);
+      if (updatedConv) {
+        saveToBackend(updatedConv);
+      }
     }
-  }, [updateMessage, flushSave]);
+  }, [updateMessage, flushSave, saveToBackend]);
 
   return useMemo(() => ({
     conversations,

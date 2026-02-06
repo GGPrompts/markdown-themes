@@ -465,3 +465,121 @@ export async function ensureDirectory(path: string): Promise<void> {
     }
   }
 }
+
+// ============================================================
+// Conversation persistence API (SQLite backend)
+// ============================================================
+
+/**
+ * Conversation list item returned by GET /api/chat/conversations
+ */
+export interface ConversationListItem {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  cwd?: string;
+  claudeSessionId?: string;
+  settings?: Record<string, unknown>;
+  messageCount: number;
+  lastMessage?: string;
+}
+
+/**
+ * Full conversation returned by GET /api/chat/conversations/:id
+ */
+export interface StoredConversation {
+  id: string;
+  title: string;
+  createdAt: number;
+  updatedAt: number;
+  cwd?: string;
+  claudeSessionId?: string;
+  settings?: Record<string, unknown>;
+  messages: StoredMessage[];
+}
+
+/**
+ * Message stored in the backend
+ */
+export interface StoredMessage {
+  id: string;
+  conversationId: string;
+  role: string;
+  content: string;
+  timestamp: number;
+  isStreaming?: boolean;
+  toolUse?: unknown[];
+  usage?: Record<string, unknown>;
+  modelUsage?: Record<string, unknown>;
+  claudeSessionId?: string;
+  costUSD?: number;
+  durationMs?: number;
+}
+
+/**
+ * List all conversations (lightweight, no full messages)
+ */
+export async function fetchConversations(): Promise<ConversationListItem[]> {
+  const response = await fetch(`${API_BASE}/api/chat/conversations`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch conversations: ${response.status}`);
+  }
+  return response.json();
+}
+
+/**
+ * Get a full conversation with all messages
+ */
+export async function fetchConversation(id: string): Promise<StoredConversation> {
+  const response = await fetch(`${API_BASE}/api/chat/conversations/${encodeURIComponent(id)}`);
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error('Conversation not found');
+    }
+    throw new Error(`Failed to fetch conversation: ${response.status}`);
+  }
+  return response.json();
+}
+
+/**
+ * Create a new conversation
+ */
+export async function createConversation(conv: StoredConversation): Promise<StoredConversation> {
+  const response = await fetch(`${API_BASE}/api/chat/conversations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(conv),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to create conversation: ${response.status}`);
+  }
+  return response.json();
+}
+
+/**
+ * Update an existing conversation
+ */
+export async function updateConversation(id: string, conv: StoredConversation): Promise<StoredConversation> {
+  const response = await fetch(`${API_BASE}/api/chat/conversations/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(conv),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to update conversation: ${response.status}`);
+  }
+  return response.json();
+}
+
+/**
+ * Delete a conversation
+ */
+export async function deleteConversationAPI(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/chat/conversations/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to delete conversation: ${response.status}`);
+  }
+}

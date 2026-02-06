@@ -853,12 +853,16 @@ export function Files() {
       return;
     }
 
-    // Skip file existence check - conversation path comes from session API
-    // which already verified the session exists. The file watcher will
-    // handle any errors if the file was deleted.
-    openTab(conversation.conversationPath, false); // Open as pinned tab
+    // Open as a conversation tab with a descriptive name instead of the raw session ID
+    openConversationTab(conversation.conversationPath, {
+      sessionId: conversation.sessionId,
+      workingDir: conversation.workingDir,
+      pane: conversation.pane || '',
+      taskDescription: 'Current Session',
+      autoClose: false,
+    });
     addRecentFile(conversation.conversationPath);
-  }, [conversation, openTab, addRecentFile]);
+  }, [conversation, openConversationTab, addRecentFile]);
 
   // Handle archive button click
   const handleArchiveClick = useCallback(() => {
@@ -1269,6 +1273,15 @@ export function Files() {
               <ChatPanel
                 currentFile={currentFile}
                 fontSize={appState.fontSize}
+                onViewConversation={(path, sessionId, title) => {
+                  openConversationTab(path, {
+                    sessionId,
+                    workingDir: workspacePath || '',
+                    pane: '',
+                    taskDescription: title,
+                    autoClose: false,
+                  });
+                }}
               />
             </div>
           </>

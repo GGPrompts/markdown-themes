@@ -69,6 +69,7 @@ func main() {
 
 		// Claude
 		r.Get("/claude/session", handlers.ClaudeSession)
+		r.Get("/claude/session/{sessionId}", handlers.ClaudeSessionByID)
 
 		// Chat (AI conversations via Claude CLI)
 		r.Post("/chat", handlers.Chat)

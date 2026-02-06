@@ -95,6 +95,53 @@ func ClaudeSession(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(bestSession)
 }
 
+// ClaudeSessionByID handles GET /api/claude/session/{sessionId} - find a specific session's JSONL file
+func ClaudeSessionByID(w http.ResponseWriter, r *http.Request) {
+	sessionID := r.PathValue("sessionId")
+	if sessionID == "" {
+		http.Error(w, `{"error": "sessionId required"}`, http.StatusBadRequest)
+		return
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		http.Error(w, `{"error": "cannot determine home directory"}`, http.StatusInternalServerError)
+		return
+	}
+
+	claudeProjectsDir := filepath.Join(home, ".claude", "projects")
+	targetFile := sessionID + ".jsonl"
+
+	// Scan all project directories for the JSONL file
+	projectEntries, err := os.ReadDir(claudeProjectsDir)
+	if err != nil {
+		http.Error(w, `{"error": "cannot read Claude projects directory"}`, http.StatusNotFound)
+		return
+	}
+
+	for _, projectEntry := range projectEntries {
+		if !projectEntry.IsDir() {
+			continue
+		}
+
+		filePath := filepath.Join(claudeProjectsDir, projectEntry.Name(), targetFile)
+		if _, err := os.Stat(filePath); err == nil {
+			workingDir := decodeProjectPath(projectEntry.Name())
+			session := models.ClaudeSessionInfo{
+				SessionID:        sessionID,
+				WorkingDir:       workingDir,
+				ConversationPath: filePath,
+				Pane:             "",
+				Status:           "found",
+			}
+			json.NewEncoder(w).Encode(session)
+			return
+		}
+	}
+
+	http.Error(w, `{"error": "session not found"}`, http.StatusNotFound)
+}
+
 // decodeProjectPath converts the encoded directory name back to a filesystem path.
 // e.g., "-home-user-projects-myapp" -> "/home/user/projects/myapp"
 func decodeProjectPath(encoded string) string {

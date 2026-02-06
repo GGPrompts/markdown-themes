@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
-import { MessageSquarePlus, Trash2, ChevronLeft, Bot, StopCircle, X, RefreshCw } from 'lucide-react';
+import { MessageSquarePlus, Trash2, ChevronLeft, Bot, StopCircle, X, RefreshCw, ExternalLink } from 'lucide-react';
 import { ChatMessageComponent } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { ChatSettings, getSettingsSummary } from './ChatSettings';
@@ -11,6 +11,8 @@ interface ChatPanelProps {
   /** Current file path for context */
   currentFile?: string | null;
   fontSize?: number;
+  /** Callback to open the conversation JSONL in the main viewer. Receives the resolved file path, sessionId, and title. */
+  onViewConversation?: (path: string, sessionId: string, title: string) => void;
 }
 
 const DEFAULT_CONTEXT_LIMIT = 200_000;
@@ -52,7 +54,7 @@ function isConversationStreaming(conversation: Conversation): boolean {
   return lastMsg?.isStreaming === true;
 }
 
-export function ChatPanel({ currentFile, fontSize = 100 }: ChatPanelProps) {
+export function ChatPanel({ currentFile, fontSize = 100, onViewConversation }: ChatPanelProps) {
   const {
     conversations,
     activeConversation,
@@ -467,6 +469,29 @@ export function ChatPanel({ currentFile, fontSize = 100 }: ChatPanelProps) {
             Thinking...
           </span>
         ) : null}
+
+        {/* View full conversation in main viewer */}
+        {activeConversation?.claudeSessionId && onViewConversation && (
+          <button
+            onClick={async () => {
+              const conv = activeConversation;
+              if (!conv.claudeSessionId) return;
+              try {
+                const resp = await fetch(`http://localhost:8130/api/claude/session/${conv.claudeSessionId}`);
+                if (!resp.ok) throw new Error('Session not found');
+                const data = await resp.json();
+                onViewConversation(data.conversationPath, conv.claudeSessionId, conv.title || 'Chat');
+              } catch (err) {
+                console.warn('[ViewConversation] Could not resolve session:', err);
+              }
+            }}
+            className="p-1 rounded hover:opacity-80 transition-opacity"
+            style={{ color: 'var(--text-secondary)' }}
+            title="View full conversation in main viewer"
+          >
+            <ExternalLink size={16} />
+          </button>
+        )}
 
         {/* End conversation button - only show if session exists */}
         {activeConversation?.claudeSessionId && !isGenerating && (

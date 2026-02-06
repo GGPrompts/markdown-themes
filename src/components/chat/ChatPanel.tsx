@@ -62,6 +62,7 @@ export function ChatPanel({ currentFile, fontSize = 100, onViewConversation }: C
     isGenerating,
     error,
     reconnectAttempt,
+    backendLoaded,
     sendMessage,
     stopGeneration,
     newConversation,
@@ -245,7 +246,7 @@ export function ChatPanel({ currentFile, fontSize = 100, onViewConversation }: C
     }
   }, [activeConversationId, updateConversationSettings]);
 
-  const contextPercent = getContextPercent(activeConversation);
+  const contextPercent = backendLoaded ? getContextPercent(activeConversation) : null;
 
   const zoom = fontSize / 100;
 
@@ -391,6 +392,7 @@ export function ChatPanel({ currentFile, fontSize = 100, onViewConversation }: C
                   conversation={conv}
                   isActive={conv.id === activeConversationId}
                   isTabbed={chatTabs.includes(conv.id)}
+                  backendLoaded={backendLoaded}
                   onSelect={handleSelectConversation}
                   onDelete={handleDelete}
                 />
@@ -580,19 +582,21 @@ function ConversationRow({
   conversation,
   isActive,
   isTabbed,
+  backendLoaded,
   onSelect,
   onDelete,
 }: {
   conversation: Conversation;
   isActive: boolean;
   isTabbed: boolean;
+  backendLoaded: boolean;
   onSelect: (id: string) => void;
   onDelete: (e: React.MouseEvent, id: string) => void;
 }) {
   const messageCount = conversation.messages.length;
   const lastMessage = conversation.messages[messageCount - 1];
   const preview = lastMessage?.content?.slice(0, 80) || 'No messages';
-  const ctxPercent = getConversationContextPercent(conversation);
+  const ctxPercent = backendLoaded ? getConversationContextPercent(conversation) : null;
   const settingsSummary = getSettingsSummary(conversation.settings);
 
   return (

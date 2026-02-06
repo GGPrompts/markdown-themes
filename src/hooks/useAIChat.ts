@@ -89,6 +89,7 @@ export interface UseAIChatResult {
   isGenerating: boolean;
   error: string | null;
   reconnectAttempt: number;
+  backendLoaded: boolean;
   sendMessage: (content: string) => Promise<void>;
   sendToChat: (content: string) => void;
   stopGeneration: () => void;
@@ -206,6 +207,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reconnectAttempt, setReconnectAttempt] = useState(0);
+  const [backendLoaded, setBackendLoaded] = useState(false);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const inFlightRef = useRef(false);
@@ -319,6 +321,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
               }
             }
           }
+          setBackendLoaded(true);
           return;
         }
 
@@ -343,9 +346,11 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(fullConversations));
           } catch { /* ignore */ }
         }
+        setBackendLoaded(true);
       } catch (err) {
         console.warn('[useAIChat] Backend unavailable, using localStorage:', err);
         backendAvailableRef.current = false;
+        setBackendLoaded(true);
       }
     }
 
@@ -911,6 +916,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
     isGenerating,
     error,
     reconnectAttempt,
+    backendLoaded,
     sendMessage,
     sendToChat,
     stopGeneration,
@@ -927,6 +933,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
     isGenerating,
     error,
     reconnectAttempt,
+    backendLoaded,
     sendMessage,
     sendToChat,
     stopGeneration,

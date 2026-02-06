@@ -72,6 +72,16 @@ func getOrCreateBuffer(convID string) *ConversationBuffer {
 	return buf
 }
 
+// resetBuffer creates a fresh buffer for the conversation, replacing any existing one
+func resetBuffer(convID string) *ConversationBuffer {
+	bufferMu.Lock()
+	defer bufferMu.Unlock()
+
+	buf := &ConversationBuffer{}
+	conversationBuffers[convID] = buf
+	return buf
+}
+
 // getBuffer returns an existing buffer (nil if not found)
 func getBuffer(convID string) *ConversationBuffer {
 	bufferMu.RLock()
@@ -331,8 +341,9 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 	activeProcesses[convID] = proc
 	processMu.Unlock()
 
-	// Create event buffer for this conversation
-	buf := getOrCreateBuffer(convID)
+	// Create a fresh event buffer for this conversation turn.
+	// Reconnects are handled above and return early, so this always starts a new stream.
+	buf := resetBuffer(convID)
 
 	// Buffer the initial start event
 	buf.appendEvent(map[string]interface{}{

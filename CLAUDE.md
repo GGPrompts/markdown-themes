@@ -18,6 +18,8 @@ WSL (Go backend @ 8130)             Browser (Chrome)
 │  /api/files/tree              │   │  markdown-themes    │
 │  /api/files/content           │◄─►│  - Streamdown       │
 │  /api/git/* endpoints         │   │  - Themes (CSS)     │
+│  /api/chat/* (SSE + CRUD)     │   │  - AI Chat (SSE)    │
+│  SQLite (conversations.db)    │   │                     │
 │  WebSocket file-watch msgs    │   │                     │
 └───────────────────────────────┘   └─────────────────────┘
 ```
@@ -30,9 +32,13 @@ WSL (Go backend @ 8130)             Browser (Chrome)
 backend/                       # Go backend server
 ├── main.go                    # Entry point, Chi router, CORS middleware
 ├── go.mod                     # Go module dependencies
+├── db/
+│   └── conversations.go       # SQLite layer (conversations + messages tables)
 ├── handlers/
 │   ├── files.go               # File tree, content, git status APIs
-│   └── git.go                 # Git graph, commit details, diff APIs
+│   ├── git.go                 # Git graph, commit details, diff APIs
+│   ├── chat.go                # Claude AI chat SSE proxy with reconnect buffering
+│   └── conversations.go       # Conversation CRUD REST handlers
 ├── websocket/
 │   ├── hub.go                 # WebSocket connection management
 │   └── filewatcher.go         # fsnotify integration, streaming detection
@@ -57,13 +63,16 @@ src/
 │   ├── PromptNotebook.tsx     # Prompty renderer with inline fields
 │   ├── PromptLibrary.tsx      # Prompty file browser sidebar
 │   ├── InlineField.tsx        # Editable {{variable}} fields
+│   ├── chat/                  # AI Chat panel (ChatPanel, ChatInput, ChatMessage, ChatSettings)
 │   ├── viewers/               # File type viewers (see Supported File Types)
 │   └── git/                   # Git components (GitGraph, CommitDetails, RepoCard, etc.)
 ├── context/
 │   ├── AppStoreContext.tsx    # localStorage persistence (theme, recent files, favorites)
+│   ├── AIChatContext.tsx      # App-level AI chat provider (wraps useAIChat)
 │   ├── WorkspaceContext.tsx   # Current workspace path + file tree
-│   └── PageStateContext.tsx   # In-memory page state (tabs, split view, etc.)
+│   └── PageStateContext.tsx   # In-memory page state (tabs, split view, chat tabs, etc.)
 ├── hooks/
+│   ├── useAIChat.ts           # AI chat state, SSE streaming, conversation persistence
 │   ├── useFileWatcher.ts      # WebSocket file watching + streaming detection
 │   ├── useWorkspaceStreaming.ts # Workspace-wide streaming detection (Follow AI Edits)
 │   ├── useDiffAutoScroll.ts   # Auto-scroll to changes during streaming
@@ -208,7 +217,7 @@ The app auto-detects file types and renders with appropriate viewers:
 
 | Page | Preserved State |
 |------|-----------------|
-| Files | Open tabs, active tab, split view, split ratio, right pane file |
+| Files | Open tabs, active tab, split view, split ratio, right pane file, chat tabs, active chat tab |
 | Prompts | Current file, library visibility |
 
 The hooks `useTabManager` and `useSplitView` accept optional `initialState` and `onStateChange` props to sync with the context.
@@ -242,6 +251,38 @@ The Files page toolbar has a git graph button that shows commit history in the r
 - `GET /api/git/graph?path=...&limit=50&skip=0` - Paginated commit list
 - `GET /api/git/commit/:hash?path=...` - Commit details with files
 - `GET /api/git/diff?path=...&base=hash&file=path` - File diff for a commit
+
+### AI Chat
+
+The app includes an AI chat panel that streams responses from Claude via the Go backend.
+
+**Architecture:**
+- `useAIChat` hook manages conversations, messages, and SSE streaming
+- `AIChatContext` provides chat state app-wide (wraps `useAIChat`)
+- `ChatPanel` renders the UI with multi-conversation tabs
+- Go backend proxies requests to Claude CLI and streams responses via SSE
+
+**SSE Streaming with Reconnect Buffering:**
+The backend buffers SSE events per conversation so clients can reconnect without losing output:
+- Each SSE event gets a sequential `id:` field (per SSE spec)
+- `ConversationBuffer` stores up to 1000 events per conversation
+- On reconnect, client sends `lastEventId` and backend replays missed events
+- Buffers expire 5 minutes after conversation completes
+- Background cleanup goroutine runs every minute
+
+**Conversation Persistence (SQLite):**
+Conversations are stored in SQLite at `~/.local/share/markdown-themes/conversations.db`:
+- Tables: `conversations` (id, title, cwd, settings JSON, etc.) and `messages` (role, content, usage JSON, etc.)
+- REST API: `GET/POST /api/chat/conversations`, `GET/PUT/DELETE /api/chat/conversations/{id}`
+- Frontend loads from backend on mount, falls back to localStorage if backend unavailable
+- Auto-migrates existing localStorage conversations on first run
+
+**Multi-Conversation Tabs:**
+The chat panel supports multiple open conversations as tabs:
+- `chatTabs` (conversation IDs) and `activeChatTabId` persisted in `PageStateContext`
+- Tab bar shows truncated title, streaming indicator dot, close button on hover
+- Click conversation in list to open as tab; middle-click or close button removes tab
+- Back button returns to conversation list without closing tabs
 
 ## Keyboard Shortcuts
 

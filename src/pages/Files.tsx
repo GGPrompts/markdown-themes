@@ -1127,6 +1127,7 @@ export function Files() {
                       fontSize={appState.fontSize}
                       repoPath={workspacePath}
                       onSendToChat={handleSendToChat}
+                      scrollContainerRef={leftScrollContainerRef}
                     />
                   </div>
                 </>
@@ -1175,6 +1176,7 @@ export function Files() {
                           fontSize={appState.fontSize}
                           repoPath={workspacePath}
                           onSendToChat={handleSendToChat}
+                          scrollContainerRef={rightScrollContainerRef}
                         />
                       </div>
                     </>

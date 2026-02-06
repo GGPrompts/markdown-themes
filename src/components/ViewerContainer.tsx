@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type RefObject } from 'react';
 import { FileWarning } from 'lucide-react';
 import { MarkdownViewer } from './MarkdownViewer';
 import { CodeViewer } from './viewers/CodeViewer';
@@ -24,6 +24,8 @@ interface ViewerContainerProps {
   repoPath?: string | null;
   /** Callback to send content to AI Chat */
   onSendToChat?: (content: string) => void;
+  /** Ref to the parent scroll container for CodeViewer scrollbar markers */
+  scrollContainerRef?: RefObject<HTMLDivElement | null>;
 }
 
 type ViewerType = 'markdown' | 'code' | 'image' | 'csv' | 'json' | 'jsonl' | 'convlog' | 'audio' | 'video' | 'svg' | 'pdf' | 'prompty' | 'binary';
@@ -169,6 +171,7 @@ export function ViewerContainer({
   fontSize = 100,
   repoPath = null,
   onSendToChat,
+  scrollContainerRef,
 }: ViewerContainerProps) {
   const viewerType = useMemo(() => getViewerType(filePath, content), [filePath, content]);
 
@@ -251,6 +254,6 @@ export function ViewerContainer({
 
     case 'code':
     default:
-      return <CodeViewer content={content} filePath={filePath} fontSize={fontSize} isStreaming={isStreaming} repoPath={repoPath} />;
+      return <CodeViewer content={content} filePath={filePath} fontSize={fontSize} isStreaming={isStreaming} repoPath={repoPath} scrollContainerRef={scrollContainerRef} />;
   }
 }

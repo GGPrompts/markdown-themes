@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef, useCallback, type MouseEvent as ReactMouseEvent } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback, type MouseEvent as ReactMouseEvent, type RefObject } from 'react';
 import { codeToHtml, bundledLanguages } from 'shiki';
 import { createCssVariablesTheme } from 'shiki';
 import { useGitDiff, type GitDiffLineType, type DeletedLine } from '../../hooks/useGitDiff';
@@ -11,6 +11,8 @@ interface CodeViewerProps {
   isStreaming?: boolean;
   /** Repository root path for git diff highlighting */
   repoPath?: string | null;
+  /** Ref to the parent scroll container for sticky scrollbar markers */
+  scrollContainerRef?: RefObject<HTMLDivElement | null>;
 }
 
 // Create a single CSS variables theme - colors defined in each theme's CSS
@@ -130,7 +132,7 @@ interface LineHighlight {
   recentEdit?: boolean;
 }
 
-export function CodeViewer({ content, filePath, fontSize = 100, isStreaming = false, repoPath = null }: CodeViewerProps) {
+export function CodeViewer({ content, filePath, fontSize = 100, isStreaming = false, repoPath = null, scrollContainerRef }: CodeViewerProps) {
   const [highlightedHtml, setHighlightedHtml] = useState<string>('');
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -359,7 +361,7 @@ export function CodeViewer({ content, filePath, fontSize = 100, isStreaming = fa
 
   return (
     <div className="code-viewer h-full" style={{ zoom: fontSize / 100, position: 'relative' }}>
-      <ScrollbarMarkers changedLines={gitChangedLines} deletedLines={gitDeletedLines} totalLines={lineCount} />
+      <ScrollbarMarkers changedLines={gitChangedLines} deletedLines={gitDeletedLines} totalLines={lineCount} scrollContainerRef={scrollContainerRef} />
       <div className="flex">
         <div
           className="line-numbers select-none text-right pr-4 pl-4 py-4 sticky left-0"
@@ -446,18 +448,42 @@ export function CodeViewer({ content, filePath, fontSize = 100, isStreaming = fa
 
 /**
  * Scrollbar-style diff markers overlay.
- * Renders colored tick marks on the right edge of the code viewer
- * showing where diffs are located, like VS Code's minimap markers.
+ * Renders colored tick marks on the right edge of the scroll container's
+ * scrollbar track, showing where diffs are located (like VS Code's minimap markers).
+ *
+ * Uses position:sticky so the markers stay fixed in the viewport while
+ * content scrolls beneath them. The marker container floats right and
+ * overlaps the scrollbar track area.
  */
 function ScrollbarMarkers({
   changedLines,
   deletedLines,
   totalLines,
+  scrollContainerRef,
 }: {
   changedLines: Map<number, GitDiffLineType>;
   deletedLines: DeletedLine[];
   totalLines: number;
+  scrollContainerRef?: RefObject<HTMLDivElement | null>;
 }) {
+  const [containerHeight, setContainerHeight] = useState(0);
+
+  // Track the scroll container's visible height so markers map to the scrollbar track
+  useEffect(() => {
+    const el = scrollContainerRef?.current;
+    if (!el) return;
+
+    const updateHeight = () => {
+      setContainerHeight(el.clientHeight);
+    };
+
+    updateHeight();
+
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [scrollContainerRef]);
+
   const handleClick = useCallback((e: ReactMouseEvent<HTMLDivElement>) => {
     const lineNum = e.currentTarget.dataset.markerLine;
     if (!lineNum) return;
@@ -484,52 +510,65 @@ function ScrollbarMarkers({
     return result;
   }, [changedLines, deletedLines]);
 
-  if (markers.length === 0 || totalLines === 0) return null;
+  if (markers.length === 0 || totalLines === 0 || containerHeight === 0) return null;
 
   return (
     <div
-      className="scrollbar-markers"
+      className="scrollbar-markers-sticky"
       style={{
-        position: 'absolute',
+        position: 'sticky',
         top: 0,
-        right: 0,
-        width: '8px',
-        height: '100%',
-        pointerEvents: 'none',
+        float: 'right',
+        width: 0,
+        height: 0,
+        overflow: 'visible',
         zIndex: 10,
+        pointerEvents: 'none',
       }}
     >
-      {markers.map((marker, idx) => {
-        const topPercent = ((marker.line - 1) / totalLines) * 100;
-        let color: string;
-        if (marker.type === 'added') {
-          color = 'rgba(34, 197, 94, 0.75)';
-        } else if (marker.type === 'modified') {
-          color = 'rgba(250, 204, 21, 0.75)';
-        } else {
-          color = 'rgba(239, 68, 68, 0.75)';
-        }
+      <div
+        className="scrollbar-markers"
+        style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          width: '8px',
+          height: `${containerHeight}px`,
+          pointerEvents: 'none',
+        }}
+      >
+        {markers.map((marker, idx) => {
+          const topPx = ((marker.line - 1) / totalLines) * containerHeight;
+          let color: string;
+          if (marker.type === 'added') {
+            color = 'rgba(34, 197, 94, 0.75)';
+          } else if (marker.type === 'modified') {
+            color = 'rgba(250, 204, 21, 0.75)';
+          } else {
+            color = 'rgba(239, 68, 68, 0.75)';
+          }
 
-        return (
-          <div
-            key={`${marker.type}-${marker.line}-${idx}`}
-            data-marker-line={marker.line}
-            onClick={handleClick}
-            style={{
-              position: 'absolute',
-              top: `${topPercent}%`,
-              right: 0,
-              width: '8px',
-              height: '3px',
-              backgroundColor: color,
-              borderRadius: '1px',
-              pointerEvents: 'auto',
-              cursor: 'pointer',
-            }}
-            title={`Line ${marker.line} (${marker.type})`}
-          />
-        );
-      })}
+          return (
+            <div
+              key={`${marker.type}-${marker.line}-${idx}`}
+              data-marker-line={marker.line}
+              onClick={handleClick}
+              style={{
+                position: 'absolute',
+                top: `${topPx}px`,
+                right: 0,
+                width: '8px',
+                height: '3px',
+                backgroundColor: color,
+                borderRadius: '1px',
+                pointerEvents: 'auto',
+                cursor: 'pointer',
+              }}
+              title={`Line ${marker.line} (${marker.type})`}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }

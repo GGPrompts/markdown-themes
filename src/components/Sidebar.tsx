@@ -886,32 +886,35 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
                 />
 
                 {/* Filter presets */}
-                {FILTERS.map((filter) => (
-                  <button
-                    key={filter.id}
-                    onClick={() => handleFilterSelect(filter.id)}
-                    className="w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 transition-colors"
-                    style={{
-                      color: activeFilter === filter.id ? 'var(--accent)' : 'var(--text-primary)',
-                      backgroundColor: activeFilter === filter.id
-                        ? 'color-mix(in srgb, var(--accent) 10%, transparent)'
-                        : 'transparent',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = activeFilter === filter.id
-                        ? 'color-mix(in srgb, var(--accent) 10%, transparent)'
-                        : 'transparent';
-                    }}
-                  >
-                    <span className="w-4">
-                      {activeFilter === filter.id && <CheckIcon />}
-                    </span>
-                    {filter.name}
-                  </button>
-                ))}
+                {FILTERS.map((filter) => {
+                  const FilterIcon2 = filter.icon;
+                  return (
+                    <button
+                      key={filter.id}
+                      onClick={() => handleFilterSelect(filter.id)}
+                      className="w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 transition-colors"
+                      style={{
+                        color: activeFilter === filter.id ? 'var(--accent)' : 'var(--text-primary)',
+                        backgroundColor: activeFilter === filter.id
+                          ? 'color-mix(in srgb, var(--accent) 10%, transparent)'
+                          : 'transparent',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = activeFilter === filter.id
+                          ? 'color-mix(in srgb, var(--accent) 10%, transparent)'
+                          : 'transparent';
+                      }}
+                    >
+                      <span className="w-4 flex items-center justify-center">
+                        {activeFilter === filter.id ? <CheckIcon /> : <FilterIcon2 size={13} />}
+                      </span>
+                      {filter.name}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

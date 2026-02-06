@@ -40,6 +40,18 @@ export interface ToolUseEvent {
   id?: string;
 }
 
+export interface ChatSettings {
+  model?: string;
+  addDirs?: string[];
+  pluginDirs?: string[];
+  appendSystemPrompt?: string;
+  allowedTools?: string[];
+  maxTurns?: number;
+  permissionMode?: string;
+  teammateMode?: string;
+  agent?: string;
+}
+
 export interface Conversation {
   id: string;
   title: string;
@@ -48,6 +60,7 @@ export interface Conversation {
   createdAt: number;
   updatedAt: number;
   cwd?: string;
+  settings?: ChatSettings;
 }
 
 interface UseAIChatOptions {
@@ -66,6 +79,7 @@ export interface UseAIChatResult {
   setActiveConversation: (id: string) => void;
   deleteConversation: (id: string) => void;
   endConversation: (id: string) => Promise<void>;
+  updateConversationSettings: (id: string, settings: ChatSettings) => void;
   clearError: () => void;
 }
 
@@ -215,6 +229,14 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
     );
   }, []);
 
+  const updateConversationSettings = useCallback((id: string, settings: ChatSettings) => {
+    setConversations(prev =>
+      prev.map(c =>
+        c.id === id ? { ...c, settings, updatedAt: Date.now() } : c
+      )
+    );
+  }, []);
+
   const clearError = useCallback(() => setError(null), []);
 
   const stopGeneration = useCallback(() => {
@@ -313,6 +335,9 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
     abortControllerRef.current = abortController;
 
     try {
+      // Read settings from the latest conversation state
+      const currentSettings = conversationsRef.current.find(c => c.id === currentConvId)?.settings ?? conv?.settings;
+
       const response = await fetch(`${API_BASE}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -321,6 +346,15 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
           conversationId: currentConvId,
           claudeSessionId: conv?.claudeSessionId,
           cwd: cwdRef.current ?? undefined,
+          ...(currentSettings?.model && { model: currentSettings.model }),
+          ...(currentSettings?.addDirs?.length && { addDirs: currentSettings.addDirs }),
+          ...(currentSettings?.pluginDirs?.length && { pluginDirs: currentSettings.pluginDirs }),
+          ...(currentSettings?.appendSystemPrompt && { appendSystemPrompt: currentSettings.appendSystemPrompt }),
+          ...(currentSettings?.allowedTools?.length && { allowedTools: currentSettings.allowedTools }),
+          ...(currentSettings?.maxTurns && { maxTurns: currentSettings.maxTurns }),
+          ...(currentSettings?.permissionMode && { permissionMode: currentSettings.permissionMode }),
+          ...(currentSettings?.teammateMode && { teammateMode: currentSettings.teammateMode }),
+          ...(currentSettings?.agent && { agent: currentSettings.agent }),
         }),
         signal: abortController.signal,
       });
@@ -484,6 +518,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
     setActiveConversation,
     deleteConversation,
     endConversation,
+    updateConversationSettings,
     clearError,
   }), [
     conversations,
@@ -497,6 +532,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
     setActiveConversation,
     deleteConversation,
     endConversation,
+    updateConversationSettings,
     clearError,
   ]);
 }

@@ -2,8 +2,9 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { MessageSquarePlus, Trash2, ChevronLeft, Bot, StopCircle } from 'lucide-react';
 import { ChatMessageComponent } from './ChatMessage';
 import { ChatInput } from './ChatInput';
+import { ChatSettings, getSettingsSummary } from './ChatSettings';
 import { useAIChatContext, type Conversation } from '../../context/AIChatContext';
-import type { ModelUsage } from '../../hooks/useAIChat';
+import type { ModelUsage, ChatSettings as ChatSettingsType } from '../../hooks/useAIChat';
 
 interface ChatPanelProps {
   /** Current file path for context */
@@ -56,17 +57,19 @@ export function ChatPanel({ currentFile, fontSize = 100 }: ChatPanelProps) {
     setActiveConversation,
     deleteConversation,
     endConversation,
+    updateConversationSettings,
     clearError,
   } = useAIChatContext();
 
   const [showList, setShowList] = useState(!activeConversationId);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
+  // Uses scrollTop instead of scrollIntoView because CSS zoom breaks scrollIntoView coordinates
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
     }
   }, [activeConversation?.messages]);
 
@@ -121,6 +124,12 @@ export function ChatPanel({ currentFile, fontSize = 100 }: ChatPanelProps) {
       setShowList(true);
     }
   }, [activeConversationId, deleteConversation]);
+
+  const handleSettingsChange = useCallback((settings: ChatSettingsType) => {
+    if (activeConversationId) {
+      updateConversationSettings(activeConversationId, settings);
+    }
+  }, [activeConversationId, updateConversationSettings]);
 
   const contextPercent = getContextPercent(activeConversation);
 
@@ -271,6 +280,13 @@ export function ChatPanel({ currentFile, fontSize = 100 }: ChatPanelProps) {
         </button>
       </div>
 
+      {/* Settings bar */}
+      <ChatSettings
+        settings={activeConversation?.settings || {}}
+        onSettingsChange={handleSettingsChange}
+        disabled={isGenerating}
+      />
+
       {/* Error banner */}
       {error && (
         <div
@@ -307,7 +323,6 @@ export function ChatPanel({ currentFile, fontSize = 100 }: ChatPanelProps) {
         {activeConversation?.messages.map((msg) => (
           <ChatMessageComponent key={msg.id} message={msg} />
         ))}
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Input */}
@@ -337,6 +352,7 @@ function ConversationRow({
   const lastMessage = conversation.messages[messageCount - 1];
   const preview = lastMessage?.content?.slice(0, 80) || 'No messages';
   const ctxPercent = getConversationContextPercent(conversation);
+  const settingsSummary = getSettingsSummary(conversation.settings);
 
   return (
     <div
@@ -383,6 +399,19 @@ function ConversationRow({
         >
           {messageCount} message{messageCount !== 1 ? 's' : ''} · {preview}
         </p>
+        {settingsSummary && (
+          <span
+            className="inline-block text-[10px] mt-0.5 px-1 py-0 rounded"
+            style={{
+              backgroundColor: 'var(--accent)',
+              color: 'var(--bg-primary)',
+              borderRadius: 'var(--radius)',
+              opacity: 0.8,
+            }}
+          >
+            {settingsSummary}
+          </span>
+        )}
       </div>
       <button
         onClick={(e) => onDelete(e, conversation.id)}

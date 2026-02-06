@@ -10,10 +10,11 @@ import {
   File,
   FileType,
   FileCog,
+  FileInput,
 } from 'lucide-react';
 
 // File type categories
-type FileCategory = 'code' | 'markdown' | 'json' | 'config' | 'image' | 'video' | 'audio' | 'data' | 'text' | 'unknown';
+type FileCategory = 'code' | 'markdown' | 'json' | 'config' | 'image' | 'video' | 'audio' | 'data' | 'text' | 'prompt' | 'unknown';
 
 interface FileIconInfo {
   icon: LucideIcon;
@@ -32,6 +33,7 @@ const ICON_COLORS = {
   audio: '#ec4899',     // Pink - audio files
   data: '#10b981',      // Emerald - CSV, data files
   text: '#6b7280',      // Gray - text files
+  prompt: '#8b5cf6',    // Violet - prompt/template files
   unknown: '#6b7280',   // Gray - unknown
 } as const;
 
@@ -148,6 +150,7 @@ function getFileCategory(filePath: string): FileCategory {
     : '';
 
   // Check by extension
+  if (ext === 'prompty') return 'prompt';
   if (MARKDOWN_EXTENSIONS.has(ext)) return 'markdown';
   if (JSON_EXTENSIONS.has(ext)) return 'json';
   if (CONFIG_EXTENSIONS.has(ext)) return 'config';
@@ -182,6 +185,8 @@ function getIconForCategory(category: FileCategory): LucideIcon {
       return FileAudio;
     case 'data':
       return FileSpreadsheet;
+    case 'prompt':
+      return FileInput;
     case 'text':
       return FileType;
     case 'unknown':

@@ -14,12 +14,19 @@ import (
 
 // ChatRequest represents the incoming chat request
 type ChatRequest struct {
-	Messages        []ChatMessage `json:"messages"`
-	ConversationID  string        `json:"conversationId,omitempty"`
-	ClaudeSessionID string        `json:"claudeSessionId,omitempty"`
-	Model           string        `json:"model,omitempty"`
-	Cwd             string        `json:"cwd,omitempty"`
-	AllowedTools    []string      `json:"allowedTools,omitempty"`
+	Messages           []ChatMessage `json:"messages"`
+	ConversationID     string        `json:"conversationId,omitempty"`
+	ClaudeSessionID    string        `json:"claudeSessionId,omitempty"`
+	Model              string        `json:"model,omitempty"`
+	Cwd                string        `json:"cwd,omitempty"`
+	AllowedTools       []string      `json:"allowedTools,omitempty"`
+	AddDirs            []string      `json:"addDirs,omitempty"`
+	PluginDirs         []string      `json:"pluginDirs,omitempty"`
+	AppendSystemPrompt string        `json:"appendSystemPrompt,omitempty"`
+	MaxTurns           int           `json:"maxTurns,omitempty"`
+	PermissionMode     string        `json:"permissionMode,omitempty"`
+	TeammateMode       string        `json:"teammateMode,omitempty"`
+	Agent              string        `json:"agent,omitempty"`
 }
 
 // ChatMessage represents a single message in the conversation
@@ -100,6 +107,39 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 	// Add model if explicitly specified
 	if req.Model != "" {
 		args = append([]string{"--model", req.Model}, args...)
+	}
+
+	// Add directories
+	for _, dir := range req.AddDirs {
+		args = append(args, "--add-dir", dir)
+	}
+	for _, dir := range req.PluginDirs {
+		args = append(args, "--plugin-dir", dir)
+	}
+
+	// Add system prompt appendage
+	if req.AppendSystemPrompt != "" {
+		args = append(args, "--append-system-prompt", req.AppendSystemPrompt)
+	}
+
+	// Add max turns
+	if req.MaxTurns > 0 {
+		args = append(args, "--max-turns", fmt.Sprintf("%d", req.MaxTurns))
+	}
+
+	// Add permission mode
+	if req.PermissionMode != "" {
+		args = append(args, "--permission-mode", req.PermissionMode)
+	}
+
+	// Add teammate mode
+	if req.TeammateMode != "" {
+		args = append(args, "--teammate-mode", req.TeammateMode)
+	}
+
+	// Add agent
+	if req.Agent != "" {
+		args = append(args, "--agent", req.Agent)
 	}
 
 	// Add session resumption if provided

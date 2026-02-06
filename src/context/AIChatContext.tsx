@@ -1,8 +1,8 @@
 import { createContext, useContext, type ReactNode } from 'react';
-import { useAIChat, type Conversation, type ChatMessage, type UseAIChatResult } from '../hooks/useAIChat';
+import { useAIChat, type Conversation, type ChatMessage, type ChatSettings, type UseAIChatResult } from '../hooks/useAIChat';
 import { useWorkspaceContext } from './WorkspaceContext';
 
-export type { Conversation, ChatMessage };
+export type { Conversation, ChatMessage, ChatSettings };
 
 const AIChatContext = createContext<UseAIChatResult | null>(null);
 

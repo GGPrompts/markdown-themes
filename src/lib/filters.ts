@@ -2,6 +2,8 @@
  * File filter definitions and matching logic for the Sidebar.
  */
 
+import type { LucideIcon } from 'lucide-react';
+import { Bot, FileInput, FileText, Image, FileCog, GitBranch } from 'lucide-react';
 import type { FileTreeNode } from '../context/WorkspaceContext';
 
 /**
@@ -81,6 +83,8 @@ export interface FilterHomePaths {
 export interface FilterDefinition {
   id: FilterId;
   name: string;
+  /** Lucide icon component */
+  icon: LucideIcon;
   /** Patterns to match in project directory */
   patterns: string[];
   /** Optional home directory paths to include */
@@ -91,6 +95,7 @@ export const FILTERS: FilterDefinition[] = [
   {
     id: 'claude-code',
     name: 'Claude Code',
+    icon: Bot,
     patterns: CLAUDE_CODE_PATTERNS,
     homePaths: {
       // Specific subdirectories to include (excludes heavy dirs like debug, paste-cache, shell-snapshots, session-env, todos, tasks)
@@ -112,6 +117,7 @@ export const FILTERS: FilterDefinition[] = [
   {
     id: 'prompts',
     name: 'Prompts',
+    icon: FileInput,
     patterns: PROMPTS_PATTERNS,
     homePaths: {
       relativePaths: ['.prompts'],  // ~/.prompts
@@ -120,21 +126,25 @@ export const FILTERS: FilterDefinition[] = [
   {
     id: 'markdown',
     name: 'Markdown',
+    icon: FileText,
     patterns: MARKDOWN_PATTERNS,
   },
   {
     id: 'media',
     name: 'Media',
+    icon: Image,
     patterns: MEDIA_PATTERNS,
   },
   {
     id: 'config',
     name: 'Config',
+    icon: FileCog,
     patterns: CONFIG_PATTERNS,
   },
   {
     id: 'changed',
     name: 'Changed',
+    icon: GitBranch,
     patterns: [], // Special filter - matches gitStatus + WebSocket changedFiles
   },
 ];

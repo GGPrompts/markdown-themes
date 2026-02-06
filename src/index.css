@@ -224,6 +224,73 @@ body {
   min-height: 200px;
 }
 
+/* Mermaid text visibility - CSS fallbacks for theme compatibility
+   Mermaid's base theme internally derives some colors (e.g. node fills)
+   that can clash with theme text colors. These rules ensure text inside
+   SVG nodes, labels, and edges always uses theme-aware colors. */
+.mermaid svg text,
+.mermaid svg .nodeLabel,
+.mermaid svg .label,
+.mermaid svg .edgeLabel,
+.mermaid svg .cluster-label {
+  fill: var(--text-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+.mermaid svg .node rect,
+.mermaid svg .node circle,
+.mermaid svg .node ellipse,
+.mermaid svg .node polygon,
+.mermaid svg .node path {
+  fill: var(--bg-secondary) !important;
+  stroke: var(--accent) !important;
+}
+
+/* Edge/arrow labels get secondary background so they sit above lines */
+.mermaid svg .edgeLabel rect,
+.mermaid svg .labelBkg {
+  fill: var(--bg-secondary) !important;
+  opacity: 0.85;
+}
+
+/* Cluster (subgraph) backgrounds - subtle differentiation */
+.mermaid svg .cluster rect {
+  fill: color-mix(in srgb, var(--bg-secondary) 80%, transparent) !important;
+  stroke: var(--border) !important;
+}
+
+/* Sequence diagram actors */
+.mermaid svg .actor {
+  fill: var(--bg-secondary) !important;
+  stroke: var(--accent) !important;
+}
+
+/* Ensure marker arrows (arrowheads) use theme line color */
+.mermaid svg .arrowheadPath,
+.mermaid svg marker path {
+  fill: var(--text-secondary) !important;
+}
+
+/* Edge lines */
+.mermaid svg .flowchart-link,
+.mermaid svg .messageLine0,
+.mermaid svg .messageLine1 {
+  stroke: var(--text-secondary) !important;
+}
+
+/* State diagram fills */
+.mermaid svg .statediagram-state rect {
+  fill: var(--bg-secondary) !important;
+  stroke: var(--accent) !important;
+}
+
+/* Pie chart legend and title text */
+.mermaid svg .pieTitleText,
+.mermaid svg .slice,
+.mermaid svg .legend text {
+  fill: var(--text-primary) !important;
+}
+
 /* Chat message prose - smaller, tighter styles for chat context */
 .chat-message-prose .prose {
   font-size: 0.875rem;

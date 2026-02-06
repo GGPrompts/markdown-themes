@@ -149,10 +149,11 @@ export const MarkdownViewer = forwardRef<MarkdownViewerHandle, MarkdownViewerPro
           secondaryColor: isDark ? '#3a3a3a' : '#f0f0f0',
           tertiaryColor: isDark ? '#2a2a2a' : '#fafafa',
 
-          // Text colors
+          // Text colors - explicit for all diagram types
           primaryTextColor: textPrimary,
           secondaryTextColor: textSecondary,
           tertiaryTextColor: textSecondary,
+          nodeTextColor: textPrimary,
 
           // Border/line colors
           primaryBorderColor: border,
@@ -163,6 +164,7 @@ export const MarkdownViewer = forwardRef<MarkdownViewerHandle, MarkdownViewerPro
           // Accent colors for nodes
           nodeBorder: accent,
           clusterBorder: accent,
+          clusterBkg: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
 
           // Note styling
           noteBkgColor: isDark ? '#3a3a3a' : '#fffde7',
@@ -172,6 +174,8 @@ export const MarkdownViewer = forwardRef<MarkdownViewerHandle, MarkdownViewerPro
           // Flowchart specific
           mainBkg: bgSecondary,
           nodeBkg: bgSecondary,
+          edgeLabelBackground: bgSecondary,
+          titleColor: textPrimary,
 
           // Sequence diagram
           actorBkg: bgSecondary,
@@ -184,6 +188,9 @@ export const MarkdownViewer = forwardRef<MarkdownViewerHandle, MarkdownViewerPro
           labelBoxBorderColor: border,
           labelTextColor: textPrimary,
           loopTextColor: textPrimary,
+          activationBkgColor: bgSecondary,
+          activationBorderColor: accent,
+          sequenceNumberColor: textPrimary,
 
           // Pie chart
           pie1: accent,
@@ -195,10 +202,35 @@ export const MarkdownViewer = forwardRef<MarkdownViewerHandle, MarkdownViewerPro
           pie7: isDark ? '#fb923c' : '#f97316',
           pieStrokeColor: bgPrimary,
           pieOuterStrokeColor: bgPrimary,
+          pieTitleTextColor: textPrimary,
+          pieSectionTextColor: textPrimary,
+          pieLegendTextColor: textPrimary,
 
           // State diagram
           labelColor: textPrimary,
           altBackground: isDark ? '#2a2a2a' : '#f5f5f5',
+          transitionColor: textSecondary,
+          stateBkg: bgSecondary,
+          stateTextColor: textPrimary,
+          stateLabelColor: textPrimary,
+
+          // Class diagram
+          classText: textPrimary,
+
+          // Gantt chart
+          sectionBkgColor: bgSecondary,
+          taskTextColor: textPrimary,
+          taskTextOutsideColor: textPrimary,
+          gridColor: border,
+          doneTaskBkgColor: isDark ? '#3a3a3a' : '#e0e0e0',
+
+          // Git graph
+          git0: accent,
+          gitBranchLabel0: textPrimary,
+
+          // Requirement diagram
+          requirementBackground: bgSecondary,
+          requirementTextColor: textPrimary,
 
           // Font
           fontFamily: 'inherit',

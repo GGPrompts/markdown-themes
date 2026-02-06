@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
+
 	"markdown-themes-backend/models"
 	"markdown-themes-backend/utils"
 )
@@ -609,5 +611,316 @@ func GitDiff(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"data": response,
+	})
+}
+
+// resolveRepoPath resolves the repo path from URL params and query string.
+// Expects chi route: /api/git/repos/{repo}/{operation}?dir=...
+func resolveRepoPath(r *http.Request) (string, error) {
+	repo := chi.URLParam(r, "repo")
+	dir := r.URL.Query().Get("dir")
+	if repo == "" || dir == "" {
+		return "", fmt.Errorf("repo and dir parameters required")
+	}
+
+	// Expand home directory
+	if strings.HasPrefix(dir, "~") {
+		home, err := os.UserHomeDir()
+		if err == nil {
+			dir = filepath.Join(home, dir[1:])
+		}
+	}
+
+	repoPath := filepath.Join(filepath.Clean(dir), repo)
+	if !utils.IsGitRepo(repoPath) {
+		return "", fmt.Errorf("not a git repository: %s", repoPath)
+	}
+	return repoPath, nil
+}
+
+func jsonError(w http.ResponseWriter, msg string, code int) {
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": false,
+		"error":   msg,
+	})
+}
+
+func jsonSuccess(w http.ResponseWriter, extra map[string]interface{}) {
+	resp := map[string]interface{}{"success": true}
+	for k, v := range extra {
+		resp[k] = v
+	}
+	json.NewEncoder(w).Encode(resp)
+}
+
+// GitRepoStage handles POST /api/git/repos/{repo}/stage
+func GitRepoStage(w http.ResponseWriter, r *http.Request) {
+	repoPath, err := resolveRepoPath(r)
+	if err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var body struct {
+		Files []string `json:"files"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		jsonError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if len(body.Files) == 0 {
+		body.Files = []string{"."}
+	}
+
+	args := append([]string{"-C", repoPath, "add"}, body.Files...)
+	cmd := exec.Command("git", args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		jsonError(w, fmt.Sprintf("git add failed: %s", strings.TrimSpace(string(output))), http.StatusInternalServerError)
+		return
+	}
+
+	jsonSuccess(w, nil)
+}
+
+// GitRepoUnstage handles POST /api/git/repos/{repo}/unstage
+func GitRepoUnstage(w http.ResponseWriter, r *http.Request) {
+	repoPath, err := resolveRepoPath(r)
+	if err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var body struct {
+		Files []string `json:"files"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		jsonError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if len(body.Files) == 0 {
+		jsonError(w, "files required", http.StatusBadRequest)
+		return
+	}
+
+	args := append([]string{"-C", repoPath, "reset", "HEAD", "--"}, body.Files...)
+	cmd := exec.Command("git", args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		jsonError(w, fmt.Sprintf("git reset failed: %s", strings.TrimSpace(string(output))), http.StatusInternalServerError)
+		return
+	}
+
+	jsonSuccess(w, nil)
+}
+
+// GitRepoCommit handles POST /api/git/repos/{repo}/commit
+func GitRepoCommit(w http.ResponseWriter, r *http.Request) {
+	repoPath, err := resolveRepoPath(r)
+	if err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var body struct {
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		jsonError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if strings.TrimSpace(body.Message) == "" {
+		jsonError(w, "commit message required", http.StatusBadRequest)
+		return
+	}
+
+	cmd := exec.Command("git", "-C", repoPath, "commit", "-m", body.Message)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		jsonError(w, fmt.Sprintf("git commit failed: %s", strings.TrimSpace(string(output))), http.StatusInternalServerError)
+		return
+	}
+
+	jsonSuccess(w, map[string]interface{}{
+		"output": strings.TrimSpace(string(output)),
+	})
+}
+
+// GitRepoPush handles POST /api/git/repos/{repo}/push
+func GitRepoPush(w http.ResponseWriter, r *http.Request) {
+	repoPath, err := resolveRepoPath(r)
+	if err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	cmd := exec.Command("git", "-C", repoPath, "push")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		jsonError(w, fmt.Sprintf("git push failed: %s", strings.TrimSpace(string(output))), http.StatusInternalServerError)
+		return
+	}
+
+	jsonSuccess(w, map[string]interface{}{
+		"output": strings.TrimSpace(string(output)),
+	})
+}
+
+// GitRepoPull handles POST /api/git/repos/{repo}/pull
+func GitRepoPull(w http.ResponseWriter, r *http.Request) {
+	repoPath, err := resolveRepoPath(r)
+	if err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	cmd := exec.Command("git", "-C", repoPath, "pull")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		jsonError(w, fmt.Sprintf("git pull failed: %s", strings.TrimSpace(string(output))), http.StatusInternalServerError)
+		return
+	}
+
+	jsonSuccess(w, map[string]interface{}{
+		"output": strings.TrimSpace(string(output)),
+	})
+}
+
+// GitRepoFetch handles POST /api/git/repos/{repo}/fetch
+func GitRepoFetch(w http.ResponseWriter, r *http.Request) {
+	repoPath, err := resolveRepoPath(r)
+	if err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	cmd := exec.Command("git", "-C", repoPath, "fetch")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		jsonError(w, fmt.Sprintf("git fetch failed: %s", strings.TrimSpace(string(output))), http.StatusInternalServerError)
+		return
+	}
+
+	jsonSuccess(w, map[string]interface{}{
+		"output": strings.TrimSpace(string(output)),
+	})
+}
+
+// GitRepoDiscard handles POST /api/git/repos/{repo}/discard
+func GitRepoDiscard(w http.ResponseWriter, r *http.Request) {
+	repoPath, err := resolveRepoPath(r)
+	if err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var body struct {
+		Files []string `json:"files"`
+		All   bool     `json:"all"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		jsonError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if body.All {
+		// Discard all changes: checkout all tracked files, clean untracked
+		cmd := exec.Command("git", "-C", repoPath, "checkout", ".")
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			jsonError(w, fmt.Sprintf("git checkout failed: %s", strings.TrimSpace(string(output))), http.StatusInternalServerError)
+			return
+		}
+
+		cmd = exec.Command("git", "-C", repoPath, "clean", "-fd")
+		output, err = cmd.CombinedOutput()
+		if err != nil {
+			jsonError(w, fmt.Sprintf("git clean failed: %s", strings.TrimSpace(string(output))), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		if len(body.Files) == 0 {
+			jsonError(w, "files required", http.StatusBadRequest)
+			return
+		}
+
+		args := append([]string{"-C", repoPath, "checkout", "--"}, body.Files...)
+		cmd := exec.Command("git", args...)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			jsonError(w, fmt.Sprintf("git checkout failed: %s", strings.TrimSpace(string(output))), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	jsonSuccess(w, nil)
+}
+
+// GitRepoGenerateMessage handles POST /api/git/repos/{repo}/generate-message
+func GitRepoGenerateMessage(w http.ResponseWriter, r *http.Request) {
+	repoPath, err := resolveRepoPath(r)
+	if err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Get the staged diff
+	cmd := exec.Command("git", "-C", repoPath, "diff", "--cached")
+	diffOutput, err := cmd.Output()
+	if err != nil {
+		jsonError(w, "failed to get staged diff", http.StatusInternalServerError)
+		return
+	}
+
+	diff := strings.TrimSpace(string(diffOutput))
+	if diff == "" {
+		jsonError(w, "no staged changes to describe", http.StatusBadRequest)
+		return
+	}
+
+	// Truncate diff if too large
+	if len(diff) > 8000 {
+		diff = diff[:8000] + "\n... (truncated)"
+	}
+
+	// Use git log to get recent commit style
+	cmd = exec.Command("git", "-C", repoPath, "log", "--oneline", "-5")
+	logOutput, _ := cmd.Output()
+
+	prompt := fmt.Sprintf(
+		"Generate a concise git commit message (1-2 lines) for these staged changes. "+
+			"Follow conventional commits style if the project uses it. "+
+			"Recent commits for style reference:\n%s\n\nDiff:\n%s",
+		strings.TrimSpace(string(logOutput)),
+		diff,
+	)
+
+	// Try using claude CLI to generate the message
+	cmd = exec.Command("claude", "-p", prompt)
+	cmd.Dir = repoPath
+	output, err := cmd.Output()
+	if err != nil {
+		// Fallback: generate a simple message from the diff stat
+		cmd = exec.Command("git", "-C", repoPath, "diff", "--cached", "--stat")
+		statOutput, _ := cmd.Output()
+		jsonSuccess(w, map[string]interface{}{
+			"message": fmt.Sprintf("Update %s", strings.TrimSpace(string(statOutput))),
+		})
+		return
+	}
+
+	// Clean up Claude's response
+	msg := strings.TrimSpace(string(output))
+	// Remove markdown code fences if present
+	msg = strings.TrimPrefix(msg, "```")
+	msg = strings.TrimSuffix(msg, "```")
+	msg = strings.TrimSpace(msg)
+
+	jsonSuccess(w, map[string]interface{}{
+		"message": msg,
 	})
 }

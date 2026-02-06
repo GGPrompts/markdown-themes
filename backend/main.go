@@ -87,6 +87,16 @@ func main() {
 		r.Get("/git/graph", handlers.GitGraph)
 		r.Get("/git/commit/{hash}", handlers.GitCommitDetails)
 		r.Get("/git/diff", handlers.GitDiff)
+
+		// Git repo operations
+		r.Post("/git/repos/{repo}/stage", handlers.GitRepoStage)
+		r.Post("/git/repos/{repo}/unstage", handlers.GitRepoUnstage)
+		r.Post("/git/repos/{repo}/commit", handlers.GitRepoCommit)
+		r.Post("/git/repos/{repo}/push", handlers.GitRepoPush)
+		r.Post("/git/repos/{repo}/pull", handlers.GitRepoPull)
+		r.Post("/git/repos/{repo}/fetch", handlers.GitRepoFetch)
+		r.Post("/git/repos/{repo}/discard", handlers.GitRepoDiscard)
+		r.Post("/git/repos/{repo}/generate-message", handlers.GitRepoGenerateMessage)
 	})
 
 	// WebSocket

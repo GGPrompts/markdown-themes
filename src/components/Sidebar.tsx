@@ -162,6 +162,9 @@ const GIT_STATUS_TITLES: Record<GitStatus, string> = {
 function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick, onRightFileSelect, depth, isExpanded, onToggleExpand, expandedPaths, onToggleExpandPath, isFavorite, toggleFavorite, onContextMenu, gitStatus, getFolderGitStatus, loadedPaths, loadingPaths, loadChildren, focusedPath }: TreeItemProps) {
   const isSelected = node.path === currentFile;
   const isFocused = node.path === focusedPath;
+  // When keyboard nav is active, only highlight the focused item — suppress
+  // the selected-file accent so two items aren't highlighted at once.
+  const showSelected = isSelected && !focusedPath;
   // Reduced indent: 8px base + 12px per level (was 12px + 16px)
   const paddingLeft = 8 + depth * 12;
   const favorited = isFavorite(node.path);
@@ -381,23 +384,23 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
       className="group/item w-full text-left py-1.5 pr-2 flex items-center gap-1 text-sm transition-colors relative"
       style={{
         paddingLeft: filePaddingLeft,
-        backgroundColor: isSelected
+        backgroundColor: showSelected
           ? 'var(--selection-bg, color-mix(in srgb, var(--accent) 20%, transparent))'
           : isFocused
             ? 'var(--bg-primary)'
             : 'transparent',
-        color: isSelected ? 'var(--selection-text, var(--accent))' : 'var(--text-primary)',
-        fontWeight: isSelected ? 500 : 400,
+        color: showSelected ? 'var(--selection-text, var(--accent))' : 'var(--text-primary)',
+        fontWeight: showSelected ? 500 : 400,
         outline: isFocused ? '1px solid var(--accent)' : 'none',
         outlineOffset: '-1px',
       }}
       onMouseEnter={(e) => {
-        if (!isSelected) {
+        if (!showSelected) {
           e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
         }
       }}
       onMouseLeave={(e) => {
-        if (!isSelected && !isFocused) {
+        if (!showSelected && !isFocused) {
           e.currentTarget.style.backgroundColor = 'transparent';
         }
       }}
@@ -853,6 +856,11 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
       setFocusedPath(null);
     }
   }, [focusedPath, visiblePaths]);
+
+  // Clear keyboard focus when user clicks a file (selected file highlight takes over)
+  useEffect(() => {
+    setFocusedPath(null);
+  }, [currentFile]);
 
   // Find the node for a given path in the tree
   const findNode = useCallback((targetPath: string, nodes: ScopedFileTreeNode[]): ScopedFileTreeNode | null => {

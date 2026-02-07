@@ -216,12 +216,25 @@ body {
   font-weight: normal !important;
 }
 
+/* The Mermaid component ([data-streamdown="mermaid"]) uses Tailwind's size-full
+   (width: 100%; height: 100%). Since the parent mermaid-block has h-auto,
+   height: 100% resolves to 0 and clips horizontal (LR) diagrams.
+   Override to auto so content determines the height. */
+[data-streamdown="mermaid-block"] > [data-streamdown="mermaid"] {
+  height: auto;
+}
+
+/* PanZoom's inner content wrapper uses flex-1 (flex: 1 1 0%) inside a flex-col
+   container. The 0% flex-basis collapses the wrapper when content height is
+   ambiguous (e.g. SVG with width="100%" and no explicit height). Change to
+   flex-basis: auto so the SVG's intrinsic aspect ratio determines the height. */
+[data-streamdown="mermaid-block"] > [data-streamdown="mermaid"] .flex-1 {
+  flex-basis: auto;
+}
+
 /* Allow mermaid SVG to scale naturally.
    Use height: auto (without !important) so that if mermaid sets an explicit
-   height attribute on the SVG, it can take effect. The !important was causing
-   gantt charts to collapse because their SVG relies on viewBox + intrinsic
-   aspect ratio inside a flex container — !important prevented the browser
-   from resolving height correctly in some layout contexts. */
+   height attribute on the SVG, it can take effect. */
 [data-streamdown="mermaid-block"] svg {
   max-width: 100%;
   height: auto;
@@ -229,10 +242,8 @@ body {
 
 /* Gantt chart SVGs need their intrinsic height preserved.
    Mermaid gantt renderer sets viewBox but uses width="100%" without an explicit
-   height attribute, relying on the SVG aspect ratio. Inside the PanZoom flex
-   wrapper (items-center + flex-1), the SVG can collapse to near-zero height.
-   Setting a min-height ensures the chart remains visible, and aspect-ratio: auto
-   tells the browser to use the viewBox for sizing. */
+   height attribute, relying on the SVG aspect ratio. Setting min-height ensures
+   the chart remains visible even before layout resolves. */
 [data-streamdown="mermaid-block"] svg[id^="mermaid-"] {
   min-height: 100px;
 }

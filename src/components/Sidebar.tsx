@@ -79,6 +79,46 @@ interface TreeItemProps {
   loadingPaths: Set<string>;
   /** Function to lazy load children for a folder */
   loadChildren: (folderPath: string) => Promise<void>;
+  /** Path of the keyboard-focused item */
+  focusedPath?: string | null;
+}
+
+/** Build a flat list of visible tree paths (respecting expanded/collapsed state) */
+function flattenVisiblePaths(nodes: ScopedFileTreeNode[], expandedPaths: Set<string>): string[] {
+  const result: string[] = [];
+  const traverse = (nodeList: ScopedFileTreeNode[]) => {
+    for (const node of nodeList) {
+      if (node.isScopeHeader) {
+        // Scope headers are visible
+        result.push(node.path);
+        if (expandedPaths.has(node.path) && node.children) {
+          traverse(node.children as ScopedFileTreeNode[]);
+        }
+      } else {
+        result.push(node.path);
+        if (node.isDirectory && expandedPaths.has(node.path) && node.children) {
+          traverse(node.children as ScopedFileTreeNode[]);
+        }
+      }
+    }
+  };
+  traverse(nodes);
+  return result;
+}
+
+/** Find the parent path of a given path in the tree */
+function findParentPath(targetPath: string, nodes: ScopedFileTreeNode[], expandedPaths: Set<string>): string | null {
+  const search = (nodeList: ScopedFileTreeNode[], parentPath: string | null): string | null => {
+    for (const node of nodeList) {
+      if (node.path === targetPath) return parentPath;
+      if (node.children && expandedPaths.has(node.path)) {
+        const found = search(node.children as ScopedFileTreeNode[], node.path);
+        if (found !== null) return found;
+      }
+    }
+    return null;
+  };
+  return search(nodes, null);
 }
 
 // Indent guide component - renders vertical lines at each depth level
@@ -119,8 +159,9 @@ const GIT_STATUS_TITLES: Record<GitStatus, string> = {
   untracked: 'Untracked',
 };
 
-function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick, onRightFileSelect, depth, isExpanded, onToggleExpand, expandedPaths, onToggleExpandPath, isFavorite, toggleFavorite, onContextMenu, gitStatus, getFolderGitStatus, loadedPaths, loadingPaths, loadChildren }: TreeItemProps) {
+function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick, onRightFileSelect, depth, isExpanded, onToggleExpand, expandedPaths, onToggleExpandPath, isFavorite, toggleFavorite, onContextMenu, gitStatus, getFolderGitStatus, loadedPaths, loadingPaths, loadChildren, focusedPath }: TreeItemProps) {
   const isSelected = node.path === currentFile;
+  const isFocused = node.path === focusedPath;
   // Reduced indent: 8px base + 12px per level (was 12px + 16px)
   const paddingLeft = 8 + depth * 12;
   const favorited = isFavorite(node.path);
@@ -137,15 +178,19 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
   // Scope header nodes (Project / User (~)) get special styling
   if (node.isScopeHeader) {
     return (
-      <div>
+      <div role="treeitem" aria-expanded={isExpanded}>
         <button
           onClick={onToggleExpand}
+          data-tree-path={node.path}
+          tabIndex={-1}
           className="w-full text-left py-2 pr-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide transition-colors"
           style={{
             paddingLeft: 12,
             color: 'var(--accent)',
             backgroundColor: 'color-mix(in srgb, var(--accent) 8%, transparent)',
             borderBottom: '1px solid var(--border)',
+            outline: isFocused ? '1px solid var(--accent)' : 'none',
+            outlineOffset: '-1px',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--accent) 15%, transparent)';
@@ -168,7 +213,7 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
           <span>{node.name}</span>
         </button>
         {isExpanded && node.children && (
-          <div>
+          <div role="group">
             {node.children.map((child) => (
               <TreeItem
                 key={child.path}
@@ -191,6 +236,7 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
                 loadedPaths={loadedPaths}
                 loadingPaths={loadingPaths}
                 loadChildren={loadChildren}
+                focusedPath={focusedPath}
               />
             ))}
           </div>
@@ -223,22 +269,29 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
     };
 
     return (
-      <div>
+      <div role="treeitem" aria-expanded={isExpanded}>
         <button
           onClick={handleFolderClick}
           onContextMenu={handleContextMenu}
+          data-tree-path={node.path}
+          tabIndex={-1}
           className="group/item w-full text-left py-1.5 pr-2 flex items-center gap-1 text-sm transition-colors relative"
           style={{
             paddingLeft,
-            color: 'var(--text-secondary)',
+            color: isFocused ? 'var(--text-primary)' : 'var(--text-secondary)',
+            backgroundColor: isFocused ? 'var(--bg-primary)' : 'transparent',
+            outline: isFocused ? '1px solid var(--accent)' : 'none',
+            outlineOffset: '-1px',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
             e.currentTarget.style.color = 'var(--text-primary)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = 'var(--text-secondary)';
+            if (!isFocused) {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = 'var(--text-secondary)';
+            }
           }}
         >
           <IndentGuides depth={depth} />
@@ -273,7 +326,7 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
           </span>
         </button>
         {isExpanded && node.children && (
-          <div>
+          <div role="group">
             {node.children.map((child) => (
               <TreeItem
                 key={child.path}
@@ -296,6 +349,7 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
                 loadedPaths={loadedPaths}
                 loadingPaths={loadingPaths}
                 loadChildren={loadChildren}
+                focusedPath={focusedPath}
               />
             ))}
           </div>
@@ -321,12 +375,21 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
       onClick={handleClick}
       onDoubleClick={() => onFileDoubleClick?.(node.path)}
       onContextMenu={handleContextMenu}
+      data-tree-path={node.path}
+      tabIndex={-1}
+      role="treeitem"
       className="group/item w-full text-left py-1.5 pr-2 flex items-center gap-1 text-sm transition-colors relative"
       style={{
         paddingLeft: filePaddingLeft,
-        backgroundColor: isSelected ? 'var(--selection-bg, color-mix(in srgb, var(--accent) 20%, transparent))' : 'transparent',
+        backgroundColor: isSelected
+          ? 'var(--selection-bg, color-mix(in srgb, var(--accent) 20%, transparent))'
+          : isFocused
+            ? 'var(--bg-primary)'
+            : 'transparent',
         color: isSelected ? 'var(--selection-text, var(--accent))' : 'var(--text-primary)',
         fontWeight: isSelected ? 500 : 400,
+        outline: isFocused ? '1px solid var(--accent)' : 'none',
+        outlineOffset: '-1px',
       }}
       onMouseEnter={(e) => {
         if (!isSelected) {
@@ -334,7 +397,7 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
         }
       }}
       onMouseLeave={(e) => {
-        if (!isSelected) {
+        if (!isSelected && !isFocused) {
           e.currentTarget.style.backgroundColor = 'transparent';
         }
       }}
@@ -499,8 +562,10 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [favoritesExpanded, setFavoritesExpanded] = useState(true);
+  const [focusedPath, setFocusedPath] = useState<string | null>(null);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
   const filterMenuRef = useRef<HTMLDivElement>(null);
+  const treeContainerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
   const currentWidthRef = useRef(width);
 
@@ -760,6 +825,133 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
     setFilterMenuOpen(false);
   };
 
+  // Flat list of visible tree item paths for keyboard navigation
+  const visiblePaths = useMemo(() => {
+    return flattenVisiblePaths(searchFilteredFiles, expandedPaths);
+  }, [searchFilteredFiles, expandedPaths]);
+
+  // Scroll the focused item into view
+  useEffect(() => {
+    if (!focusedPath || !treeContainerRef.current) return;
+    const el = treeContainerRef.current.querySelector(`[data-tree-path="${CSS.escape(focusedPath)}"]`);
+    if (el) {
+      el.scrollIntoView({ block: 'nearest' });
+    }
+  }, [focusedPath]);
+
+  // Clear focused path if it's no longer visible (e.g. parent collapsed)
+  useEffect(() => {
+    if (focusedPath && !visiblePaths.includes(focusedPath)) {
+      setFocusedPath(null);
+    }
+  }, [focusedPath, visiblePaths]);
+
+  // Find the node for a given path in the tree
+  const findNode = useCallback((targetPath: string, nodes: ScopedFileTreeNode[]): ScopedFileTreeNode | null => {
+    for (const node of nodes) {
+      if (node.path === targetPath) return node;
+      if (node.children) {
+        const found = findNode(targetPath, node.children as ScopedFileTreeNode[]);
+        if (found) return found;
+      }
+    }
+    return null;
+  }, []);
+
+  // Keyboard handler for the tree container
+  const handleTreeKeyDown = useCallback((e: React.KeyboardEvent) => {
+    // Ignore if focus is in search input
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      return;
+    }
+
+    const currentIndex = focusedPath ? visiblePaths.indexOf(focusedPath) : -1;
+
+    switch (e.key) {
+      case 'ArrowDown': {
+        e.preventDefault();
+        if (visiblePaths.length === 0) return;
+        if (currentIndex === -1) {
+          // Nothing focused yet, focus first item
+          setFocusedPath(visiblePaths[0]);
+        } else if (currentIndex < visiblePaths.length - 1) {
+          setFocusedPath(visiblePaths[currentIndex + 1]);
+        }
+        break;
+      }
+      case 'ArrowUp': {
+        e.preventDefault();
+        if (visiblePaths.length === 0) return;
+        if (currentIndex === -1) {
+          // Nothing focused yet, focus last item
+          setFocusedPath(visiblePaths[visiblePaths.length - 1]);
+        } else if (currentIndex > 0) {
+          setFocusedPath(visiblePaths[currentIndex - 1]);
+        }
+        break;
+      }
+      case 'ArrowRight': {
+        e.preventDefault();
+        if (!focusedPath) return;
+        const node = findNode(focusedPath, searchFilteredFiles);
+        if (!node) return;
+        if (node.isDirectory || node.isScopeHeader) {
+          if (!expandedPaths.has(focusedPath)) {
+            // Expand the folder
+            toggleExpandPath(focusedPath);
+          } else if (node.children && node.children.length > 0) {
+            // Already expanded, move to first child
+            setFocusedPath(node.children[0].path);
+          }
+        }
+        break;
+      }
+      case 'ArrowLeft': {
+        e.preventDefault();
+        if (!focusedPath) return;
+        const node = findNode(focusedPath, searchFilteredFiles);
+        if (!node) return;
+        if ((node.isDirectory || node.isScopeHeader) && expandedPaths.has(focusedPath)) {
+          // Collapse the folder
+          toggleExpandPath(focusedPath);
+        } else {
+          // Move to parent folder
+          const parentPath = findParentPath(focusedPath, searchFilteredFiles, expandedPaths);
+          if (parentPath) {
+            setFocusedPath(parentPath);
+          }
+        }
+        break;
+      }
+      case 'Enter': {
+        e.preventDefault();
+        if (!focusedPath) return;
+        const node = findNode(focusedPath, searchFilteredFiles);
+        if (!node) return;
+        if (node.isDirectory || node.isScopeHeader) {
+          toggleExpandPath(focusedPath);
+        } else {
+          onFileSelect(focusedPath);
+        }
+        break;
+      }
+      case 'Home': {
+        e.preventDefault();
+        if (visiblePaths.length > 0) {
+          setFocusedPath(visiblePaths[0]);
+        }
+        break;
+      }
+      case 'End': {
+        e.preventDefault();
+        if (visiblePaths.length > 0) {
+          setFocusedPath(visiblePaths[visiblePaths.length - 1]);
+        }
+        break;
+      }
+    }
+  }, [focusedPath, visiblePaths, expandedPaths, searchFilteredFiles, findNode, toggleExpandPath, onFileSelect]);
+
   return (
     <aside
       className="flex flex-col h-full relative flex-shrink-0"
@@ -993,7 +1185,14 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
       </div>
 
       {/* File tree - mr-2 creates space for drag handle so scrollbar isn't covered */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden mr-2">
+      <div
+        ref={treeContainerRef}
+        className="flex-1 overflow-y-auto overflow-x-hidden mr-2"
+        role="tree"
+        tabIndex={0}
+        onKeyDown={handleTreeKeyDown}
+        style={{ outline: 'none' }}
+      >
         {/* Favorites section - hidden when empty */}
         {favorites.length > 0 && (
           <div style={{ borderBottom: '1px solid var(--border)' }}>
@@ -1073,6 +1272,7 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
                 loadedPaths={loadedPaths}
                 loadingPaths={loadingPaths}
                 loadChildren={loadChildren}
+                focusedPath={focusedPath}
               />
             ))
           )}

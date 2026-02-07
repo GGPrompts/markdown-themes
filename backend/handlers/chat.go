@@ -384,7 +384,8 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 		var claudeSessionID string
 		var accumulatedContent string
 		var currentBlockType string // tracks "text", "thinking", "tool_use"
-		var lastMessageStopUsage map[string]interface{}
+		var lastMessageStartUsage map[string]interface{} // from message_start (input tokens)
+	var lastMessageStopUsage map[string]interface{}  // from message_stop (output + final tokens)
 
 		for scanner.Scan() {
 			line := scanner.Text()
@@ -548,11 +549,17 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 					if sid, ok := message["id"].(string); ok {
 						claudeSessionID = sid
 					}
+					// Capture per-call usage from message.usage (input tokens at start of API call)
+					if usage, ok := message["usage"].(map[string]interface{}); ok && usage != nil {
+						log.Printf("[Chat] message_start usage: %v", usage)
+						lastMessageStartUsage = usage
+					}
 				}
 
 			case "message_stop":
 				usage, _ := event["usage"].(map[string]interface{})
 				if usage != nil {
+					log.Printf("[Chat] message_stop usage: %v", usage)
 					lastMessageStopUsage = usage
 				}
 				if sid, ok := event["session_id"].(string); ok && sid != "" {
@@ -575,6 +582,8 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 				modelUsage, _ := event["modelUsage"].(map[string]interface{})
 				costUSD, _ := event["total_cost_usd"].(float64)
 				duration, _ := event["duration_ms"].(float64)
+				log.Printf("[Chat] result usage: %v", usage)
+				log.Printf("[Chat] result modelUsage: %v", modelUsage)
 
 				doneEvent := map[string]interface{}{
 					"type":            "done",
@@ -587,8 +596,17 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 					"costUSD":         costUSD,
 					"durationMs":      duration,
 				}
-				if lastMessageStopUsage != nil {
+				// Claude CLI puts per-call usage directly in result.usage
+				// (it doesn't emit message_start/message_stop events).
+				// Use result.usage as lastCallUsage since it has the
+				// snake_case token breakdown the frontend expects.
+				if usage != nil {
+					doneEvent["lastCallUsage"] = usage
+				} else if lastMessageStopUsage != nil {
+					// Fallback for raw Anthropic API streams
 					doneEvent["lastCallUsage"] = lastMessageStopUsage
+				} else if lastMessageStartUsage != nil {
+					doneEvent["lastCallUsage"] = lastMessageStartUsage
 				}
 				buf.appendEvent(doneEvent)
 			}

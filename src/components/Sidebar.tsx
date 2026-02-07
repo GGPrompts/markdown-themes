@@ -834,6 +834,10 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
   const visiblePathsRef = useRef(visiblePaths);
   visiblePathsRef.current = visiblePaths;
 
+  // Ref for currentFile so keyboard handler can seed focus from clicked file
+  const currentFileRef = useRef(currentFile);
+  currentFileRef.current = currentFile;
+
   // Scroll the focused item into view
   useEffect(() => {
     if (!focusedPath || !treeContainerRef.current) return;
@@ -877,7 +881,9 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
         setFocusedPath(prev => {
           const paths = visiblePathsRef.current;
           if (paths.length === 0) return prev;
-          const idx = prev ? paths.indexOf(prev) : -1;
+          // Seed from selected file if no keyboard focus yet
+          const start = prev ?? currentFileRef.current;
+          const idx = start ? paths.indexOf(start) : -1;
           if (idx === -1) return paths[0];
           return idx < paths.length - 1 ? paths[idx + 1] : prev;
         });
@@ -888,7 +894,9 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
         setFocusedPath(prev => {
           const paths = visiblePathsRef.current;
           if (paths.length === 0) return prev;
-          const idx = prev ? paths.indexOf(prev) : -1;
+          // Seed from selected file if no keyboard focus yet
+          const start = prev ?? currentFileRef.current;
+          const idx = start ? paths.indexOf(start) : -1;
           if (idx === -1) return paths[paths.length - 1];
           return idx > 0 ? paths[idx - 1] : prev;
         });

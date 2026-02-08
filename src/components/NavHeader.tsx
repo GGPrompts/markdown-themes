@@ -74,8 +74,9 @@ export function NavHeader({
         })}
       </nav>
 
-      {/* Right: AI status, Project selector and Theme selector */}
+      {/* Right: Portal slot for page actions + AI status + Project/Theme selectors */}
       <div className="flex items-center gap-3">
+        <div id="nav-actions-slot" className="flex items-center gap-2" />
         {isGenerating && (
           <button
             onClick={() => navigate('/files')}

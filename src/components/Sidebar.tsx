@@ -54,6 +54,8 @@ interface SidebarProps {
   gitStatusVersion?: number;
   /** Callback to send content to AI Chat */
   onSendToChat?: (content: string) => void;
+  /** Callback when archive is requested from context menu */
+  onArchiveFile?: (path: string) => void;
 }
 
 interface TreeItemProps {
@@ -556,7 +558,7 @@ function filterTreeBySearch<T extends FileTreeNode>(nodes: T[], query: string): 
 const MIN_SIDEBAR_WIDTH = 150;
 const MAX_SIDEBAR_WIDTH = 400;
 
-export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSplit, width = 250, onWidthChange, onWidthChangeEnd, onFileSelect, onFileDoubleClick, onRightFileSelect, favorites, toggleFavorite, isFavorite, searchInputRef, changedFiles, gitStatusVersion, onSendToChat }: SidebarProps) {
+export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSplit, width = 250, onWidthChange, onWidthChangeEnd, onFileSelect, onFileDoubleClick, onRightFileSelect, favorites, toggleFavorite, isFavorite, searchInputRef, changedFiles, gitStatusVersion, onSendToChat, onArchiveFile }: SidebarProps) {
   const workspaceName = workspacePath?.split('/').pop() ?? workspacePath?.split('\\').pop() ?? 'Workspace';
 
   // Get lazy loading state from workspace context
@@ -680,6 +682,21 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
       setIsLoadingAudio(false);
     }
   }, [contextMenu.filePath, contextMenu.isDirectory, closeContextMenu]);
+
+  const handleCopyContent = useCallback(async () => {
+    if (contextMenu.isDirectory) return;
+    try {
+      const fileContent = await fetchFileContent(contextMenu.filePath);
+      await navigator.clipboard.writeText(fileContent.content);
+    } catch (err) {
+      console.error('Failed to copy content:', err);
+    }
+  }, [contextMenu.filePath, contextMenu.isDirectory]);
+
+  const handleArchive = useCallback(() => {
+    if (contextMenu.isDirectory || !onArchiveFile) return;
+    onArchiveFile(contextMenu.filePath);
+  }, [contextMenu.filePath, contextMenu.isDirectory, onArchiveFile]);
 
   // Keep ref in sync with prop
   useEffect(() => {
@@ -1328,10 +1345,17 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
         isFavorite={isFavorite(contextMenu.filePath)}
         onClose={closeContextMenu}
         onToggleFavorite={() => toggleFavorite(contextMenu.filePath, contextMenu.isDirectory)}
+        onCopyContent={handleCopyContent}
         onSendToChat={handleSendToChat}
         onPasteToTerminal={handlePasteToTerminal}
         onReadAloud={handleReadAloud}
+        onArchive={onArchiveFile ? handleArchive : undefined}
         isLoadingAudio={isLoadingAudio}
+        isConversationFile={
+          !contextMenu.isDirectory &&
+          (contextMenu.filePath.endsWith('.jsonl') || contextMenu.filePath.endsWith('.ndjson')) &&
+          contextMenu.filePath.includes('/.claude/projects/')
+        }
       />
     </aside>
   );

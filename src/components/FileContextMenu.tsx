@@ -11,10 +11,13 @@ interface FileContextMenuProps {
   isFavorite: boolean;
   onClose: () => void;
   onToggleFavorite: () => void;
+  onCopyContent?: () => void;
   onSendToChat?: () => void;
   onPasteToTerminal?: () => void;
   onReadAloud?: () => void;
+  onArchive?: () => void;
   isLoadingAudio?: boolean;
+  isConversationFile?: boolean;
 }
 
 const API_BASE = 'http://localhost:8130';
@@ -54,10 +57,13 @@ export function FileContextMenu({
   isFavorite,
   onClose,
   onToggleFavorite,
+  onCopyContent,
   onSendToChat,
   onPasteToTerminal,
   onReadAloud,
+  onArchive,
   isLoadingAudio,
+  isConversationFile,
 }: FileContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x, y });
@@ -225,6 +231,23 @@ export function FileContextMenu({
         <span>Copy @Path</span>
       </button>
 
+      {/* Copy Content - files only */}
+      {isFile && onCopyContent && (
+        <button
+          className="context-menu-item"
+          onClick={() => {
+            onCopyContent();
+            setTimeout(onClose, 150);
+          }}
+          style={menuItemStyle}
+          onMouseEnter={handleMenuItemHover}
+          onMouseLeave={handleMenuItemLeave}
+        >
+          <CopyIcon />
+          <span>Copy Content</span>
+        </button>
+      )}
+
       <div style={dividerStyle} />
 
       {/* Toggle Favorite */}
@@ -318,6 +341,26 @@ export function FileContextMenu({
             <EditIcon />
             <span>Edit</span>
           </button>
+
+          {/* Archive Conversation - only for conversation files */}
+          {isConversationFile && onArchive && (
+            <>
+              <div style={dividerStyle} />
+              <button
+                className="context-menu-item"
+                onClick={() => {
+                  onArchive();
+                  onClose();
+                }}
+                style={menuItemStyle}
+                onMouseEnter={handleMenuItemHover}
+                onMouseLeave={handleMenuItemLeave}
+              >
+                <ArchiveIcon />
+                <span>Archive Conversation</span>
+              </button>
+            </>
+          )}
         </>
       )}
     </div>
@@ -424,6 +467,16 @@ function VolumeIcon() {
       <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
       <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
       <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+    </svg>
+  );
+}
+
+function ArchiveIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="21 8 21 21 3 21 3 8" />
+      <rect x="1" y="3" width="22" height="5" />
+      <line x1="10" y1="12" x2="14" y2="12" />
     </svg>
   );
 }

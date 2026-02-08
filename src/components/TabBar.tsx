@@ -11,18 +11,21 @@ interface TabBarProps {
   onTabPin: (id: string) => void;
   /** Which pane this tab bar is in - used for drag transfer between panes */
   pane?: 'left' | 'right';
+  /** Path of a file currently being streamed (shows animated dot on matching tab) */
+  streamingFilePath?: string | null;
 }
 
 interface TabItemProps {
   tab: Tab;
   isActive: boolean;
+  isStreaming?: boolean;
   onSelect: () => void;
   onClose: () => void;
   onPin: () => void;
   pane: 'left' | 'right';
 }
 
-function TabItem({ tab, isActive, onSelect, onClose, onPin, pane }: TabItemProps) {
+function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, pane }: TabItemProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -102,6 +105,18 @@ function TabItem({ tab, isActive, onSelect, onClose, onPin, pane }: TabItemProps
       >
         {displayName}
       </span>
+      {isStreaming && (
+        <span className="relative flex h-2 w-2 flex-shrink-0">
+          <span
+            className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+            style={{ backgroundColor: 'var(--accent)' }}
+          />
+          <span
+            className="relative inline-flex rounded-full h-2 w-2"
+            style={{ backgroundColor: 'var(--accent)' }}
+          />
+        </span>
+      )}
       {showCloseButton ? (
         <button
           className="w-4 h-4 flex items-center justify-center rounded transition-colors flex-shrink-0"
@@ -129,7 +144,7 @@ function TabItem({ tab, isActive, onSelect, onClose, onPin, pane }: TabItemProps
   );
 }
 
-export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, pane = 'left' }: TabBarProps) {
+export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, pane = 'left', streamingFilePath }: TabBarProps) {
   if (tabs.length === 0) {
     return null;
   }
@@ -148,6 +163,7 @@ export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, p
           key={tab.id}
           tab={tab}
           isActive={tab.id === activeTabId}
+          isStreaming={!!streamingFilePath && tab.path === streamingFilePath}
           onSelect={() => onTabSelect(tab.id)}
           onClose={() => onTabClose(tab.id)}
           onPin={() => onTabPin(tab.id)}

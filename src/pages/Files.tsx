@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import { Clock, ChevronLeft, GitCommit, FileDiff, Loader2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Clock, ChevronLeft, GitCommit, FileDiff, Loader2, MessageCircle, Crosshair, Users, Columns, Bot } from 'lucide-react';
 import { useFileWatcher } from '../hooks/useFileWatcher';
 import { useWorkspaceStreaming } from '../hooks/useWorkspaceStreaming';
 import { useDiffAutoScroll } from '../hooks/useDiffAutoScroll';
@@ -12,7 +13,6 @@ import { useAIChatContext } from '../context/AIChatContext';
 import { useTabManager } from '../hooks/useTabManager';
 import { useSplitView } from '../hooks/useSplitView';
 import { useRightPaneTabs } from '../hooks/useRightPaneTabs';
-import { Toolbar } from '../components/Toolbar';
 import { ViewerContainer } from '../components/ViewerContainer';
 import { MetadataBar } from '../components/MetadataBar';
 import { Sidebar } from '../components/Sidebar';
@@ -282,6 +282,7 @@ export function Files() {
   const [sidebarWidth, setSidebarWidth] = useState(appState.sidebarWidth);
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
+  const [archiveFilePath, setArchiveFilePath] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const leftScrollContainerRef = useRef<HTMLDivElement>(null);
   const rightScrollContainerRef = useRef<HTMLDivElement>(null);
@@ -484,7 +485,6 @@ export function Files() {
     error,
     loading,
     isStreaming,
-    connected,
   } = useFileWatcher({
     path: isCurrentFileBinary ? null : currentFile,
   });
@@ -638,15 +638,6 @@ export function Files() {
     if (!currentFile) return false;
     const ext = currentFile.split('.').pop()?.toLowerCase();
     return ext === 'md' || ext === 'markdown' || ext === 'mdx';
-  }, [currentFile]);
-
-  // Check if current file is a conversation file (JSONL in ~/.claude/projects/)
-  const isConversationFile = useMemo(() => {
-    if (!currentFile) return false;
-    const ext = currentFile.split('.').pop()?.toLowerCase();
-    const isJsonl = ext === 'jsonl' || ext === 'ndjson';
-    const isInClaudeProjects = currentFile.includes('/.claude/projects/');
-    return isJsonl && isInClaudeProjects;
   }, [currentFile]);
 
   // Parse frontmatter from content (only for markdown files)
@@ -863,11 +854,11 @@ export function Files() {
     addRecentFile(conversation.conversationPath);
   }, [conversation, openConversationTab, addRecentFile]);
 
-  // Handle archive button click
-  const handleArchiveClick = useCallback(() => {
-    if (!currentFile || !isConversationFile) return;
+  // Handle archive from sidebar context menu or other triggers
+  const handleArchiveFile = useCallback((path: string) => {
+    setArchiveFilePath(path);
     setShowArchiveModal(true);
-  }, [currentFile, isConversationFile]);
+  }, []);
 
   // Handle archive completion
   const handleArchiveComplete = useCallback((archive: ArchivedConversation) => {
@@ -944,32 +935,151 @@ export function Files() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleSplit, handleGitGraphToggle, handleWorkingTreeToggle, handleChatPanelToggle, handleHotkeysClick]);
 
+  // Portal target for nav actions
+  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setPortalTarget(document.getElementById('nav-actions-slot'));
+  }, []);
+
   return (
     <>
-      <Toolbar
-        currentFile={currentFile}
-        isStreaming={isStreaming}
-        connected={connected || isCurrentFileBinary || isLeftPaneActiveConversation}
-        recentFiles={appState.recentFiles}
-        fontSize={appState.fontSize}
-        isSplit={isSplit}
-        isChatPanelOpen={chatPanelOpen}
-        isFollowMode={appState.followStreamingMode}
-        content={content}
-        workspacePath={workspacePath}
-        conversationPath={conversation?.conversationPath ?? null}
-        conversationLoading={conversationLoading}
-        isConversationFile={isConversationFile}
-        activeSubagentCount={activeSubagentCount}
-        onFileSelect={handleFileSelect}
-        onFontSizeChange={handleFontSizeChange}
-        onSplitToggle={toggleSplit}
-        onChatPanelToggle={handleChatPanelToggle}
-        onFollowModeToggle={toggleFollowMode}
-        onViewConversation={handleViewConversation}
-        onArchiveClick={handleArchiveClick}
-        onSendToChat={handleSendToChat}
-      />
+      {/* Portal actions into NavHeader's #nav-actions-slot */}
+      {portalTarget && createPortal(
+        <>
+          {/* View Conversation */}
+          <button
+            type="button"
+            onClick={handleViewConversation}
+            disabled={!conversation?.conversationPath || conversationLoading}
+            className="w-8 h-8 flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{
+              borderRadius: 'var(--radius)',
+              backgroundColor: 'var(--bg-primary)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border)',
+            }}
+            title={conversationLoading ? 'Loading conversation...' : conversation?.conversationPath ? 'View current conversation' : 'No conversation found'}
+          >
+            {conversationLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <MessageCircle className="w-4 h-4" />
+            )}
+          </button>
+
+          {/* Separator */}
+          <div className="w-px h-5" style={{ backgroundColor: 'var(--border)' }} />
+
+          {/* Follow AI Edits toggle */}
+          <button
+            type="button"
+            onClick={toggleFollowMode}
+            className="w-8 h-8 flex items-center justify-center transition-colors"
+            style={{
+              borderRadius: 'var(--radius)',
+              backgroundColor: appState.followStreamingMode ? 'var(--accent)' : 'var(--bg-primary)',
+              color: appState.followStreamingMode ? 'var(--bg-primary)' : 'var(--text-primary)',
+              border: '1px solid var(--border)',
+            }}
+            title={appState.followStreamingMode ? 'Stop following AI edits' : 'Follow AI edits (auto-open streaming files)'}
+          >
+            <Crosshair className="w-4 h-4" />
+          </button>
+
+          {/* Active subagents indicator */}
+          {appState.followStreamingMode && activeSubagentCount > 0 && (
+            <div
+              className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium"
+              style={{
+                backgroundColor: 'rgba(34, 197, 94, 0.15)',
+                color: '#22c55e',
+                borderRadius: 'var(--radius)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+              }}
+              title={`${activeSubagentCount} active subagent${activeSubagentCount > 1 ? 's' : ''}`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>{activeSubagentCount}</span>
+            </div>
+          )}
+
+          {/* Split View toggle */}
+          <button
+            type="button"
+            onClick={toggleSplit}
+            className="w-8 h-8 flex items-center justify-center transition-colors"
+            style={{
+              borderRadius: 'var(--radius)',
+              backgroundColor: isSplit ? 'var(--accent)' : 'var(--bg-primary)',
+              color: isSplit ? 'var(--bg-primary)' : 'var(--text-primary)',
+              border: '1px solid var(--border)',
+            }}
+            title={isSplit ? 'Close split view' : 'Open split view'}
+          >
+            <Columns className="w-4 h-4" />
+          </button>
+
+          {/* Font size controls */}
+          <div className="flex items-center gap-0">
+            <button
+              type="button"
+              onClick={() => handleFontSizeChange(Math.max(50, appState.fontSize - 10))}
+              className="w-7 h-7 flex items-center justify-center text-sm font-medium transition-colors"
+              style={{
+                borderRadius: 'var(--radius) 0 0 var(--radius)',
+                backgroundColor: 'var(--bg-primary)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border)',
+              }}
+              title="Decrease font size"
+            >
+              -
+            </button>
+            <span
+              className="w-12 h-7 flex items-center justify-center text-xs"
+              style={{
+                backgroundColor: 'var(--bg-primary)',
+                color: 'var(--text-secondary)',
+                borderTop: '1px solid var(--border)',
+                borderBottom: '1px solid var(--border)',
+              }}
+            >
+              {appState.fontSize}%
+            </span>
+            <button
+              type="button"
+              onClick={() => handleFontSizeChange(Math.min(200, appState.fontSize + 10))}
+              className="w-7 h-7 flex items-center justify-center text-sm font-medium transition-colors"
+              style={{
+                borderRadius: '0 var(--radius) var(--radius) 0',
+                backgroundColor: 'var(--bg-primary)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border)',
+              }}
+              title="Increase font size"
+            >
+              +
+            </button>
+          </div>
+
+          {/* AI Chat panel toggle */}
+          <button
+            type="button"
+            onClick={handleChatPanelToggle}
+            className="w-8 h-8 flex items-center justify-center transition-colors"
+            style={{
+              borderRadius: 'var(--radius)',
+              backgroundColor: chatPanelOpen ? 'var(--accent)' : 'var(--bg-primary)',
+              color: chatPanelOpen ? 'var(--bg-primary)' : 'var(--text-primary)',
+              border: '1px solid var(--border)',
+            }}
+            title={chatPanelOpen ? 'Close AI chat panel (Ctrl+Shift+C)' : 'Open AI chat panel (Ctrl+Shift+C)'}
+          >
+            <Bot className="w-4 h-4" />
+          </button>
+        </>,
+        portalTarget
+      )}
 
       <div className="flex-1 flex overflow-hidden">
         {workspacePath && sidebarVisible && (
@@ -992,6 +1102,7 @@ export function Files() {
             changedFiles={changedFiles}
             gitStatusVersion={gitStatusVersion}
             onSendToChat={handleSendToChat}
+            onArchiveFile={handleArchiveFile}
           />
         )}
 
@@ -1026,6 +1137,7 @@ export function Files() {
                 onTabSelect={setActiveTab}
                 onTabClose={handleCloseTab}
                 onTabPin={pinTab}
+                streamingFilePath={streamingFile}
               />
 
               {(activeTab?.type === 'file' || activeTab?.type === 'conversation') && loading && (
@@ -1291,13 +1403,13 @@ export function Files() {
       </div>
 
       {/* Archive Modal */}
-      {showArchiveModal && currentFile && (
+      {showArchiveModal && archiveFilePath && (
         <ArchiveModal
-          conversationPath={currentFile}
+          conversationPath={archiveFilePath}
           archiveLocation={appState.archiveLocation}
           onArchiveLocationChange={saveArchiveLocation}
           onArchiveComplete={handleArchiveComplete}
-          onClose={() => setShowArchiveModal(false)}
+          onClose={() => { setShowArchiveModal(false); setArchiveFilePath(null); }}
         />
       )}
     </>

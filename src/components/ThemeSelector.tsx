@@ -103,6 +103,15 @@ export function ThemeSelector({ currentTheme, onThemeChange }: ThemeSelectorProp
     setFocusedIndex(-1);
   }
 
+  // Compute scrollbar colors for the portal (outside theme container, CSS vars don't inherit)
+  const scrollbarColors = isOpen ? (() => {
+    const root = document.querySelector('[class*="theme-"]') || document.documentElement;
+    const style = getComputedStyle(root);
+    const border = style.getPropertyValue('--border').trim() || '#404040';
+    const bg = style.getPropertyValue('--bg-secondary').trim() || '#2a2a2a';
+    return `${border} ${bg}`;
+  })() : '';
+
   const dropdownMenu = isOpen && (
     <ul
       id="theme-dropdown-portal"
@@ -117,6 +126,7 @@ export function ThemeSelector({ currentTheme, onThemeChange }: ThemeSelectorProp
         borderRadius: 'var(--radius)',
         border: '1px solid var(--border)',
         boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
+        scrollbarColor: scrollbarColors,
       }}
     >
       {themes.map((theme, index) => {

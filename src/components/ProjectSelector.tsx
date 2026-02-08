@@ -93,13 +93,10 @@ export function ProjectSelector({
     setIsOpen(false);
   };
 
-  // Get display name: last 2 path segments
+  // Get display name: last path segment only
   const getDisplayName = (path: string) => {
     const segments = path.split('/').filter(Boolean);
-    if (segments.length <= 2) {
-      return '/' + segments.join('/');
-    }
-    return '.../' + segments.slice(-2).join('/');
+    return segments[segments.length - 1] || path;
   };
 
   const getFolderName = (path: string) => path.split('/').pop() ?? path.split('\\').pop() ?? path;
@@ -125,7 +122,7 @@ export function ProjectSelector({
             <Folder className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
           )}
           <span
-            className="max-w-[180px] truncate"
+            className="truncate"
             title={currentPath ?? 'No project open'}
           >
             {currentPath ? getDisplayName(currentPath) : 'Open Project'}
@@ -192,7 +189,10 @@ export function ProjectSelector({
               >
                 Recent Projects
               </div>
-              <div className="max-h-[200px] overflow-y-auto">
+              <div
+                className="max-h-[200px] overflow-y-auto"
+                style={{ scrollbarColor: `${colors.border} ${colors.bgSecondary}` }}
+              >
                 {recentFolders
                   .filter((path) => path !== currentPath)
                   .map((path) => (

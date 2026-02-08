@@ -22,7 +22,9 @@ import { SplitView } from '../components/SplitView';
 import { GitGraph, WorkingTree, MultiRepoView } from '../components/git';
 import { DiffViewer } from '../components/viewers/DiffViewer';
 import { ArchiveModal } from '../components/ArchiveModal';
+import { FileContextMenu } from '../components/FileContextMenu';
 import { ChatPanel } from '../components/chat';
+import { fetchFileContent } from '../lib/api';
 import { parseFrontmatter } from '../utils/frontmatter';
 import { themes } from '../themes';
 import type { ArchivedConversation } from '../context/AppStoreContext';
@@ -283,6 +285,13 @@ export function Files() {
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [archiveFilePath, setArchiveFilePath] = useState<string | null>(null);
+  const [tabContextMenu, setTabContextMenu] = useState({
+    show: false, x: 0, y: 0,
+    tabId: '', filePath: '', fileName: '',
+    isPinned: false, isPreview: false,
+    tabType: 'file' as 'file' | 'diff' | 'conversation',
+    pane: 'left' as 'left' | 'right',
+  });
   const searchInputRef = useRef<HTMLInputElement>(null);
   const leftScrollContainerRef = useRef<HTMLDivElement>(null);
   const rightScrollContainerRef = useRef<HTMLDivElement>(null);
@@ -852,6 +861,74 @@ export function Files() {
     addArchivedConversation(archive);
   }, [addArchivedConversation]);
 
+  // Tab context menu handlers
+  const handleTabContextMenu = useCallback((e: React.MouseEvent, tab: { id: string; path: string; isPinned: boolean; isPreview: boolean; type?: string }, pane: 'left' | 'right') => {
+    const fileName = tab.path.split('/').pop() ?? tab.path;
+    setTabContextMenu({
+      show: true,
+      x: e.clientX,
+      y: e.clientY,
+      tabId: tab.id,
+      filePath: tab.path,
+      fileName,
+      isPinned: tab.isPinned,
+      isPreview: tab.isPreview,
+      tabType: (tab.type ?? 'file') as 'file' | 'diff' | 'conversation',
+      pane,
+    });
+  }, []);
+
+  const closeTabContextMenu = useCallback(() => {
+    setTabContextMenu(prev => ({ ...prev, show: false }));
+  }, []);
+
+  const handleTabContextMenuPin = useCallback(() => {
+    if (tabContextMenu.pane === 'left') {
+      pinTab(tabContextMenu.tabId);
+    } else {
+      pinRightTab(tabContextMenu.tabId);
+    }
+  }, [tabContextMenu.pane, tabContextMenu.tabId, pinTab, pinRightTab]);
+
+  const handleTabContextMenuClose = useCallback(() => {
+    if (tabContextMenu.pane === 'left') {
+      handleCloseTab(tabContextMenu.tabId);
+    } else {
+      closeRightTab(tabContextMenu.tabId);
+    }
+  }, [tabContextMenu.pane, tabContextMenu.tabId, handleCloseTab, closeRightTab]);
+
+  const handleTabContextMenuCloseOthers = useCallback(() => {
+    if (tabContextMenu.pane === 'left') {
+      tabs.forEach(t => {
+        if (t.id !== tabContextMenu.tabId) handleCloseTab(t.id);
+      });
+    } else {
+      rightPaneTabs.forEach(t => {
+        if (t.id !== tabContextMenu.tabId) closeRightTab(t.id);
+      });
+    }
+  }, [tabContextMenu.pane, tabContextMenu.tabId, tabs, rightPaneTabs, handleCloseTab, closeRightTab]);
+
+  const handleTabContextMenuCopyContent = useCallback(async () => {
+    try {
+      const fileContent = await fetchFileContent(tabContextMenu.filePath);
+      await navigator.clipboard.writeText(fileContent.content);
+    } catch (err) {
+      console.error('Failed to copy content:', err);
+    }
+  }, [tabContextMenu.filePath]);
+
+  const handleTabContextMenuSendToChat = useCallback(async () => {
+    try {
+      const fileContent = await fetchFileContent(tabContextMenu.filePath);
+      const message = `\`\`\`${tabContextMenu.fileName}\n${fileContent.content}\n\`\`\``;
+      handleSendToChat(message);
+    } catch (err) {
+      console.error('Failed to send to chat:', err);
+    }
+  }, [tabContextMenu.filePath, tabContextMenu.fileName, handleSendToChat]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1091,6 +1168,7 @@ export function Files() {
               onTabSelect={setRightActiveTab}
               onTabClose={closeRightTab}
               onTabPin={pinRightTab}
+              onTabContextMenu={(e, tab) => handleTabContextMenu(e, { ...tab, type: 'file' }, 'right')}
             />
           }
           leftPane={
@@ -1102,6 +1180,7 @@ export function Files() {
                 onTabClose={handleCloseTab}
                 onTabPin={pinTab}
                 streamingFilePath={streamingFile}
+                onTabContextMenu={(e, tab) => handleTabContextMenu(e, tab, 'left')}
               />
 
               {(activeTab?.type === 'file' || activeTab?.type === 'conversation') && loading && (
@@ -1365,6 +1444,24 @@ export function Files() {
           </>
         )}
       </div>
+
+      {/* Tab context menu */}
+      <FileContextMenu
+        show={tabContextMenu.show}
+        x={tabContextMenu.x}
+        y={tabContextMenu.y}
+        filePath={tabContextMenu.filePath}
+        fileName={tabContextMenu.fileName}
+        isDirectory={false}
+        isFavorite={isFavorite(tabContextMenu.filePath)}
+        onClose={closeTabContextMenu}
+        onToggleFavorite={() => toggleFavorite(tabContextMenu.filePath, false)}
+        onCopyContent={tabContextMenu.tabType === 'file' ? handleTabContextMenuCopyContent : undefined}
+        onSendToChat={tabContextMenu.tabType === 'file' ? handleTabContextMenuSendToChat : undefined}
+        onPin={tabContextMenu.isPreview && !tabContextMenu.isPinned ? handleTabContextMenuPin : undefined}
+        onCloseTab={handleTabContextMenuClose}
+        onCloseOtherTabs={handleTabContextMenuCloseOthers}
+      />
 
       {/* Archive Modal */}
       {showArchiveModal && archiveFilePath && (

@@ -13,6 +13,7 @@ interface TabBarProps {
   pane?: 'left' | 'right';
   /** Path of a file currently being streamed (shows animated dot on matching tab) */
   streamingFilePath?: string | null;
+  onTabContextMenu?: (e: React.MouseEvent, tab: Tab) => void;
 }
 
 interface TabItemProps {
@@ -22,10 +23,11 @@ interface TabItemProps {
   onSelect: () => void;
   onClose: () => void;
   onPin: () => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
   pane: 'left' | 'right';
 }
 
-function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, pane }: TabItemProps) {
+function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, onContextMenu, pane }: TabItemProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -92,6 +94,7 @@ function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, pane }:
       }}
       onClick={onSelect}
       onDoubleClick={handleDoubleClick}
+      onContextMenu={(e) => { e.preventDefault(); onContextMenu?.(e); }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       title={tooltipText}
@@ -144,7 +147,7 @@ function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, pane }:
   );
 }
 
-export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, pane = 'left', streamingFilePath }: TabBarProps) {
+export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, pane = 'left', streamingFilePath, onTabContextMenu }: TabBarProps) {
   if (tabs.length === 0) {
     return null;
   }
@@ -167,6 +170,7 @@ export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, p
           onSelect={() => onTabSelect(tab.id)}
           onClose={() => onTabClose(tab.id)}
           onPin={() => onTabPin(tab.id)}
+          onContextMenu={onTabContextMenu ? (e) => onTabContextMenu(e, tab) : undefined}
           pane={pane}
         />
       ))}

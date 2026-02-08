@@ -16,6 +16,9 @@ interface FileContextMenuProps {
   onArchive?: () => void;
   onResumeInChat?: () => void;
   isConversationFile?: boolean;
+  onPin?: () => void;
+  onCloseTab?: () => void;
+  onCloseOtherTabs?: () => void;
 }
 
 /**
@@ -46,6 +49,9 @@ export function FileContextMenu({
   onArchive,
   onResumeInChat,
   isConversationFile,
+  onPin,
+  onCloseTab,
+  onCloseOtherTabs,
 }: FileContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x, y });
@@ -309,6 +315,58 @@ export function FileContextMenu({
           )}
         </>
       )}
+
+      {/* Tab actions */}
+      {(onPin || onCloseTab || onCloseOtherTabs) && (
+        <>
+          <div style={dividerStyle} />
+          {onPin && (
+            <button
+              className="context-menu-item"
+              onClick={() => {
+                onPin();
+                onClose();
+              }}
+              style={menuItemStyle}
+              onMouseEnter={handleMenuItemHover}
+              onMouseLeave={handleMenuItemLeave}
+            >
+              <PinIcon />
+              <span>Pin Tab</span>
+            </button>
+          )}
+          {onCloseTab && (
+            <button
+              className="context-menu-item"
+              onClick={() => {
+                onCloseTab();
+                onClose();
+              }}
+              style={menuItemStyle}
+              onMouseEnter={handleMenuItemHover}
+              onMouseLeave={handleMenuItemLeave}
+            >
+              <CloseTabIcon />
+              <span>Close Tab</span>
+            </button>
+          )}
+          {onCloseOtherTabs && (
+            <button
+              className="context-menu-item"
+              onClick={() => {
+                onCloseOtherTabs();
+                onClose();
+              }}
+              style={menuItemStyle}
+              onMouseEnter={handleMenuItemHover}
+              onMouseLeave={handleMenuItemLeave}
+            >
+              <CloseOthersIcon />
+              <span>Close Other Tabs</span>
+            </button>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -413,6 +471,32 @@ function ResumeIcon() {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
       <polyline points="21 3 21 8 16 8" />
+    </svg>
+  );
+}
+
+function PinIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="17" x2="12" y2="22" />
+      <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
+    </svg>
+  );
+}
+
+function CloseTabIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 6L6 18M6 6l12 12" />
+    </svg>
+  );
+}
+
+function CloseOthersIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M15 9l-6 6M9 9l6 6" />
     </svg>
   );
 }

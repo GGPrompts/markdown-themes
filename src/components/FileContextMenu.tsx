@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useLayoutEffect, useState } from 'react';
 import { openInEditor } from '../lib/api';
 
 interface FileContextMenuProps {
@@ -52,7 +52,8 @@ export function FileContextMenu({
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
   // Smart positioning - flip menu when near window edges
-  useEffect(() => {
+  // useLayoutEffect runs before paint, preventing visible position flash
+  useLayoutEffect(() => {
     if (show && menuRef.current) {
       const menuRect = menuRef.current.getBoundingClientRect();
       const padding = 8;

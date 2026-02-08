@@ -303,6 +303,42 @@ func parseGitStatus(output string, gitRoot string) map[string]models.GitStatusIn
 	return files
 }
 
+// FileOpen handles POST /api/files/open - opens a file or directory in VS Code.
+func FileOpen(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Path string `json:"path"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Path == "" {
+		http.Error(w, `{"error": "path parameter required"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Expand home directory
+	path := req.Path
+	if strings.HasPrefix(path, "~") {
+		home, err := os.UserHomeDir()
+		if err == nil {
+			path = filepath.Join(home, path[1:])
+		}
+	}
+	path = filepath.Clean(path)
+
+	if _, err := os.Stat(path); err != nil {
+		http.Error(w, fmt.Sprintf(`{"error": "path not found: %s"}`, err.Error()), http.StatusNotFound)
+		return
+	}
+
+	cmd := exec.Command("code", path)
+	if err := cmd.Start(); err != nil {
+		http.Error(w, fmt.Sprintf(`{"error": "failed to open editor: %s"}`, err.Error()), http.StatusInternalServerError)
+		return
+	}
+	// Don't wait for the process - VS Code runs independently
+	go cmd.Wait()
+
+	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}
+
 // FileRaw handles GET /api/files/raw - serves files directly with correct Content-Type.
 // Used for inline markdown images and other embedded media.
 func FileRaw(w http.ResponseWriter, r *http.Request) {

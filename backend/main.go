@@ -70,6 +70,7 @@ func main() {
 		r.Get("/files/video", handlers.FileMedia)
 		r.Get("/files/audio", handlers.FileMedia)
 		r.Get("/files/raw", handlers.FileRaw)
+		r.Post("/files/open", handlers.FileOpen)
 
 		// Claude
 		r.Get("/claude/session", handlers.ClaudeSession)

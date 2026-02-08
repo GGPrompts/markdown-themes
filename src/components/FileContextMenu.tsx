@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { getAuthToken } from '../lib/api';
+import { openInEditor } from '../lib/api';
 
 interface FileContextMenuProps {
   show: boolean;
@@ -18,18 +18,6 @@ interface FileContextMenuProps {
   isConversationFile?: boolean;
 }
 
-const API_BASE = 'http://localhost:8130';
-
-/**
- * Escape a string for safe use in a shell command.
- * Uses single quotes and escapes any single quotes within the string.
- */
-function escapeShellArg(arg: string): string {
-  // Single quotes prevent all shell expansion except for single quotes themselves
-  // Replace ' with '\'' (end quote, escaped quote, start quote)
-  return `'${arg.replace(/'/g, "'\\''")}'`;
-}
-
 /**
  * FileContextMenu - Right-click context menu for file tree items
  *
@@ -41,7 +29,7 @@ function escapeShellArg(arg: string): string {
  * - **Copy @Path**: Copy path with @ prefix (for Claude references)
  * - **Toggle Favorite**: Add/remove from favorites
  * - **Send to Chat**: Send file content to AI Chat (files only)
- * - **Edit**: Open file in $EDITOR via TabzChrome spawn API (files only)
+ * - **Open in Editor**: Open file in VS Code via Go backend (files only)
  */
 export function FileContextMenu({
   show,
@@ -154,20 +142,7 @@ export function FileContextMenu({
 
   const handleOpenInEditor = async () => {
     try {
-      const token = await getAuthToken();
-      // Use $EDITOR on the server side - the spawn command will inherit the environment
-      // This spawns a terminal that runs: $EDITOR "filepath" (falls back to nano if EDITOR not set)
-      await fetch(`${API_BASE}/api/spawn`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Auth-Token': token,
-        },
-        body: JSON.stringify({
-          name: `Edit: ${fileName}`,
-          command: `\${EDITOR:-nano} ${escapeShellArg(filePath)}`,
-        }),
-      });
+      await openInEditor(filePath);
       onClose();
     } catch (err) {
       console.error('Failed to open in editor:', err);
@@ -283,7 +258,7 @@ export function FileContextMenu({
 
           {onSendToChat && <div style={dividerStyle} />}
 
-          {/* Edit */}
+          {/* Open in Editor */}
           <button
             className="context-menu-item"
             onClick={handleOpenInEditor}
@@ -292,7 +267,7 @@ export function FileContextMenu({
             onMouseLeave={handleMenuItemLeave}
           >
             <EditIcon />
-            <span>Edit</span>
+            <span>Open in Editor</span>
           </button>
 
           {/* Conversation file actions */}

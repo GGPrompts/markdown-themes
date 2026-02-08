@@ -127,7 +127,7 @@ export async function fetchFileContent(path: string): Promise<FileContent> {
 }
 
 /**
- * Check if TabzChrome backend is available
+ * Check if backend is available
  */
 export async function checkBackendHealth(): Promise<boolean> {
   try {
@@ -138,6 +138,20 @@ export async function checkBackendHealth(): Promise<boolean> {
     return response.ok;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Open a file or directory in VS Code
+ */
+export async function openInEditor(path: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/files/open`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path }),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to open in editor: ${response.statusText}`);
   }
 }
 

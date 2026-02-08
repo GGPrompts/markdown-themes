@@ -189,6 +189,18 @@ export function ConversationMarkdownViewer({
   themeClassName,
   isStreaming = false,
 }: ConversationMarkdownViewerProps) {
+  // Whether to load all messages (bypass MAX_MESSAGES limit)
+  const [loadAll, setLoadAll] = useState(false);
+
+  // Reset loadAll when switching files
+  const prevFilePathRef = useRef(filePath);
+  useEffect(() => {
+    if (filePath !== prevFilePathRef.current) {
+      prevFilePathRef.current = filePath;
+      setLoadAll(false);
+    }
+  }, [filePath]);
+
   // Throttle content updates during streaming to prevent expensive re-parsing
   // Only update at most once per second when streaming
   const throttledContent = useThrottledContent(content, isStreaming, 1000);
@@ -202,12 +214,12 @@ export function ConversationMarkdownViewer({
       return '';
     }
     try {
-      return jsonlToMarkdown(throttledContent, MAX_MESSAGES);
+      return jsonlToMarkdown(throttledContent, loadAll ? 0 : MAX_MESSAGES);
     } catch (err) {
       console.error('Failed to parse conversation JSONL:', err);
       return '';
     }
-  }, [throttledContent]);
+  }, [throttledContent, loadAll]);
 
   // Cache metadata to avoid re-parsing during streaming
   // Only re-extract when content length decreases (new file) or streaming stops
@@ -284,12 +296,28 @@ export function ConversationMarkdownViewer({
           }}
         >
           <span>
-            {metadata.estimatedTotal !== null
-              ? `~${metadata.estimatedTotal.toLocaleString()} messages (showing last ${MAX_MESSAGES})`
-              : metadata.messageCount > MAX_MESSAGES
-                ? `${metadata.messageCount.toLocaleString()} messages (showing last ${MAX_MESSAGES})`
-                : `${metadata.messageCount} messages`}
+            {loadAll
+              ? `${metadata.messageCount} messages`
+              : metadata.estimatedTotal !== null
+                ? `~${metadata.estimatedTotal.toLocaleString()} messages (showing last ${MAX_MESSAGES})`
+                : metadata.messageCount > MAX_MESSAGES
+                  ? `${metadata.messageCount.toLocaleString()} messages (showing last ${MAX_MESSAGES})`
+                  : `${metadata.messageCount} messages`}
           </span>
+          {/* Load all messages button - shown when truncated and not streaming */}
+          {!loadAll && !isStreaming && (metadata.messageCount > MAX_MESSAGES || metadata.estimatedTotal !== null) && (
+            <button
+              onClick={() => setLoadAll(true)}
+              className="px-2.5 py-0.5 rounded text-xs cursor-pointer transition-opacity hover:opacity-80"
+              style={{
+                backgroundColor: 'var(--bg-primary)',
+                color: 'var(--accent)',
+                border: '1px solid var(--border)',
+              }}
+            >
+              Load all messages
+            </button>
+          )}
           {metadata.hasThinking && (
             <span
               className="px-2 py-0.5 rounded"

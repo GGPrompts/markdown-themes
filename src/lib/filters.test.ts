@@ -237,21 +237,11 @@ describe('CLAUDE_CODE_PATTERNS', () => {
     }
   });
 
-  it('matches conversation JSONL files', () => {
-    const testCases = [
-      // Conversation logs in ~/.claude/projects/
-      { path: '/home/user/.claude/projects/myproject/conversation-abc123.jsonl', expected: true },
-      { path: '/home/user/.claude/projects/-home-user-code-myapp/session.jsonl', expected: true },
-      // JSONL files elsewhere should also match (the filter is pattern-based)
-      { path: '/project/logs/data.jsonl', expected: true },
-      // Non-JSONL files should not match
-      { path: '/project/data.json', expected: false },
-      { path: '/project/logs.txt', expected: false },
-    ];
-
-    for (const { path, expected } of testCases) {
-      expect(matchesFilter(path, CLAUDE_CODE_PATTERNS)).toBe(expected);
-    }
+  it('does not match standalone JSONL files (moved to conversations filter)', () => {
+    // .jsonl extension was moved out of CLAUDE_CODE_PATTERNS into the dedicated conversations filter
+    // Note: JSONL files under .claude/ still match due to the .claude/ directory pattern
+    expect(matchesFilter('/project/logs/data.jsonl', CLAUDE_CODE_PATTERNS)).toBe(false);
+    expect(matchesFilter('/home/user/data/export.jsonl', CLAUDE_CODE_PATTERNS)).toBe(false);
   });
 });
 

@@ -7,6 +7,7 @@ export interface FileTreeNode {
   path: string;
   isDirectory: boolean;
   children?: FileTreeNode[];
+  modified?: string;
 }
 
 interface WorkspaceContextValue {

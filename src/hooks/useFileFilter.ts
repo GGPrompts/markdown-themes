@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import type { FileTreeNode } from '../context/WorkspaceContext';
-import { fetchFileTree, type FileTreeNode as APIFileTreeNode } from '../lib/api';
+import { fetchFileTree, fetchFileContent, type FileTreeNode as APIFileTreeNode } from '../lib/api';
 import { FILTERS, filterFiles, countMatches, type FilterId, type FileScope } from '../lib/filters';
 
 /**
@@ -101,6 +101,7 @@ function convertApiTree(node: APIFileTreeNode, allowedHiddenNames: Set<string>):
       name: node.name,
       path: node.path,
       isDirectory: false,
+      modified: node.modified,
     };
   }
 }
@@ -119,6 +120,155 @@ function sortTree(nodes: FileTreeNode[]): FileTreeNode[] {
       if (!a.isDirectory && b.isDirectory) return 1;
       return a.name.localeCompare(b.name);
     });
+}
+
+/**
+ * Get the most recent modified timestamp from a node and all its descendants
+ */
+function getNewestTimestamp(node: FileTreeNode): string | undefined {
+  if (!node.isDirectory) return node.modified;
+  if (!node.children) return undefined;
+  let newest: string | undefined;
+  for (const child of node.children) {
+    const ts = getNewestTimestamp(child);
+    if (ts && (!newest || ts > newest)) {
+      newest = ts;
+    }
+  }
+  return newest;
+}
+
+/**
+ * Sort nodes by recency (newest modified first).
+ * Directories are sorted by their most recent descendant's timestamp.
+ * Files are sorted by their own modified timestamp.
+ */
+function sortTreeByRecency(nodes: FileTreeNode[]): FileTreeNode[] {
+  return nodes
+    .map((node) => ({
+      ...node,
+      children: node.children ? sortTreeByRecency(node.children) : undefined,
+    }))
+    .sort((a, b) => {
+      const tsA = getNewestTimestamp(a) || '';
+      const tsB = getNewestTimestamp(b) || '';
+      // Descending: newest first
+      return tsB.localeCompare(tsA);
+    });
+}
+
+/**
+ * Decode a Claude projects directory name to a readable project path.
+ * Uses projectPath from sessions-index.json when available (accurate),
+ * falls back to stripping the home prefix from the encoded name.
+ */
+function decodeProjectDirName(name: string, homePath: string, projectPath?: string): string {
+  // Best: use the actual project path from sessions-index.json
+  if (projectPath) {
+    // Strip home prefix to get relative path: /home/marci/projects/markdown-themes -> projects/markdown-themes
+    if (projectPath.startsWith(homePath + '/')) {
+      return projectPath.slice(homePath.length + 1);
+    }
+    // If not under home, show last 2 path segments
+    const segments = projectPath.split('/');
+    return segments.slice(-2).join('/');
+  }
+
+  // Fallback: strip encoded home prefix, keep remainder as-is (dashes preserved)
+  const encodedPrefix = homePath.replace(/\//g, '-') + '-';
+  if (name.startsWith(encodedPrefix)) {
+    return name.slice(encodedPrefix.length);
+  }
+  if (name.startsWith('-')) {
+    return name.slice(1);
+  }
+  return name;
+}
+
+/**
+ * Session entry from Claude Code's sessions-index.json
+ */
+interface SessionIndexEntry {
+  sessionId: string;
+  summary?: string;
+  firstPrompt?: string;
+  modified?: string;
+  messageCount?: number;
+  projectPath?: string;
+}
+
+interface SessionsIndex {
+  entries: SessionIndexEntry[];
+}
+
+/**
+ * Fetch sessions-index.json for each project directory and return new enriched nodes.
+ * Returns a new array with new child objects (immutable - does not mutate inputs).
+ */
+async function enrichConversationNodes(
+  projectDirs: FileTreeNode[],
+  homePath: string
+): Promise<FileTreeNode[]> {
+  const results = await Promise.all(projectDirs.map(async (dir): Promise<FileTreeNode> => {
+    if (!dir.isDirectory || !dir.children) {
+      return dir;
+    }
+
+    // Check if sessions-index.json exists in the tree (already fetched at depth=2)
+    const hasIndex = dir.children.some((c) => c.name === 'sessions-index.json');
+    if (!hasIndex) {
+      // No index - just decode dir name with fallback
+      return {
+        ...dir,
+        name: decodeProjectDirName(dir.name, homePath),
+      };
+    }
+
+    const indexPath = `${dir.path}/sessions-index.json`;
+    try {
+      const { content } = await fetchFileContent(indexPath);
+      const index: SessionsIndex = JSON.parse(content);
+      if (!index.entries) {
+        return { ...dir, name: decodeProjectDirName(dir.name, homePath) };
+      }
+
+      // Build lookup: sessionId -> entry
+      const lookup = new Map<string, SessionIndexEntry>();
+      for (const entry of index.entries) {
+        lookup.set(entry.sessionId, entry);
+      }
+
+      // Extract projectPath from first entry for accurate dir name decoding
+      const projectPath = index.entries[0]?.projectPath;
+
+      // Build new children array with enriched names (immutable)
+      const enrichedChildren = dir.children.map((child) => {
+        if (child.isDirectory) return child;
+        const sessionId = child.name.replace(/\.jsonl$/, '');
+        const entry = lookup.get(sessionId);
+        if (!entry) return child;
+
+        const label = entry.summary
+          || (entry.firstPrompt ? entry.firstPrompt.slice(0, 60) + (entry.firstPrompt.length > 60 ? '...' : '') : null);
+
+        return {
+          ...child,
+          name: label || child.name,
+          modified: entry.modified || child.modified,
+        };
+      });
+
+      return {
+        ...dir,
+        name: decodeProjectDirName(dir.name, homePath, projectPath),
+        children: enrichedChildren,
+      };
+    } catch {
+      return { ...dir, name: decodeProjectDirName(dir.name, homePath) };
+    }
+  }));
+
+  return results;
 }
 
 /**
@@ -269,22 +419,20 @@ export function useFileFilter({ files, homePath, gitStatus, changedFiles }: UseF
       return;
     }
 
+    // Cancellation flag for StrictMode double-run and filter switching
+    let cancelled = false;
+
     const fetchHomeFiles = async () => {
       setHomeLoading(true);
-      const allHomeFiles: FileTreeNode[] = [];
+      let allHomeFiles: FileTreeNode[] = [];
 
       // Build allowed hidden names set from filter patterns
       const allowedHiddenNames = new Set<string>();
       for (const pattern of activeFilterDef.patterns) {
         if (pattern.endsWith('/')) {
           allowedHiddenNames.add(pattern.slice(0, -1));
-        } else if (pattern.startsWith('.')) {
-          // For extension patterns, we need to allow any file with that extension
-          // This is handled by the filter function, not here
         }
       }
-      // Also add the home paths as allowed
-      // Guard against race condition where activeFilterDef might change
       if (!activeFilterDef.homePaths) {
         setHomeLoading(false);
         return;
@@ -293,10 +441,14 @@ export function useFileFilter({ files, homePath, gitStatus, changedFiles }: UseF
         allowedHiddenNames.add(relPath);
       }
 
+      // Use shallow depth for conversations filter (project dirs + JSONL files, avoids UUID/subagent recursion)
+      const fetchDepth = activeFilterDef.id === 'conversations' ? 2 : 5;
+
       for (const relativePath of activeFilterDef.homePaths.relativePaths) {
         const fullPath = `${homePath}/${relativePath}`;
         try {
-          const apiTree = await fetchFileTree(fullPath, 5, true);
+          const apiTree = await fetchFileTree(fullPath, fetchDepth, true);
+          if (cancelled) return;
           const converted = convertApiTree(apiTree, allowedHiddenNames);
           if (converted?.children) {
             allHomeFiles.push(...converted.children);
@@ -304,7 +456,6 @@ export function useFileFilter({ files, homePath, gitStatus, changedFiles }: UseF
             allHomeFiles.push(converted);
           }
         } catch (err) {
-          // Directory might not exist - that's OK
           const message = err instanceof Error ? err.message : '';
           if (!message.includes('ENOENT') && !message.includes('not found') && !message.includes('does not exist')) {
             console.warn(`Failed to fetch home files from ${fullPath}:`, err);
@@ -312,11 +463,25 @@ export function useFileFilter({ files, homePath, gitStatus, changedFiles }: UseF
         }
       }
 
-      setHomeFiles(sortTree(allHomeFiles));
+      if (cancelled) return;
+
+      // For conversations filter, enrich with session metadata and decode directory names
+      if (activeFilterDef.id === 'conversations') {
+        allHomeFiles = await enrichConversationNodes(allHomeFiles, homePath);
+        if (cancelled) return;
+      }
+
+      // Sort by recency if filter requests it, otherwise alphabetically
+      const sorted = activeFilterDef.sortMode === 'recency'
+        ? sortTreeByRecency(allHomeFiles)
+        : sortTree(allHomeFiles);
+      setHomeFiles(sorted);
       setHomeLoading(false);
     };
 
     fetchHomeFiles();
+
+    return () => { cancelled = true; };
   }, [activeFilterDef, homePath]);
 
   // Filter project files
@@ -347,6 +512,11 @@ export function useFileFilter({ files, homePath, gitStatus, changedFiles }: UseF
       return files;
     }
 
+    // homeOnly: skip project scope entirely, return filtered home files directly
+    if (activeFilterDef.homeOnly) {
+      return filteredHomeFiles;
+    }
+
     // If filter doesn't have home paths, just return filtered project files
     if (!activeFilterDef.homePaths) {
       return filteredProjectFiles;
@@ -368,7 +538,7 @@ export function useFileFilter({ files, homePath, gitStatus, changedFiles }: UseF
   }, [activeFilterDef, filteredProjectFiles, filteredHomeFiles]);
 
   const projectMatchCount = useMemo(() => {
-    if (!activeFilterDef) {
+    if (!activeFilterDef || activeFilterDef.homeOnly) {
       return 0;
     }
     // Special case for "changed" filter

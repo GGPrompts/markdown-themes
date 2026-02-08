@@ -3,7 +3,7 @@
  */
 
 import type { LucideIcon } from 'lucide-react';
-import { Bot, FileInput, FileText, Image, FileCog, GitBranch } from 'lucide-react';
+import { Bot, FileInput, FileText, Image, FileCog, GitBranch, MessageSquare } from 'lucide-react';
 import type { FileTreeNode } from '../context/WorkspaceContext';
 
 /**
@@ -17,7 +17,6 @@ export const CLAUDE_CODE_PATTERNS = [
   'CLAUDE.md',        // Project instructions
   '.mcp.json',        // MCP server config
   '.claudeignore',    // Ignore patterns
-  '.jsonl',           // Conversation logs (in ~/.claude/projects/)
 ];
 
 /**
@@ -64,7 +63,7 @@ export const CONFIG_PATTERNS = [
   '.env',             // Environment variables
 ];
 
-export type FilterId = 'claude-code' | 'prompts' | 'markdown' | 'media' | 'config' | 'changed';
+export type FilterId = 'claude-code' | 'prompts' | 'markdown' | 'media' | 'config' | 'changed' | 'conversations';
 
 /**
  * Scope for merged file tree display
@@ -89,6 +88,10 @@ export interface FilterDefinition {
   patterns: string[];
   /** Optional home directory paths to include */
   homePaths?: FilterHomePaths;
+  /** Sort mode: 'alpha' (default) or 'recency' (newest first by modified time) */
+  sortMode?: 'alpha' | 'recency';
+  /** If true, only show home files (skip project scope entirely) */
+  homeOnly?: boolean;
 }
 
 export const FILTERS: FilterDefinition[] = [
@@ -146,6 +149,17 @@ export const FILTERS: FilterDefinition[] = [
     name: 'Changed',
     icon: GitBranch,
     patterns: [], // Special filter - matches gitStatus + WebSocket changedFiles
+  },
+  {
+    id: 'conversations',
+    name: 'Conversations',
+    icon: MessageSquare,
+    patterns: ['.jsonl'],
+    homePaths: {
+      relativePaths: ['.claude/projects'],
+    },
+    sortMode: 'recency',
+    homeOnly: true,
   },
 ];
 

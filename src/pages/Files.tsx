@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
-import { Clock, ChevronLeft, GitCommit, FileDiff, Loader2, Crosshair, Users, Columns, Bot } from 'lucide-react';
+import { Clock, ChevronLeft, GitCommit, FileDiff, Loader2 } from 'lucide-react';
 import { useFileWatcher } from '../hooks/useFileWatcher';
 import { useWorkspaceStreaming } from '../hooks/useWorkspaceStreaming';
 import { useDiffAutoScroll } from '../hooks/useDiffAutoScroll';
@@ -24,6 +23,7 @@ import { DiffViewer } from '../components/viewers/DiffViewer';
 import { ArchiveModal } from '../components/ArchiveModal';
 import { FileContextMenu } from '../components/FileContextMenu';
 import { ChatPanel } from '../components/chat';
+import { ChatBubble } from '../components/ChatBubble';
 import { fetchFileContent } from '../lib/api';
 import { parseFrontmatter } from '../utils/frontmatter';
 import { themes } from '../themes';
@@ -272,13 +272,13 @@ export function Files() {
   const {
     state: appState,
     addRecentFile,
-    saveFontSize,
     saveSidebarWidth,
     toggleFavorite,
     isFavorite,
     toggleFollowMode,
     saveArchiveLocation,
     addArchivedConversation,
+    saveTheme,
   } = useAppStore();
 
   // Local state for sidebar width during drag (for smooth updates)
@@ -299,6 +299,10 @@ export function Files() {
 
   // Counter incremented after git operations (commit, stage, etc.) to trigger Sidebar git status refresh
   const [gitStatusVersion, setGitStatusVersion] = useState(0);
+
+  // Main pane view mode: file viewer, git graph, or working tree
+  // When not split, git graph/working tree render in the main pane
+  const [mainPaneView, setMainPaneView] = useState<'file' | 'git-graph' | 'working-tree'>('file');
 
   // Track recently closed files to prevent circular auto-reopening (path -> close timestamp)
   const recentlyClosedRef = useRef<Map<string, number>>(new Map());
@@ -374,6 +378,30 @@ export function Files() {
     onStateChange: handleSplitStateChange,
   });
 
+  // When split view closes and right pane had git-graph/working-tree, move it to main pane
+  // When split view opens and main pane has git-graph/working-tree, move it to right pane
+  const prevIsSplitRef = useRef(isSplit);
+  useEffect(() => {
+    if (prevIsSplitRef.current && !isSplit) {
+      // Split just closed - if right pane had git view, move to main
+      if (rightPaneContent?.type === 'git-graph') {
+        setMainPaneView('git-graph');
+      } else if (rightPaneContent?.type === 'working-tree') {
+        setMainPaneView('working-tree');
+      }
+    } else if (!prevIsSplitRef.current && isSplit) {
+      // Split just opened - if main had git view, move to right pane
+      if (mainPaneView === 'git-graph') {
+        setRightPaneGitGraph();
+        setMainPaneView('file');
+      } else if (mainPaneView === 'working-tree') {
+        setRightPaneWorkingTree();
+        setMainPaneView('file');
+      }
+    }
+    prevIsSplitRef.current = isSplit;
+  }, [isSplit, rightPaneContent?.type, mainPaneView, setRightPaneGitGraph, setRightPaneWorkingTree]);
+
   // Right pane tabs state with persistence
   const handleRightPaneTabsStateChange = useCallback(
     (tabs: Parameters<typeof setFilesState>[0]['rightPaneTabs'], activeTabId: string | null) => {
@@ -430,8 +458,8 @@ export function Files() {
     setChatPanelOpen((prev) => !prev);
   }, []);
 
-  // AI Chat integration for "Send to Chat" and "Resume in Chat"
-  const { sendToChat, resumeConversation } = useAIChatContext();
+  // AI Chat integration for "Send to Chat", "Resume in Chat", and generating status
+  const { sendToChat, resumeConversation, isGenerating } = useAIChatContext();
   const handleSendToChat = useCallback((content: string) => {
     // Open chat panel if not already open
     setChatPanelOpen(true);
@@ -556,37 +584,38 @@ export function Files() {
     onSubagentEnd: handleSubagentEnd,
   });
 
-  // Auto-open streaming file when follow mode is enabled (opens in right pane)
+  // Auto-open streaming file when follow mode is enabled
+  // When split: opens in right pane. When not split: opens in main pane.
   useEffect(() => {
     if (!appState.followStreamingMode || !streamingFile) return;
 
-    // Auto-open if:
-    // 1. Streaming file is different from current right pane file, OR
-    // 2. Right pane matches but split view isn't open (persisted state from previous session)
-    // Also skip if it's already open as a visible tab in the right pane
-    const alreadyOpenAsTab = rightPaneTabs.some((t) => t.path === streamingFile);
-    const alreadyVisible = isSplit && (streamingFile === rightPaneFilePath || alreadyOpenAsTab);
-    if (!alreadyVisible) {
-      // Filter out noisy files that aren't useful to watch
-      if (!shouldFollowFile(streamingFile)) return;
+    // Filter out noisy files that aren't useful to watch
+    if (!shouldFollowFile(streamingFile)) return;
 
-      // Don't reopen files that were recently closed by the user
-      if (wasRecentlyClosed(streamingFile)) return;
+    if (isSplit) {
+      // Split mode: open in right pane (existing behavior)
+      const alreadyOpenAsTab = rightPaneTabs.some((t) => t.path === streamingFile);
+      const alreadyVisible = streamingFile === rightPaneFilePath || alreadyOpenAsTab;
+      if (!alreadyVisible) {
+        if (wasRecentlyClosed(streamingFile)) return;
+        if (!shouldAutoOpen(streamingFile)) return;
 
-      // Deduplicate: skip if another effect already opened this file recently
-      if (!shouldAutoOpen(streamingFile)) return;
-
-      // Open streaming file in right pane tabs (enables split if needed)
-      if (!isSplit) {
-        openSplit();
+        setRightPaneFile(streamingFile);
+        openRightTab(streamingFile, { preview: true, addNew: true });
+        addRecentFile(streamingFile);
       }
-      // Use setRightPaneFile to ensure rightPaneContent is set to file mode
-      setRightPaneFile(streamingFile);
-      // Open as a tab with addNew so it adds new tabs instead of replacing
-      openRightTab(streamingFile, { preview: true, addNew: true });
-      addRecentFile(streamingFile);
+    } else {
+      // Non-split mode: open in main pane
+      const alreadyOpen = currentFile === streamingFile;
+      if (!alreadyOpen) {
+        if (wasRecentlyClosed(streamingFile)) return;
+        if (!shouldAutoOpen(streamingFile)) return;
+
+        openTab(streamingFile, true); // preview mode
+        addRecentFile(streamingFile);
+      }
     }
-  }, [appState.followStreamingMode, streamingFile, rightPaneFilePath, rightPaneTabs, isSplit, openSplit, setRightPaneFile, openRightTab, addRecentFile, wasRecentlyClosed, shouldAutoOpen]);
+  }, [appState.followStreamingMode, streamingFile, rightPaneFilePath, rightPaneTabs, isSplit, currentFile, setRightPaneFile, openRightTab, openTab, addRecentFile, wasRecentlyClosed, shouldAutoOpen]);
 
   // Track files that have been auto-opened as tabs (to avoid re-opening)
   const autoOpenedFilesRef = useRef<Set<string>>(new Set());
@@ -596,7 +625,8 @@ export function Files() {
     autoOpenedFilesRef.current.clear();
   }, [workspacePath]);
 
-  // Auto-open changed files as tabs in the RIGHT pane when Follow mode is active
+  // Auto-open changed files as tabs when Follow mode is active
+  // When split: opens in right pane. When not split: opens in main pane.
   useEffect(() => {
     if (!appState.followStreamingMode) return;
 
@@ -605,9 +635,14 @@ export function Files() {
     changedFiles.forEach((filePath) => {
       if (autoOpenedFilesRef.current.has(filePath)) return;
 
-      // Check if file is already open as a tab in the right pane
-      const existingTab = rightPaneTabs.find((t) => t.path === filePath);
-      if (existingTab) return;
+      // Check if file is already open as a tab
+      if (isSplit) {
+        const existingTab = rightPaneTabs.find((t) => t.path === filePath);
+        if (existingTab) return;
+      } else {
+        const existingTab = tabs.find((t) => t.path === filePath);
+        if (existingTab) return;
+      }
 
       // Apply the shared file filtering logic
       if (!shouldFollowFile(filePath)) return;
@@ -617,21 +652,22 @@ export function Files() {
 
     if (newChangedFiles.length === 0) return;
 
-    // Auto-enable split view when there are new changed files to open
-    if (!isSplit) {
-      openSplit();
-    }
-
-    // Open new tabs in the right pane as preview tabs
-    newChangedFiles.forEach((filePath) => {
-      // Deduplicate: skip if another effect already opened this file recently
-      if (!shouldAutoOpen(filePath)) {
-        return;
+    if (isSplit) {
+      // Split mode: open in right pane
+      newChangedFiles.forEach((filePath) => {
+        if (!shouldAutoOpen(filePath)) return;
+        autoOpenedFilesRef.current.add(filePath);
+        openRightTab(filePath, true);
+      });
+    } else {
+      // Non-split mode: open in main pane (just the most recent one)
+      const latest = newChangedFiles[newChangedFiles.length - 1];
+      if (shouldAutoOpen(latest)) {
+        autoOpenedFilesRef.current.add(latest);
+        openTab(latest, true);
       }
-      autoOpenedFilesRef.current.add(filePath);
-      openRightTab(filePath, true); // preview mode
-    });
-  }, [appState.followStreamingMode, isSplit, changedFiles, rightPaneTabs, openRightTab, shouldAutoOpen, openSplit]);
+    }
+  }, [appState.followStreamingMode, isSplit, changedFiles, rightPaneTabs, tabs, openRightTab, openTab, shouldAutoOpen]);
 
   // Handle commit success - close tabs for committed files (review queue cleanup)
   // Right pane tabs act as a review queue; committed files are "done" and removed
@@ -706,14 +742,6 @@ export function Files() {
   const recentFilesForEmptyState = useMemo(() => {
     return appState.recentFiles.slice(0, 6);
   }, [appState.recentFiles]);
-
-  // Handle font size change with persistence
-  const handleFontSizeChange = useCallback(
-    (size: number) => {
-      saveFontSize(size);
-    },
-    [saveFontSize]
-  );
 
   // Handle file selection (single-click = preview)
   const handleFileSelect = useCallback(
@@ -802,31 +830,33 @@ export function Files() {
 
   // Handle git graph toggle
   const handleGitGraphToggle = useCallback(() => {
-    // If git graph is already shown, close the split view
-    if (rightPaneContent?.type === 'git-graph') {
-      setRightFile(null);
-    } else {
-      // Open split view with git graph
-      if (!isSplit) {
-        openSplit();
+    if (isSplit) {
+      // Split mode: use right pane (existing behavior)
+      if (rightPaneContent?.type === 'git-graph') {
+        setRightFile(null);
+      } else {
+        setRightPaneGitGraph();
       }
-      setRightPaneGitGraph();
+    } else {
+      // Non-split mode: toggle in main pane
+      setMainPaneView((prev) => prev === 'git-graph' ? 'file' : 'git-graph');
     }
-  }, [rightPaneContent, isSplit, openSplit, setRightFile, setRightPaneGitGraph]);
+  }, [isSplit, rightPaneContent, setRightFile, setRightPaneGitGraph]);
 
   // Handle working tree toggle
   const handleWorkingTreeToggle = useCallback(() => {
-    // If working tree is already shown, close the split view
-    if (rightPaneContent?.type === 'working-tree') {
-      setRightFile(null);
-    } else {
-      // Open split view with working tree
-      if (!isSplit) {
-        openSplit();
+    if (isSplit) {
+      // Split mode: use right pane (existing behavior)
+      if (rightPaneContent?.type === 'working-tree') {
+        setRightFile(null);
+      } else {
+        setRightPaneWorkingTree();
       }
-      setRightPaneWorkingTree();
+    } else {
+      // Non-split mode: toggle in main pane
+      setMainPaneView((prev) => prev === 'working-tree' ? 'file' : 'working-tree');
     }
-  }, [rightPaneContent, isSplit, openSplit, setRightFile, setRightPaneWorkingTree]);
+  }, [isSplit, rightPaneContent, setRightFile, setRightPaneWorkingTree]);
 
   // Handle chat panel toggle (now a separate third column)
   const handleChatPanelToggle = useCallback(() => {
@@ -1014,128 +1044,8 @@ export function Files() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [toggleSplit, handleGitGraphToggle, handleWorkingTreeToggle, handleChatPanelToggle, handleHotkeysClick]);
 
-  // Portal target for nav actions
-  const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
-  useEffect(() => {
-    setPortalTarget(document.getElementById('nav-actions-slot'));
-  }, []);
-
   return (
     <>
-      {/* Portal actions into NavHeader's #nav-actions-slot */}
-      {portalTarget && createPortal(
-        <>
-          {/* Follow AI Edits toggle */}
-          <button
-            type="button"
-            onClick={toggleFollowMode}
-            className="w-8 h-8 flex items-center justify-center transition-colors"
-            style={{
-              borderRadius: 'var(--radius)',
-              backgroundColor: appState.followStreamingMode ? 'var(--accent)' : 'var(--bg-primary)',
-              color: appState.followStreamingMode ? 'var(--bg-primary)' : 'var(--text-primary)',
-              border: '1px solid var(--border)',
-            }}
-            title={appState.followStreamingMode ? 'Stop following AI edits' : 'Follow AI edits (auto-open streaming files)'}
-          >
-            <Crosshair className="w-4 h-4" />
-          </button>
-
-          {/* Active subagents indicator */}
-          {appState.followStreamingMode && activeSubagentCount > 0 && (
-            <div
-              className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium"
-              style={{
-                backgroundColor: 'rgba(34, 197, 94, 0.15)',
-                color: '#22c55e',
-                borderRadius: 'var(--radius)',
-                border: '1px solid rgba(34, 197, 94, 0.3)',
-              }}
-              title={`${activeSubagentCount} active subagent${activeSubagentCount > 1 ? 's' : ''}`}
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span>{activeSubagentCount}</span>
-            </div>
-          )}
-
-          {/* Split View toggle */}
-          <button
-            type="button"
-            onClick={toggleSplit}
-            className="w-8 h-8 flex items-center justify-center transition-colors"
-            style={{
-              borderRadius: 'var(--radius)',
-              backgroundColor: isSplit ? 'var(--accent)' : 'var(--bg-primary)',
-              color: isSplit ? 'var(--bg-primary)' : 'var(--text-primary)',
-              border: '1px solid var(--border)',
-            }}
-            title={isSplit ? 'Close split view' : 'Open split view'}
-          >
-            <Columns className="w-4 h-4" />
-          </button>
-
-          {/* Font size controls */}
-          <div className="flex items-center gap-0">
-            <button
-              type="button"
-              onClick={() => handleFontSizeChange(Math.max(50, appState.fontSize - 10))}
-              className="w-7 h-7 flex items-center justify-center text-sm font-medium transition-colors"
-              style={{
-                borderRadius: 'var(--radius) 0 0 var(--radius)',
-                backgroundColor: 'var(--bg-primary)',
-                color: 'var(--text-primary)',
-                border: '1px solid var(--border)',
-              }}
-              title="Decrease font size"
-            >
-              -
-            </button>
-            <span
-              className="w-12 h-7 flex items-center justify-center text-xs"
-              style={{
-                backgroundColor: 'var(--bg-primary)',
-                color: 'var(--text-secondary)',
-                borderTop: '1px solid var(--border)',
-                borderBottom: '1px solid var(--border)',
-              }}
-            >
-              {appState.fontSize}%
-            </span>
-            <button
-              type="button"
-              onClick={() => handleFontSizeChange(Math.min(200, appState.fontSize + 10))}
-              className="w-7 h-7 flex items-center justify-center text-sm font-medium transition-colors"
-              style={{
-                borderRadius: '0 var(--radius) var(--radius) 0',
-                backgroundColor: 'var(--bg-primary)',
-                color: 'var(--text-primary)',
-                border: '1px solid var(--border)',
-              }}
-              title="Increase font size"
-            >
-              +
-            </button>
-          </div>
-
-          {/* AI Chat panel toggle */}
-          <button
-            type="button"
-            onClick={handleChatPanelToggle}
-            className="w-8 h-8 flex items-center justify-center transition-colors"
-            style={{
-              borderRadius: 'var(--radius)',
-              backgroundColor: chatPanelOpen ? 'var(--accent)' : 'var(--bg-primary)',
-              color: chatPanelOpen ? 'var(--bg-primary)' : 'var(--text-primary)',
-              border: '1px solid var(--border)',
-            }}
-            title={chatPanelOpen ? 'Close AI chat panel (Ctrl+Shift+C)' : 'Open AI chat panel (Ctrl+Shift+C)'}
-          >
-            <Bot className="w-4 h-4" />
-          </button>
-        </>,
-        portalTarget
-      )}
-
       <div className="flex-1 flex overflow-hidden">
         {workspacePath && sidebarVisible && (
           <Sidebar
@@ -1163,6 +1073,8 @@ export function Files() {
             recentFolders={appState.recentFolders}
             onFolderSelect={openWorkspace}
             onCloseWorkspace={closeWorkspace}
+            currentTheme={appState.theme}
+            onThemeChange={saveTheme}
           />
         )}
 
@@ -1175,11 +1087,6 @@ export function Files() {
           rightPaneContent={rightPaneContent}
           onCloseRight={handleCloseRight}
           rightIsStreaming={rightIsStreaming}
-          isGitGraph={rightPaneContent?.type === 'git-graph'}
-          isWorkingTree={rightPaneContent?.type === 'working-tree'}
-          onGitGraphToggle={handleGitGraphToggle}
-          onWorkingTreeToggle={handleWorkingTreeToggle}
-          onHotkeysClick={handleHotkeysClick}
           rightPaneTabBar={
             <RightPaneTabBar
               tabs={rightPaneTabs}
@@ -1202,110 +1109,161 @@ export function Files() {
                 onTabUnpin={unpinTab}
                 streamingFilePath={streamingFile}
                 onTabContextMenu={(e, tab) => handleTabContextMenu(e, tab, 'left')}
+                isGitGraph={mainPaneView === 'git-graph' || rightPaneContent?.type === 'git-graph'}
+                isWorkingTree={mainPaneView === 'working-tree' || rightPaneContent?.type === 'working-tree'}
+                onGitGraphToggle={handleGitGraphToggle}
+                onWorkingTreeToggle={handleWorkingTreeToggle}
+                onHotkeysClick={handleHotkeysClick}
+                isFollowMode={appState.followStreamingMode}
+                onFollowModeToggle={toggleFollowMode}
+                activeSubagentCount={activeSubagentCount}
+                isSplit={isSplit}
+                onSplitToggle={toggleSplit}
               />
 
-              {(activeTab?.type === 'file' || activeTab?.type === 'conversation') && loading && (
-                <div className="flex items-center justify-center h-full">
-                  <p style={{ color: 'var(--text-secondary)' }}>Loading...</p>
-                </div>
-              )}
-
-              {(activeTab?.type === 'file' || activeTab?.type === 'conversation') && error && (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center">
-                    <p className="text-red-500 mb-2">{error}</p>
-                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                      Make sure the backend is running on port 8130
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {(!activeTab || activeTab?.type === 'file' || activeTab?.type === 'conversation') && !loading && !error && !currentFile && (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center max-w-md">
-                    {recentFilesForEmptyState.length > 0 ? (
-                      <>
-                        <div className="flex items-center justify-center gap-2 mb-4">
-                          <Clock size={18} style={{ color: 'var(--text-secondary)' }} />
-                          <h2 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>
-                            Recent Files
-                          </h2>
-                        </div>
-                        <div className="space-y-1">
-                          {recentFilesForEmptyState.map((path) => (
-                            <button
-                              key={path}
-                              type="button"
-                              onClick={() => handleFileSelect(path)}
-                              className="w-full text-left px-3 py-2 text-sm transition-colors hover:opacity-80"
-                              style={{
-                                backgroundColor: 'var(--bg-secondary)',
-                                border: '1px solid var(--border)',
-                                borderRadius: 'var(--radius)',
-                                color: 'var(--text-primary)',
-                              }}
-                            >
-                              <span style={{ color: 'var(--accent)' }}>
-                                {path.split('/').pop()}
-                              </span>
-                              <span
-                                className="block text-xs truncate mt-0.5"
-                                style={{ color: 'var(--text-secondary)' }}
-                              >
-                                {path}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                        <p className="text-xs mt-4" style={{ color: 'var(--text-secondary)' }}>
-                          Or select a file from the sidebar
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex items-center justify-center gap-2 mb-2">
-                          <ChevronLeft size={20} style={{ color: 'var(--text-secondary)' }} />
-                          <h2 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>
-                            Select a file from the sidebar
-                          </h2>
-                        </div>
-                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                          Browse and open markdown files to view them with beautiful themes
-                        </p>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Diff tab content */}
-              {activeTab?.type === 'diff' && activeTab.diffData && workspacePath && (
-                <DiffPane
+              {/* Git graph in main pane (non-split mode) */}
+              {mainPaneView === 'git-graph' && workspacePath && (
+                <GitGraph
                   repoPath={workspacePath}
-                  base={activeTab.diffData.base}
-                  head={activeTab.diffData.head}
-                  file={activeTab.diffData.file}
+                  onCommitSelect={(hash) => console.log('Selected commit:', hash)}
+                  onFileClick={(commitHash, filePath) => {
+                    openDiffTab(commitHash, filePath);
+                  }}
                   fontSize={appState.fontSize}
                 />
               )}
 
-              {/* File and Conversation tab content */}
-              {(activeTab?.type === 'file' || activeTab?.type === 'conversation') && !loading && !error && currentFile && (content || isCurrentFileBinary) && (
+              {/* Working tree in main pane (non-split mode) */}
+              {mainPaneView === 'working-tree' && workspacePath && (
+                isGitRepo ? (
+                  <WorkingTree
+                    repoPath={workspacePath}
+                    fontSize={appState.fontSize}
+                    onFileSelect={(path) => {
+                      setMainPaneView('file');
+                      handleFileSelect(path);
+                    }}
+                    onCommitSuccess={handleCommitSuccess}
+                  />
+                ) : (
+                  <MultiRepoView
+                    projectsDir={workspacePath}
+                    fontSize={appState.fontSize}
+                    onFileSelect={(path) => {
+                      setMainPaneView('file');
+                      handleFileSelect(path);
+                    }}
+                  />
+                )
+              )}
+
+              {/* File viewer content (default main pane view) */}
+              {mainPaneView === 'file' && (
                 <>
-                  {isMarkdownFile && frontmatter && <MetadataBar frontmatter={frontmatter} />}
-                  <div className="flex-1 overflow-auto" ref={leftScrollContainerRef}>
-                    <ViewerContainer
-                      filePath={currentFile}
-                      content={markdownContent}
-                      isStreaming={isStreaming}
-                      themeClassName={themeClass}
-                      fontSize={appState.fontSize}
+                  {(activeTab?.type === 'file' || activeTab?.type === 'conversation') && loading && (
+                    <div className="flex items-center justify-center h-full">
+                      <p style={{ color: 'var(--text-secondary)' }}>Loading...</p>
+                    </div>
+                  )}
+
+                  {(activeTab?.type === 'file' || activeTab?.type === 'conversation') && error && (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center">
+                        <p className="text-red-500 mb-2">{error}</p>
+                        <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                          Make sure the backend is running on port 8130
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {(!activeTab || activeTab?.type === 'file' || activeTab?.type === 'conversation') && !loading && !error && !currentFile && (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="text-center max-w-md">
+                        {recentFilesForEmptyState.length > 0 ? (
+                          <>
+                            <div className="flex items-center justify-center gap-2 mb-4">
+                              <Clock size={18} style={{ color: 'var(--text-secondary)' }} />
+                              <h2 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>
+                                Recent Files
+                              </h2>
+                            </div>
+                            <div className="space-y-1">
+                              {recentFilesForEmptyState.map((path) => (
+                                <button
+                                  key={path}
+                                  type="button"
+                                  onClick={() => handleFileSelect(path)}
+                                  className="w-full text-left px-3 py-2 text-sm transition-colors hover:opacity-80"
+                                  style={{
+                                    backgroundColor: 'var(--bg-secondary)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: 'var(--radius)',
+                                    color: 'var(--text-primary)',
+                                  }}
+                                >
+                                  <span style={{ color: 'var(--accent)' }}>
+                                    {path.split('/').pop()}
+                                  </span>
+                                  <span
+                                    className="block text-xs truncate mt-0.5"
+                                    style={{ color: 'var(--text-secondary)' }}
+                                  >
+                                    {path}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                            <p className="text-xs mt-4" style={{ color: 'var(--text-secondary)' }}>
+                              Or select a file from the sidebar
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-center justify-center gap-2 mb-2">
+                              <ChevronLeft size={20} style={{ color: 'var(--text-secondary)' }} />
+                              <h2 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>
+                                Select a file from the sidebar
+                              </h2>
+                            </div>
+                            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                              Browse and open markdown files to view them with beautiful themes
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Diff tab content */}
+                  {activeTab?.type === 'diff' && activeTab.diffData && workspacePath && (
+                    <DiffPane
                       repoPath={workspacePath}
-                      onSendToChat={handleSendToChat}
-                      scrollContainerRef={leftScrollContainerRef}
+                      base={activeTab.diffData.base}
+                      head={activeTab.diffData.head}
+                      file={activeTab.diffData.file}
+                      fontSize={appState.fontSize}
                     />
-                  </div>
+                  )}
+
+                  {/* File and Conversation tab content */}
+                  {(activeTab?.type === 'file' || activeTab?.type === 'conversation') && !loading && !error && currentFile && (content || isCurrentFileBinary) && (
+                    <>
+                      {isMarkdownFile && frontmatter && <MetadataBar frontmatter={frontmatter} />}
+                      <div className="flex-1 overflow-auto" ref={leftScrollContainerRef}>
+                        <ViewerContainer
+                          filePath={currentFile}
+                          content={markdownContent}
+                          isStreaming={isStreaming}
+                          themeClassName={themeClass}
+                          fontSize={appState.fontSize}
+                          repoPath={workspacePath}
+                          onSendToChat={handleSendToChat}
+                          scrollContainerRef={leftScrollContainerRef}
+                        />
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -1499,6 +1457,13 @@ export function Files() {
           onClose={() => { setShowArchiveModal(false); setArchiveFilePath(null); }}
         />
       )}
+
+      {/* Floating chat bubble */}
+      <ChatBubble
+        isGenerating={isGenerating}
+        isChatOpen={chatPanelOpen}
+        onToggleChat={handleChatPanelToggle}
+      />
     </>
   );
 }

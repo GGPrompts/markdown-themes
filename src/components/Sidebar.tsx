@@ -7,6 +7,7 @@ import type { FavoriteItem } from '../context/AppStoreContext';
 import { FileContextMenu } from './FileContextMenu';
 import { ProjectSelector } from './ProjectSelector';
 import { fetchFileContent, fetchGitStatus, type GitStatusMap, type GitStatus } from '../lib/api';
+import { themes, type ThemeId } from '../themes';
 
 /**
  * Check if a path looks like a "projects directory" (contains repos, not a repo itself).
@@ -65,6 +66,10 @@ interface SidebarProps {
   onFolderSelect?: (path: string) => void;
   /** Callback when the workspace is closed */
   onCloseWorkspace?: () => void;
+  /** Current theme ID for the theme selector */
+  currentTheme?: ThemeId;
+  /** Callback when theme changes */
+  onThemeChange?: (theme: ThemeId) => void;
 }
 
 interface TreeItemProps {
@@ -599,18 +604,21 @@ function formatRelativeTime(isoDate: string): string {
 const MIN_SIDEBAR_WIDTH = 150;
 const MAX_SIDEBAR_WIDTH = 400;
 
-export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSplit, width = 250, onWidthChange, onWidthChangeEnd, onFileSelect, onFileDoubleClick, onRightFileSelect, favorites, toggleFavorite, isFavorite, searchInputRef, changedFiles, gitStatusVersion, onSendToChat, onArchiveFile, onResumeInChat, recentFolders, onFolderSelect, onCloseWorkspace }: SidebarProps) {
+export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSplit, width = 250, onWidthChange, onWidthChangeEnd, onFileSelect, onFileDoubleClick, onRightFileSelect, favorites, toggleFavorite, isFavorite, searchInputRef, changedFiles, gitStatusVersion, onSendToChat, onArchiveFile, onResumeInChat, recentFolders, onFolderSelect, onCloseWorkspace, currentTheme, onThemeChange }: SidebarProps) {
   const workspaceName = workspacePath?.split('/').pop() ?? workspacePath?.split('\\').pop() ?? 'Workspace';
 
   // Get lazy loading state from workspace context
   const { loadedPaths, loadingPaths, loadChildren } = useWorkspaceContext();
 
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [favoritesExpanded, setFavoritesExpanded] = useState(true);
   const [focusedPath, setFocusedPath] = useState<string | null>(null);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
   const filterMenuRef = useRef<HTMLDivElement>(null);
+  const themeButtonRef = useRef<HTMLButtonElement>(null);
+  const themeSelectorRef = useRef<HTMLDivElement>(null);
   const treeContainerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
   const currentWidthRef = useRef(width);
@@ -856,11 +864,25 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
       ) {
         setFilterMenuOpen(false);
       }
+      // Close theme menu when clicking outside
+      if (
+        themeMenuOpen &&
+        themeButtonRef.current &&
+        themeSelectorRef.current &&
+        !themeButtonRef.current.contains(event.target as Node) &&
+        !themeSelectorRef.current.contains(event.target as Node)
+      ) {
+        // Also check the portal dropdown (ThemeSelector uses createPortal to document.body)
+        const portalDropdown = document.getElementById('theme-dropdown-portal');
+        if (!portalDropdown || !portalDropdown.contains(event.target as Node)) {
+          setThemeMenuOpen(false);
+        }
+      }
     }
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [filterMenuOpen]);
+  }, [filterMenuOpen, themeMenuOpen]);
 
   const handleFilterSelect = (filterId: FilterId | null) => {
     if (filterId === null) {
@@ -1057,6 +1079,82 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
           </span>
         )}
         <div className="flex items-center gap-1">
+          {/* Theme selector button */}
+          {currentTheme && onThemeChange && (
+            <div className="relative">
+              <button
+                ref={themeButtonRef}
+                onClick={() => setThemeMenuOpen(!themeMenuOpen)}
+                className="w-6 h-6 flex items-center justify-center rounded transition-colors"
+                style={{
+                  color: themeMenuOpen ? 'var(--accent)' : 'var(--text-secondary)',
+                  backgroundColor: themeMenuOpen ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  if (!themeMenuOpen) {
+                    e.currentTarget.style.color = 'var(--text-primary)';
+                    e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!themeMenuOpen) {
+                    e.currentTarget.style.color = 'var(--text-secondary)';
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
+                title="Change theme"
+              >
+                <PaletteIcon />
+              </button>
+              {themeMenuOpen && (
+                <div
+                  ref={themeSelectorRef}
+                  className="absolute top-full left-0 mt-1 py-1 rounded-md z-[100] max-h-[320px] overflow-y-auto"
+                  style={{
+                    backgroundColor: 'var(--bg-secondary)',
+                    border: '1px solid var(--border)',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -4px rgba(0, 0, 0, 0.15)',
+                    minWidth: '180px',
+                  }}
+                >
+                  {themes.map((theme) => (
+                    <button
+                      key={theme.id}
+                      onClick={() => {
+                        onThemeChange(theme.id);
+                        setThemeMenuOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-sm flex items-center justify-between transition-all"
+                      style={{
+                        backgroundColor: theme.bg,
+                        opacity: theme.id === currentTheme ? 1 : 0.85,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.opacity = '1';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.opacity = theme.id === currentTheme ? '1' : '0.85';
+                      }}
+                    >
+                      <span
+                        style={{
+                          color: theme.accent,
+                          fontFamily: theme.font,
+                          fontWeight: 500,
+                        }}
+                      >
+                        {theme.name}
+                      </span>
+                      {theme.id === currentTheme && (
+                        <CheckIcon />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Expand all button */}
           <button
             onClick={expandAll}
@@ -1533,6 +1631,18 @@ function StarFilledIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2">
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
+
+function PaletteIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="13.5" cy="6.5" r="0.5" fill="currentColor" />
+      <circle cx="17.5" cy="10.5" r="0.5" fill="currentColor" />
+      <circle cx="8.5" cy="7.5" r="0.5" fill="currentColor" />
+      <circle cx="6.5" cy="12.5" r="0.5" fill="currentColor" />
+      <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" />
     </svg>
   );
 }

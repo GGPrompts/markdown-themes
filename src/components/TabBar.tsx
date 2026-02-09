@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileDiff, Users } from 'lucide-react';
+import { FileDiff, Users, GitBranch, GitPullRequestDraft, Keyboard, Crosshair, Columns } from 'lucide-react';
 import type { Tab } from '../hooks/useTabManager';
 import { getFileIconInfo } from '../utils/fileIcons';
 
@@ -15,6 +15,19 @@ interface TabBarProps {
   /** Path of a file currently being streamed (shows animated dot on matching tab) */
   streamingFilePath?: string | null;
   onTabContextMenu?: (e: React.MouseEvent, tab: Tab) => void;
+  isGitGraph?: boolean;
+  isWorkingTree?: boolean;
+  onGitGraphToggle?: () => void;
+  onWorkingTreeToggle?: () => void;
+  onHotkeysClick?: () => void;
+  /** Follow AI Edits mode */
+  isFollowMode?: boolean;
+  onFollowModeToggle?: () => void;
+  /** Active subagent count (shown when follow mode on + count > 0) */
+  activeSubagentCount?: number;
+  /** Split view state */
+  isSplit?: boolean;
+  onSplitToggle?: () => void;
 }
 
 interface TabItemProps {
@@ -85,7 +98,7 @@ function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, onUnpin
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      className="group flex items-center gap-1 px-3 py-1.5 text-sm cursor-pointer select-none min-w-0 max-w-[180px] transition-colors"
+      className="group flex items-center gap-1 px-3 py-2 text-sm cursor-pointer select-none min-w-0 max-w-[180px] transition-colors"
       style={{
         backgroundColor: isActive
           ? 'var(--bg-primary)'
@@ -151,8 +164,10 @@ function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, onUnpin
   );
 }
 
-export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, onTabUnpin, pane = 'left', streamingFilePath, onTabContextMenu }: TabBarProps) {
-  if (tabs.length === 0) {
+export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, onTabUnpin, pane = 'left', streamingFilePath, onTabContextMenu, isGitGraph, isWorkingTree, onGitGraphToggle, onWorkingTreeToggle, onHotkeysClick, isFollowMode, onFollowModeToggle, activeSubagentCount, isSplit, onSplitToggle }: TabBarProps) {
+  const hasActions = !!(onGitGraphToggle || onWorkingTreeToggle || onHotkeysClick || onFollowModeToggle || onSplitToggle);
+
+  if (tabs.length === 0 && !hasActions) {
     return null;
   }
 
@@ -162,7 +177,7 @@ export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, o
       style={{
         backgroundColor: 'var(--bg-secondary)',
         borderBottom: '1px solid var(--border)',
-        minHeight: '36px',
+        minHeight: '40px',
       }}
     >
       {tabs.map((tab) => (
@@ -179,6 +194,150 @@ export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, o
           pane={pane}
         />
       ))}
+      {hasActions && (
+        <div className="flex items-center gap-1 px-2 ml-auto flex-shrink-0 py-1">
+          {/* Follow AI Edits toggle */}
+          {onFollowModeToggle && (
+            <button
+              onClick={onFollowModeToggle}
+              className="w-7 h-7 flex items-center justify-center rounded transition-colors"
+              style={{
+                backgroundColor: isFollowMode ? 'var(--accent)' : 'transparent',
+                color: isFollowMode ? 'var(--bg-primary)' : 'var(--text-secondary)',
+              }}
+              onMouseEnter={(e) => {
+                if (!isFollowMode) {
+                  e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isFollowMode) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                }
+              }}
+              title={isFollowMode ? 'Stop following AI edits' : 'Follow AI edits (auto-open streaming files)'}
+            >
+              <Crosshair size={16} />
+            </button>
+          )}
+
+          {/* Active subagents indicator */}
+          {isFollowMode && (activeSubagentCount ?? 0) > 0 && (
+            <div
+              className="flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded"
+              style={{
+                backgroundColor: 'rgba(34, 197, 94, 0.15)',
+                color: '#22c55e',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+              }}
+              title={`${activeSubagentCount} active subagent${(activeSubagentCount ?? 0) > 1 ? 's' : ''}`}
+            >
+              <Users size={12} />
+              <span>{activeSubagentCount}</span>
+            </div>
+          )}
+
+          {onGitGraphToggle && (
+            <button
+              onClick={onGitGraphToggle}
+              className="w-7 h-7 flex items-center justify-center rounded transition-colors"
+              style={{
+                backgroundColor: isGitGraph ? 'var(--accent)' : 'transparent',
+                color: isGitGraph ? 'var(--bg-primary)' : 'var(--text-secondary)',
+              }}
+              onMouseEnter={(e) => {
+                if (!isGitGraph) {
+                  e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isGitGraph) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                }
+              }}
+              title={isGitGraph ? 'Close git graph (Ctrl+G)' : 'Show git graph (Ctrl+G)'}
+            >
+              <GitBranch size={16} />
+            </button>
+          )}
+          {onWorkingTreeToggle && (
+            <button
+              onClick={onWorkingTreeToggle}
+              className="w-7 h-7 flex items-center justify-center rounded transition-colors"
+              style={{
+                backgroundColor: isWorkingTree ? 'var(--accent)' : 'transparent',
+                color: isWorkingTree ? 'var(--bg-primary)' : 'var(--text-secondary)',
+              }}
+              onMouseEnter={(e) => {
+                if (!isWorkingTree) {
+                  e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isWorkingTree) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                }
+              }}
+              title={isWorkingTree ? 'Close working tree (Ctrl+Shift+G)' : 'Show working tree (Ctrl+Shift+G)'}
+            >
+              <GitPullRequestDraft size={16} />
+            </button>
+          )}
+          {onHotkeysClick && (
+            <button
+              onClick={onHotkeysClick}
+              className="w-7 h-7 flex items-center justify-center rounded transition-colors"
+              style={{
+                color: 'var(--text-secondary)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = 'var(--text-secondary)';
+              }}
+              title="Keyboard shortcuts (?)"
+            >
+              <Keyboard size={16} />
+            </button>
+          )}
+
+          {/* Split View toggle - furthest right */}
+          {onSplitToggle && (
+            <button
+              onClick={onSplitToggle}
+              className="w-7 h-7 flex items-center justify-center rounded transition-colors"
+              style={{
+                backgroundColor: isSplit ? 'var(--accent)' : 'transparent',
+                color: isSplit ? 'var(--bg-primary)' : 'var(--text-secondary)',
+              }}
+              onMouseEnter={(e) => {
+                if (!isSplit) {
+                  e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isSplit) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                }
+              }}
+              title={isSplit ? 'Close split view (Ctrl+\\)' : 'Open split view (Ctrl+\\)'}
+            >
+              <Columns size={16} />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader2, Copy, Check, FileText, FilePlus, FileMinus, FileEdit, Terminal } from 'lucide-react';
-import { getAuthToken } from '../../lib/api';
+import { Loader2, Copy, Check, FileText, FilePlus, FileMinus, FileEdit, Clipboard } from 'lucide-react';
 
 const API_BASE = 'http://localhost:8130';
 
@@ -112,23 +111,16 @@ export function CommitDetails({ hash, repoPath, onFileClick }: CommitDetailsProp
     }
   };
 
+  const [gitlogueCopied, setGitlogueCopied] = useState(false);
+
   const handleGitlogue = async () => {
     if (!data) return;
     try {
-      const token = await getAuthToken();
-      await fetch(`${API_BASE}/api/spawn`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Auth-Token': token,
-        },
-        body: JSON.stringify({
-          name: `Gitlogue: ${data.shortHash}`,
-          command: `cd "${repoPath}" && gitlogue --commit ${data.hash}`,
-        }),
-      });
+      await navigator.clipboard.writeText(`cd "${repoPath}" && gitlogue --commit ${data.hash}`);
+      setGitlogueCopied(true);
+      setTimeout(() => setGitlogueCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to spawn gitlogue:', err);
+      console.error('Failed to copy gitlogue command:', err);
     }
   };
 
@@ -277,8 +269,17 @@ export function CommitDetails({ hash, repoPath, onFileClick }: CommitDetailsProp
             color: 'var(--text-secondary)',
           }}
         >
-          <Terminal className="w-3.5 h-3.5" />
-          Gitlogue
+          {gitlogueCopied ? (
+            <>
+              <Check className="w-3.5 h-3.5" />
+              Copied!
+            </>
+          ) : (
+            <>
+              <Clipboard className="w-3.5 h-3.5" />
+              Gitlogue
+            </>
+          )}
         </button>
       </div>
     </div>

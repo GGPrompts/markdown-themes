@@ -52,12 +52,17 @@ html { scrollbar-color: ${colors.thumb} ${colors.track}; scrollbar-width: thin; 
 
     const baseTag = `<base href="${baseHref}">`;
     const styleTag = `<style data-scrollbar>${scrollbarCss}</style>`;
+    // Intercept fragment-only link clicks so they scroll in-page
+    // instead of navigating away from the srcdoc (which the <base> tag would cause)
+    const fragmentScript = `<script>document.addEventListener('click',function(e){var a=e.target.closest('a[href^="#"]');if(a){e.preventDefault();var id=a.getAttribute('href').slice(1);if(!id){window.scrollTo({top:0,behavior:'smooth'});return;}var el=document.getElementById(id)||document.querySelector('[name="'+id+'"]');if(el)el.scrollIntoView({behavior:'smooth'});}});</script>`;
+
+    const injected = baseTag + styleTag + fragmentScript;
 
     // Inject into <head> if present, otherwise prepend
     if (/<head[\s>]/i.test(content)) {
-      return content.replace(/<head([\s>])/i, `<head$1${baseTag}${styleTag}`);
+      return content.replace(/<head([\s>])/i, `<head$1${injected}`);
     }
-    return `${baseTag}${styleTag}${content}`;
+    return injected + content;
   }, [content, baseHref]);
 
   const handleOpenInBrowser = useCallback(() => {

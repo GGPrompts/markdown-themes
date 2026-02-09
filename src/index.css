@@ -559,6 +559,84 @@ body {
   border-color: var(--border) !important;
 }
 
+/* Mermaid fullscreen overlay — rendered via React portal to document.body,
+   escaping ancestor overflow-hidden and theme z-index battles */
+.mermaid-fullscreen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: color-mix(in srgb, var(--bg-primary) 92%, transparent);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  touch-action: none;
+}
+
+.mermaid-fullscreen-overlay:active {
+  cursor: grabbing;
+}
+
+.mermaid-fs-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10;
+  padding: 0.5rem;
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.mermaid-fs-close:hover {
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+
+.mermaid-fs-controls {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.25rem;
+}
+
+.mermaid-fs-controls button {
+  padding: 0.375rem;
+  border-radius: calc(var(--radius) - 2px);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  background: transparent;
+  border: none;
+}
+
+.mermaid-fs-controls button:hover {
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+
+.mermaid-fs-content {
+  will-change: transform;
+  transition: none;
+  pointer-events: none;
+}
+
+.mermaid-fs-content svg {
+  max-width: 90vw;
+  max-height: 90vh;
+}
+
 /* Chat message prose - smaller, tighter styles for chat context */
 .chat-message-prose .prose {
   font-size: 0.875rem;
@@ -1034,4 +1112,74 @@ body {
 .git-graph-row-selected {
   background: color-mix(in srgb, var(--accent) 15%, var(--bg-primary));
   border-left: 2px solid var(--accent);
+}
+
+/* ── Conversation Viewer ───────────────────────────────────── */
+
+/* User prompt block — accent-tinted landmark */
+.conversation-viewer .user-prompt {
+  position: relative;
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-secondary));
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 1rem 1rem 1rem 2.5rem;
+  margin: 1.5rem 0;
+}
+
+/* Person icon via inline SVG data-URI */
+.conversation-viewer .user-prompt::before {
+  content: '';
+  position: absolute;
+  left: 0.7rem;
+  top: 1.15rem;
+  width: 1rem;
+  height: 1rem;
+  opacity: 0.6;
+  background-color: var(--accent);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'%3E%3Cpath d='M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z'/%3E%3C/svg%3E");
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+/* Tool-use collapsible block */
+.conversation-viewer .tool-use-block {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin: 0.5rem 0;
+  font-size: 0.875rem;
+}
+
+.conversation-viewer .tool-use-block > summary {
+  cursor: pointer;
+  padding: 0.4rem 0.75rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* Custom disclosure triangle */
+.conversation-viewer .tool-use-block > summary::before {
+  content: '▸';
+  font-size: 0.7rem;
+  transition: transform 0.15s ease;
+}
+
+.conversation-viewer .tool-use-block[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+/* Remove default marker in all browsers */
+.conversation-viewer .tool-use-block > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Content area when expanded */
+.conversation-viewer .tool-use-block > :not(summary) {
+  padding: 0 0.75rem;
 }

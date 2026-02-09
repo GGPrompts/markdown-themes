@@ -7,6 +7,7 @@ import { math } from '@streamdown/math';
 import 'katex/dist/katex.min.css';
 import { useGitDiff } from '../hooks/useGitDiff';
 import { mapLinesToBlocks } from '../utils/markdownDiff';
+import { MermaidFullscreen } from './MermaidFullscreen';
 
 interface MarkdownViewerProps {
   content: string;
@@ -479,10 +480,11 @@ export const MarkdownViewer = forwardRef<MarkdownViewerHandle, MarkdownViewerPro
         parseIncompleteMarkdown={true}
         className="streamdown-content"
         plugins={{ code: codePlugin, mermaid: mermaidPlugin, math }}
-        controls={{ mermaid: { download: true, copy: true, fullscreen: true } }}
+        controls={{ mermaid: { download: true, copy: true, fullscreen: false } }}
       >
         {processedContent}
       </Streamdown>
+      <MermaidFullscreen containerRef={containerRef} />
     </article>
   );
 });

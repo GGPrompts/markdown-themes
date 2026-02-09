@@ -865,27 +865,14 @@ export function Files() {
 
   // Handle hotkeys button - open HOTKEYS.md in right pane
   const handleHotkeysClick = useCallback(async () => {
-    if (!workspacePath) return;
-    const hotkeysPath = workspacePath + '/HOTKEYS.md';
-
-    // Verify file exists before opening (avoids confusing error state)
-    try {
-      const response = await fetch(`${API_BASE}/api/files/content?path=${encodeURIComponent(hotkeysPath)}`);
-      if (!response.ok) {
-        console.warn(`HOTKEYS.md not found at ${hotkeysPath}`);
-        return;
-      }
-    } catch (err) {
-      console.warn('Failed to check HOTKEYS.md existence:', err);
-      return;
-    }
+    const hotkeysPath = '/home/marci/projects/markdown-themes/HOTKEYS.md';
 
     if (!isSplit) {
       openSplit();
     }
     setRightPaneFile(hotkeysPath);
     openRightTab(hotkeysPath, false); // Open as pinned tab
-  }, [workspacePath, isSplit, openSplit, setRightPaneFile, openRightTab]);
+  }, [isSplit, openSplit, setRightPaneFile, openRightTab]);
 
   // Handle archive from sidebar context menu or other triggers
   const handleArchiveFile = useCallback((path: string) => {

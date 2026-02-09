@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useWorkspaceContext, type FileTreeNode } from '../context/WorkspaceContext';
 import { useFileFilter, type ScopedFileTreeNode } from '../hooks/useFileFilter';
 import { FILTERS, type FilterId } from '../lib/filters';
@@ -612,13 +613,13 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
 
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
+  const [themeDropdownPos, setThemeDropdownPos] = useState({ top: 0, left: 0 });
   const [searchQuery, setSearchQuery] = useState('');
   const [favoritesExpanded, setFavoritesExpanded] = useState(true);
   const [focusedPath, setFocusedPath] = useState<string | null>(null);
   const filterButtonRef = useRef<HTMLButtonElement>(null);
   const filterMenuRef = useRef<HTMLDivElement>(null);
   const themeButtonRef = useRef<HTMLButtonElement>(null);
-  const themeSelectorRef = useRef<HTMLDivElement>(null);
   const treeContainerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
   const currentWidthRef = useRef(width);
@@ -865,16 +866,12 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
         setFilterMenuOpen(false);
       }
       // Close theme menu when clicking outside
-      if (
-        themeMenuOpen &&
-        themeButtonRef.current &&
-        themeSelectorRef.current &&
-        !themeButtonRef.current.contains(event.target as Node) &&
-        !themeSelectorRef.current.contains(event.target as Node)
-      ) {
-        // Also check the portal dropdown (ThemeSelector uses createPortal to document.body)
-        const portalDropdown = document.getElementById('theme-dropdown-portal');
-        if (!portalDropdown || !portalDropdown.contains(event.target as Node)) {
+      if (themeMenuOpen && themeButtonRef.current) {
+        const portalDropdown = document.getElementById('theme-dropdown-sidebar');
+        if (
+          !themeButtonRef.current.contains(event.target as Node) &&
+          (!portalDropdown || !portalDropdown.contains(event.target as Node))
+        ) {
           setThemeMenuOpen(false);
         }
       }
@@ -1084,7 +1081,13 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
             <div className="relative">
               <button
                 ref={themeButtonRef}
-                onClick={() => setThemeMenuOpen(!themeMenuOpen)}
+                onClick={() => {
+                  if (!themeMenuOpen && themeButtonRef.current) {
+                    const rect = themeButtonRef.current.getBoundingClientRect();
+                    setThemeDropdownPos({ top: rect.bottom + 4, left: rect.left });
+                  }
+                  setThemeMenuOpen(!themeMenuOpen);
+                }}
                 className="w-6 h-6 flex items-center justify-center rounded transition-colors"
                 style={{
                   color: themeMenuOpen ? 'var(--accent)' : 'var(--text-secondary)',
@@ -1106,14 +1109,16 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
               >
                 <PaletteIcon />
               </button>
-              {themeMenuOpen && (
+              {themeMenuOpen && createPortal(
                 <div
-                  ref={themeSelectorRef}
-                  className="absolute top-full left-0 mt-1 py-1 rounded-md z-[100] max-h-[320px] overflow-y-auto"
+                  id="theme-dropdown-sidebar"
+                  className="fixed rounded-md max-h-[320px] overflow-y-auto overflow-x-hidden"
                   style={{
-                    backgroundColor: 'var(--bg-secondary)',
-                    border: '1px solid var(--border)',
-                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -4px rgba(0, 0, 0, 0.15)',
+                    top: themeDropdownPos.top,
+                    left: themeDropdownPos.left,
+                    zIndex: 99999,
+                    border: '1px solid rgba(128, 128, 128, 0.3)',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2)',
                     minWidth: '180px',
                   }}
                 >
@@ -1124,7 +1129,7 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
                         onThemeChange(theme.id);
                         setThemeMenuOpen(false);
                       }}
-                      className="w-full text-left px-3 py-1.5 text-sm flex items-center justify-between transition-all"
+                      className="w-full text-left px-3 py-1.5 flex items-center justify-between transition-all"
                       style={{
                         backgroundColor: theme.bg,
                         opacity: theme.id === currentTheme ? 1 : 0.85,
@@ -1146,11 +1151,14 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
                         {theme.name}
                       </span>
                       {theme.id === currentTheme && (
-                        <CheckIcon />
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={theme.accent} strokeWidth="2.5">
+                          <path d="M20 6L9 17l-5-5" />
+                        </svg>
                       )}
                     </button>
                   ))}
-                </div>
+                </div>,
+                document.body
               )}
             </div>
           )}

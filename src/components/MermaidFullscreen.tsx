@@ -225,10 +225,15 @@ export function MermaidFullscreen({ containerRef }: MermaidFullscreenProps) {
 
   if (!svgHtml) return null;
 
+  // Read theme class from the DOM so the portal inherits theme CSS variables
+  // (portal escapes the theme's DOM scope, so variables like --bg-primary
+  // would otherwise fall back to :root defaults)
+  const themeClass = containerRef.current?.closest('[class*="theme-"]')?.className.match(/theme-[\w-]+/)?.[0] || '';
+
   return createPortal(
     <div
       ref={overlayRef}
-      className="mermaid-fullscreen-overlay"
+      className={`mermaid-fullscreen-overlay ${themeClass}`}
     >
       {/* Close button */}
       <button

@@ -570,8 +570,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: 99999;
-  background: color-mix(in srgb, var(--bg-primary) 92%, transparent);
-  backdrop-filter: blur(8px);
+  background: color-mix(in srgb, var(--bg-primary) 96%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -937,6 +936,16 @@ body {
 
 .metadata-tag:hover {
   background-color: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* ========================================
+   HTML VIEWER STYLES
+   ======================================== */
+
+/* Prevent theme texture overlays (::before/::after with position:fixed, z-index 999-1000)
+   from showing through the HTML preview iframe. Elevate the content container above overlays. */
+[class*="theme-"] > div:has(.html-viewer iframe) {
+  z-index: 1001;
 }
 
 /* ========================================

@@ -105,6 +105,8 @@ export function AudioViewer({ filePath }: AudioViewerProps) {
     if (audioRef.current) {
       setDuration(audioRef.current.duration);
       setError(null);
+      // Sync playback speed to the new audio element (preserves speed across file switches)
+      audioRef.current.playbackRate = playbackSpeed;
     }
   };
 

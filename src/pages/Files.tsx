@@ -1452,7 +1452,6 @@ export function Files() {
         x={tabContextMenu.x}
         y={tabContextMenu.y}
         filePath={tabContextMenu.filePath}
-        fileName={tabContextMenu.fileName}
         isDirectory={false}
         isFavorite={isFavorite(tabContextMenu.filePath)}
         onClose={closeTabContextMenu}

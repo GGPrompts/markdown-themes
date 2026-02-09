@@ -6,7 +6,6 @@ interface FileContextMenuProps {
   x: number;
   y: number;
   filePath: string;
-  fileName: string;
   isDirectory: boolean;
   isFavorite: boolean;
   onClose: () => void;
@@ -39,7 +38,6 @@ export function FileContextMenu({
   x,
   y,
   filePath,
-  fileName,
   isDirectory,
   isFavorite,
   onClose,

@@ -1357,7 +1357,6 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
         x={contextMenu.x}
         y={contextMenu.y}
         filePath={contextMenu.filePath}
-        fileName={contextMenu.fileName}
         isDirectory={contextMenu.isDirectory}
         isFavorite={isFavorite(contextMenu.filePath)}
         onClose={closeContextMenu}

@@ -1,17 +1,12 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Home, Folder, Bot } from 'lucide-react';
 import { ThemeSelector } from './ThemeSelector';
-import { ProjectSelector } from './ProjectSelector';
 import { useAIChatContext } from '../context/AIChatContext';
 import type { ThemeId } from '../themes';
 
 interface NavHeaderProps {
   currentTheme: ThemeId;
   onThemeChange: (theme: ThemeId) => void;
-  workspacePath: string | null;
-  recentFolders: string[];
-  onFolderSelect: (path: string) => void;
-  onCloseWorkspace: () => void;
 }
 
 interface NavItem {
@@ -29,10 +24,6 @@ const navItems: NavItem[] = [
 export function NavHeader({
   currentTheme,
   onThemeChange,
-  workspacePath,
-  recentFolders,
-  onFolderSelect,
-  onCloseWorkspace,
 }: NavHeaderProps) {
   const { isGenerating } = useAIChatContext();
   const navigate = useNavigate();
@@ -100,12 +91,6 @@ export function NavHeader({
             </span>
           </button>
         )}
-        <ProjectSelector
-          currentPath={workspacePath}
-          recentFolders={recentFolders}
-          onFolderSelect={onFolderSelect}
-          onClose={onCloseWorkspace}
-        />
         <ThemeSelector currentTheme={currentTheme} onThemeChange={onThemeChange} />
       </div>
     </header>

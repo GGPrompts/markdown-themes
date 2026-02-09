@@ -8,6 +8,7 @@ interface RightPaneTabBarProps {
   onTabSelect: (id: string) => void;
   onTabClose: (id: string) => void;
   onTabPin: (id: string) => void;
+  onTabUnpin?: (id: string) => void;
   onTabContextMenu?: (e: React.MouseEvent, tab: RightPaneTab) => void;
 }
 
@@ -17,10 +18,11 @@ interface TabItemProps {
   onSelect: () => void;
   onClose: () => void;
   onPin: () => void;
+  onUnpin?: () => void;
   onContextMenu?: (e: React.MouseEvent) => void;
 }
 
-function TabItem({ tab, isActive, onSelect, onClose, onPin, onContextMenu }: TabItemProps) {
+function TabItem({ tab, isActive, onSelect, onClose, onPin, onUnpin, onContextMenu }: TabItemProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -40,6 +42,8 @@ function TabItem({ tab, isActive, onSelect, onClose, onPin, onContextMenu }: Tab
   const handleDoubleClick = () => {
     if (tab.isPreview) {
       onPin();
+    } else if (tab.isPinned && onUnpin) {
+      onUnpin();
     }
   };
 
@@ -110,7 +114,7 @@ function TabItem({ tab, isActive, onSelect, onClose, onPin, onContextMenu }: Tab
   );
 }
 
-export function RightPaneTabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, onTabContextMenu }: RightPaneTabBarProps) {
+export function RightPaneTabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, onTabUnpin, onTabContextMenu }: RightPaneTabBarProps) {
   if (tabs.length === 0) {
     return null;
   }
@@ -127,6 +131,7 @@ export function RightPaneTabBar({ tabs, activeTabId, onTabSelect, onTabClose, on
           onSelect={() => onTabSelect(tab.id)}
           onClose={() => onTabClose(tab.id)}
           onPin={() => onTabPin(tab.id)}
+          onUnpin={onTabUnpin ? () => onTabUnpin(tab.id) : undefined}
           onContextMenu={onTabContextMenu ? (e) => onTabContextMenu(e, tab) : undefined}
         />
       ))}

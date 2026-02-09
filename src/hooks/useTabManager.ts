@@ -55,6 +55,7 @@ interface UseTabManagerResult {
   openConversationTab: (path: string, data: ConversationData) => void;
   closeConversationTab: (sessionId: string) => void;
   pinTab: (id: string) => void;
+  unpinTab: (id: string) => void;
   closeTab: (id: string) => void;
   closeTabsWithMetadata: (predicate: (metadata: TabMetadata | undefined) => boolean) => void;
   setActiveTab: (id: string) => void;
@@ -105,10 +106,10 @@ export function useTabManager(options: UseTabManagerOptions = {}): UseTabManager
     // Use ref to get current tabs without dependency
     const currentTabs = tabsRef.current;
 
-    // Check if file is already open in a pinned tab
-    const existingPinnedTab = currentTabs.find((t) => t.type === 'file' && t.path === path && t.isPinned);
-    if (existingPinnedTab) {
-      setActiveTabId(existingPinnedTab.id);
+    // Check if file is already open in a pinned or unpinned (non-preview) tab
+    const existingTab = currentTabs.find((t) => t.type === 'file' && t.path === path && !t.isPreview);
+    if (existingTab) {
+      setActiveTabId(existingTab.id);
       return;
     }
 
@@ -196,6 +197,14 @@ export function useTabManager(options: UseTabManagerOptions = {}): UseTabManager
     setTabs((prevTabs) =>
       prevTabs.map((tab) =>
         tab.id === id ? { ...tab, isPreview: false, isPinned: true } : tab
+      )
+    );
+  }, []);
+
+  const unpinTab = useCallback((id: string) => {
+    setTabs((prevTabs) =>
+      prevTabs.map((tab) =>
+        tab.id === id ? { ...tab, isPinned: false } : tab
       )
     );
   }, []);
@@ -349,6 +358,7 @@ export function useTabManager(options: UseTabManagerOptions = {}): UseTabManager
     openConversationTab,
     closeConversationTab,
     pinTab,
+    unpinTab,
     closeTab,
     closeTabsWithMetadata,
     setActiveTab,

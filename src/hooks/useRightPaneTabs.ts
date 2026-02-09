@@ -19,6 +19,7 @@ interface UseRightPaneTabsResult {
   activeTab: RightPaneTab | null;
   openTab: (path: string, options?: boolean | OpenTabOptions) => void;
   pinTab: (id: string) => void;
+  unpinTab: (id: string) => void;
   closeTab: (id: string) => void;
   setActiveTab: (id: string) => void;
   clearAllTabs: () => void;
@@ -67,10 +68,10 @@ export function useRightPaneTabs(options: UseRightPaneTabsOptions = {}): UseRigh
 
     const currentTabs = tabsRef.current;
 
-    // Check if file is already open in a pinned tab
-    const existingPinnedTab = currentTabs.find((t) => t.path === path && t.isPinned);
-    if (existingPinnedTab) {
-      setActiveTabId(existingPinnedTab.id);
+    // Check if file is already open in a pinned or unpinned (non-preview) tab
+    const existingTab = currentTabs.find((t) => t.path === path && !t.isPreview);
+    if (existingTab) {
+      setActiveTabId(existingTab.id);
       return;
     }
 
@@ -145,6 +146,14 @@ export function useRightPaneTabs(options: UseRightPaneTabsOptions = {}): UseRigh
     );
   }, []);
 
+  const unpinTab = useCallback((id: string) => {
+    setTabs((prevTabs) =>
+      prevTabs.map((tab) =>
+        tab.id === id ? { ...tab, isPinned: false } : tab
+      )
+    );
+  }, []);
+
   const closeTab = useCallback((id: string) => {
     setTabs((prevTabs) => {
       const tabIndex = prevTabs.findIndex((t) => t.id === id);
@@ -181,6 +190,7 @@ export function useRightPaneTabs(options: UseRightPaneTabsOptions = {}): UseRigh
     activeTab,
     openTab,
     pinTab,
+    unpinTab,
     closeTab,
     setActiveTab,
     clearAllTabs,

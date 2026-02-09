@@ -5,6 +5,7 @@ import { FILTERS, type FilterId } from '../lib/filters';
 import { getFileIconInfo } from '../utils/fileIcons';
 import type { FavoriteItem } from '../context/AppStoreContext';
 import { FileContextMenu } from './FileContextMenu';
+import { ProjectSelector } from './ProjectSelector';
 import { fetchFileContent, fetchGitStatus, type GitStatusMap, type GitStatus } from '../lib/api';
 
 /**
@@ -58,6 +59,12 @@ interface SidebarProps {
   onArchiveFile?: (path: string) => void;
   /** Callback when 'Resume in Chat' is requested for a conversation file */
   onResumeInChat?: (sessionId: string) => void;
+  /** Recent folders for the project selector dropdown */
+  recentFolders?: string[];
+  /** Callback when a folder is selected from the project selector */
+  onFolderSelect?: (path: string) => void;
+  /** Callback when the workspace is closed */
+  onCloseWorkspace?: () => void;
 }
 
 interface TreeItemProps {
@@ -592,7 +599,7 @@ function formatRelativeTime(isoDate: string): string {
 const MIN_SIDEBAR_WIDTH = 150;
 const MAX_SIDEBAR_WIDTH = 400;
 
-export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSplit, width = 250, onWidthChange, onWidthChangeEnd, onFileSelect, onFileDoubleClick, onRightFileSelect, favorites, toggleFavorite, isFavorite, searchInputRef, changedFiles, gitStatusVersion, onSendToChat, onArchiveFile, onResumeInChat }: SidebarProps) {
+export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSplit, width = 250, onWidthChange, onWidthChangeEnd, onFileSelect, onFileDoubleClick, onRightFileSelect, favorites, toggleFavorite, isFavorite, searchInputRef, changedFiles, gitStatusVersion, onSendToChat, onArchiveFile, onResumeInChat, recentFolders, onFolderSelect, onCloseWorkspace }: SidebarProps) {
   const workspaceName = workspacePath?.split('/').pop() ?? workspacePath?.split('\\').pop() ?? 'Workspace';
 
   // Get lazy loading state from workspace context
@@ -726,6 +733,7 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
     isDraggingRef.current = true;
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
+    document.body.classList.add('resizing');
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       if (!isDraggingRef.current) return;
@@ -740,6 +748,7 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
       isDraggingRef.current = false;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
+      document.body.classList.remove('resizing');
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
       // Persist the final width
@@ -1030,13 +1039,23 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
           backgroundColor: 'var(--bg-secondary)',
         }}
       >
-        <span
-          className="text-sm font-medium truncate"
-          style={{ color: 'var(--text-primary)' }}
-          title={workspacePath ?? ''}
-        >
-          {workspaceName}
-        </span>
+        {recentFolders && onFolderSelect && onCloseWorkspace ? (
+          <ProjectSelector
+            currentPath={workspacePath}
+            recentFolders={recentFolders}
+            onFolderSelect={onFolderSelect}
+            onClose={onCloseWorkspace}
+            compact
+          />
+        ) : (
+          <span
+            className="text-sm font-medium truncate"
+            style={{ color: 'var(--text-primary)' }}
+            title={workspacePath ?? ''}
+          >
+            {workspaceName}
+          </span>
+        )}
         <div className="flex items-center gap-1">
           {/* Expand all button */}
           <button

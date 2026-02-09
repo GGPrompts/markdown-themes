@@ -59,6 +59,7 @@ export function SplitView({
     isDraggingRef.current = true;
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
+    document.body.classList.add('resizing');
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       if (!isDraggingRef.current || !containerRef.current) return;
@@ -72,6 +73,7 @@ export function SplitView({
       isDraggingRef.current = false;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
+      document.body.classList.remove('resizing');
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };

@@ -17,6 +17,7 @@ interface FileContextMenuProps {
   isConversationFile?: boolean;
   onOpenInBrowser?: () => void;
   onPin?: () => void;
+  onUnpin?: () => void;
   onCloseTab?: () => void;
   onCloseOtherTabs?: () => void;
 }
@@ -50,6 +51,7 @@ export function FileContextMenu({
   isConversationFile,
   onOpenInBrowser,
   onPin,
+  onUnpin,
   onCloseTab,
   onCloseOtherTabs,
 }: FileContextMenuProps) {
@@ -334,7 +336,7 @@ export function FileContextMenu({
       )}
 
       {/* Tab actions */}
-      {(onPin || onCloseTab || onCloseOtherTabs) && (
+      {(onPin || onUnpin || onCloseTab || onCloseOtherTabs) && (
         <>
           <div style={dividerStyle} />
           {onPin && (
@@ -350,6 +352,21 @@ export function FileContextMenu({
             >
               <PinIcon />
               <span>Pin Tab</span>
+            </button>
+          )}
+          {onUnpin && (
+            <button
+              className="context-menu-item"
+              onClick={() => {
+                onUnpin();
+                onClose();
+              }}
+              style={menuItemStyle}
+              onMouseEnter={handleMenuItemHover}
+              onMouseLeave={handleMenuItemLeave}
+            >
+              <PinIcon />
+              <span>Unpin Tab</span>
             </button>
           )}
           {onCloseTab && (

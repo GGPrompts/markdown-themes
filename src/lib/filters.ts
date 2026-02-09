@@ -104,6 +104,12 @@ export interface FilterDefinition {
 
 export const FILTERS: FilterDefinition[] = [
   {
+    id: 'changed',
+    name: 'Changed',
+    icon: GitBranch,
+    patterns: [], // Special filter - matches gitStatus + WebSocket changedFiles
+  },
+  {
     id: 'claude-code',
     name: 'Claude Code',
     icon: Bot,
@@ -126,43 +132,10 @@ export const FILTERS: FilterDefinition[] = [
     },
   },
   {
-    id: 'prompts',
-    name: 'Prompts',
-    icon: FileInput,
-    patterns: PROMPTS_PATTERNS,
-    homePaths: {
-      relativePaths: ['.prompts'],  // ~/.prompts
-    },
-  },
-  {
-    id: 'markdown',
-    name: 'Markdown',
-    icon: FileText,
-    patterns: MARKDOWN_PATTERNS,
-  },
-  {
-    id: 'html',
-    name: 'HTML',
-    icon: Globe,
-    patterns: HTML_PATTERNS,
-  },
-  {
-    id: 'media',
-    name: 'Media',
-    icon: Image,
-    patterns: MEDIA_PATTERNS,
-  },
-  {
     id: 'config',
     name: 'Config',
     icon: FileCog,
     patterns: CONFIG_PATTERNS,
-  },
-  {
-    id: 'changed',
-    name: 'Changed',
-    icon: GitBranch,
-    patterns: [], // Special filter - matches gitStatus + WebSocket changedFiles
   },
   {
     id: 'conversations',
@@ -174,6 +147,33 @@ export const FILTERS: FilterDefinition[] = [
     },
     sortMode: 'recency',
     homeOnly: true,
+  },
+  {
+    id: 'html',
+    name: 'HTML',
+    icon: Globe,
+    patterns: HTML_PATTERNS,
+  },
+  {
+    id: 'markdown',
+    name: 'Markdown',
+    icon: FileText,
+    patterns: MARKDOWN_PATTERNS,
+  },
+  {
+    id: 'media',
+    name: 'Media',
+    icon: Image,
+    patterns: MEDIA_PATTERNS,
+  },
+  {
+    id: 'prompts',
+    name: 'Prompts',
+    icon: FileInput,
+    patterns: PROMPTS_PATTERNS,
+    homePaths: {
+      relativePaths: ['.prompts'],  // ~/.prompts
+    },
   },
 ];
 

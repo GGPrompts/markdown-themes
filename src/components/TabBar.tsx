@@ -9,6 +9,7 @@ interface TabBarProps {
   onTabSelect: (id: string) => void;
   onTabClose: (id: string) => void;
   onTabPin: (id: string) => void;
+  onTabUnpin?: (id: string) => void;
   /** Which pane this tab bar is in - used for drag transfer between panes */
   pane?: 'left' | 'right';
   /** Path of a file currently being streamed (shows animated dot on matching tab) */
@@ -23,11 +24,12 @@ interface TabItemProps {
   onSelect: () => void;
   onClose: () => void;
   onPin: () => void;
+  onUnpin?: () => void;
   onContextMenu?: (e: React.MouseEvent) => void;
   pane: 'left' | 'right';
 }
 
-function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, onContextMenu, pane }: TabItemProps) {
+function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, onUnpin, onContextMenu, pane }: TabItemProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -49,6 +51,8 @@ function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, onConte
   const handleDoubleClick = () => {
     if (tab.isPreview) {
       onPin();
+    } else if (tab.isPinned && onUnpin) {
+      onUnpin();
     }
   };
 
@@ -147,7 +151,7 @@ function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, onConte
   );
 }
 
-export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, pane = 'left', streamingFilePath, onTabContextMenu }: TabBarProps) {
+export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, onTabUnpin, pane = 'left', streamingFilePath, onTabContextMenu }: TabBarProps) {
   if (tabs.length === 0) {
     return null;
   }
@@ -170,6 +174,7 @@ export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, p
           onSelect={() => onTabSelect(tab.id)}
           onClose={() => onTabClose(tab.id)}
           onPin={() => onTabPin(tab.id)}
+          onUnpin={onTabUnpin ? () => onTabUnpin(tab.id) : undefined}
           onContextMenu={onTabContextMenu ? (e) => onTabContextMenu(e, tab) : undefined}
           pane={pane}
         />

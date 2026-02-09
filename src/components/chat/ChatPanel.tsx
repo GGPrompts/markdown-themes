@@ -74,7 +74,6 @@ export function ChatPanel({ currentFile, fontSize = 100, onViewConversation }: C
     isGenerating,
     error,
     reconnectAttempt,
-    backendLoaded,
     sendMessage,
     stopGeneration,
     newConversation,
@@ -404,7 +403,6 @@ export function ChatPanel({ currentFile, fontSize = 100, onViewConversation }: C
                   conversation={conv}
                   isActive={conv.id === activeConversationId}
                   isTabbed={chatTabs.includes(conv.id)}
-                  backendLoaded={backendLoaded}
                   onSelect={handleSelectConversation}
                   onDelete={handleDelete}
                 />
@@ -582,14 +580,12 @@ function ConversationRow({
   conversation,
   isActive,
   isTabbed,
-  backendLoaded,
   onSelect,
   onDelete,
 }: {
   conversation: Conversation;
   isActive: boolean;
   isTabbed: boolean;
-  backendLoaded: boolean;
   onSelect: (id: string) => void;
   onDelete: (e: React.MouseEvent, id: string) => void;
 }) {

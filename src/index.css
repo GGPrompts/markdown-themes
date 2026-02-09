@@ -5,6 +5,11 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/* Disable iframe pointer events during resize drags so mouse events aren't captured */
+body.resizing iframe {
+  pointer-events: none;
+}
+
 /* Base theme variables */
 :root {
   --bg-primary: #ffffff;

@@ -257,6 +257,7 @@ export function Files() {
     openConversationTab,
     closeConversationTab,
     pinTab,
+    unpinTab,
     closeTab,
     setActiveTab,
   } = useTabManager({
@@ -341,7 +342,7 @@ export function Files() {
   }, [tabs, closeTab]);
 
   // Get workspace from global context
-  const { workspacePath, fileTree, isGitRepo } = useWorkspaceContext();
+  const { workspacePath, fileTree, isGitRepo, openWorkspace, closeWorkspace } = useWorkspaceContext();
 
   // Split view state with initial state from context
   const handleSplitStateChange = useCallback(
@@ -387,6 +388,7 @@ export function Files() {
     activeTab: rightActiveTab,
     openTab: openRightTab,
     pinTab: pinRightTab,
+    unpinTab: unpinRightTab,
     closeTab: closeRightTabInternal,
     setActiveTab: setRightActiveTab,
   } = useRightPaneTabs({
@@ -457,12 +459,14 @@ export function Files() {
     const handleMouseUp = () => {
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
+      document.body.classList.remove('resizing');
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
 
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
+    document.body.classList.add('resizing');
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
   }, [chatPanelWidth]);
@@ -890,6 +894,14 @@ export function Files() {
     }
   }, [tabContextMenu.pane, tabContextMenu.tabId, pinTab, pinRightTab]);
 
+  const handleTabContextMenuUnpin = useCallback(() => {
+    if (tabContextMenu.pane === 'left') {
+      unpinTab(tabContextMenu.tabId);
+    } else {
+      unpinRightTab(tabContextMenu.tabId);
+    }
+  }, [tabContextMenu.pane, tabContextMenu.tabId, unpinTab, unpinRightTab]);
+
   const handleTabContextMenuClose = useCallback(() => {
     if (tabContextMenu.pane === 'left') {
       handleCloseTab(tabContextMenu.tabId);
@@ -1145,6 +1157,9 @@ export function Files() {
             onSendToChat={handleSendToChat}
             onArchiveFile={handleArchiveFile}
             onResumeInChat={handleResumeInChat}
+            recentFolders={appState.recentFolders}
+            onFolderSelect={openWorkspace}
+            onCloseWorkspace={closeWorkspace}
           />
         )}
 
@@ -1169,6 +1184,7 @@ export function Files() {
               onTabSelect={setRightActiveTab}
               onTabClose={closeRightTab}
               onTabPin={pinRightTab}
+              onTabUnpin={unpinRightTab}
               onTabContextMenu={(e, tab) => handleTabContextMenu(e, { ...tab, type: 'file' }, 'right')}
             />
           }
@@ -1180,6 +1196,7 @@ export function Files() {
                 onTabSelect={setActiveTab}
                 onTabClose={handleCloseTab}
                 onTabPin={pinTab}
+                onTabUnpin={unpinTab}
                 streamingFilePath={streamingFile}
                 onTabContextMenu={(e, tab) => handleTabContextMenu(e, tab, 'left')}
               />
@@ -1463,7 +1480,8 @@ export function Files() {
             ? () => window.open(`http://localhost:8130/api/files/serve${tabContextMenu.filePath}`, '_blank')
             : undefined
         }
-        onPin={tabContextMenu.isPreview && !tabContextMenu.isPinned ? handleTabContextMenuPin : undefined}
+        onPin={!tabContextMenu.isPinned ? handleTabContextMenuPin : undefined}
+        onUnpin={tabContextMenu.isPinned ? handleTabContextMenuUnpin : undefined}
         onCloseTab={handleTabContextMenuClose}
         onCloseOtherTabs={handleTabContextMenuCloseOthers}
       />

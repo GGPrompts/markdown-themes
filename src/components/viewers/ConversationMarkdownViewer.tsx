@@ -312,6 +312,7 @@ export function ConversationMarkdownViewer({
 
     // Scan for new elements, restore classes, and observe collapsible blocks
     function processElements() {
+      if (!container) return;
       const prose = container.querySelector('.streamdown-content') || container;
 
       // --- Restore classes stripped by rehype-sanitize ---

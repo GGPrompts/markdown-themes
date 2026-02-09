@@ -8,11 +8,14 @@ interface ProjectSelectorProps {
   recentFolders: string[];
   onFolderSelect: (path: string) => void;
   onClose: () => void;
+  /** Compact variant for sidebar (no border, flush styling) */
+  compact?: boolean;
 }
 
 interface DropdownPosition {
   top: number;
-  right: number;
+  left?: number;
+  right?: number;
 }
 
 // Read CSS variable values from the themed container
@@ -35,6 +38,7 @@ export function ProjectSelector({
   recentFolders,
   onFolderSelect,
   onClose,
+  compact = false,
 }: ProjectSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [showFilePicker, setShowFilePicker] = useState(false);
@@ -64,10 +68,10 @@ export function ProjectSelector({
   const toggleDropdown = () => {
     if (!isOpen && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
-      setDropdownPos({
-        top: rect.bottom + 4,
-        right: window.innerWidth - rect.right,
-      });
+      setDropdownPos(compact
+        ? { top: rect.bottom + 4, left: rect.left }
+        : { top: rect.bottom + 4, right: window.innerWidth - rect.right }
+      );
     }
     setIsOpen(!isOpen);
   };
@@ -103,34 +107,36 @@ export function ProjectSelector({
 
   return (
     <>
-      <div className="relative flex items-center gap-1" ref={containerRef}>
+      <div className={`relative flex items-center ${compact ? 'gap-0 min-w-0 flex-1' : 'gap-1'}`} ref={containerRef}>
         <button
           ref={buttonRef}
           type="button"
           onClick={toggleDropdown}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm transition-colors"
-          style={{
+          className={`flex items-center gap-2 transition-colors min-w-0 ${compact ? 'text-sm font-medium flex-1' : 'px-3 py-1.5 text-sm'}`}
+          style={compact ? {
+            color: 'var(--text-primary)',
+          } : {
             borderRadius: 'var(--radius)',
             backgroundColor: 'var(--bg-primary)',
             color: 'var(--text-primary)',
             border: '1px solid var(--border)',
           }}
         >
-          {currentPath ? (
-            <FolderOpen className="w-4 h-4" style={{ color: 'var(--accent)' }} />
+          {!compact && (currentPath ? (
+            <FolderOpen className="w-4 h-4 shrink-0" style={{ color: 'var(--accent)' }} />
           ) : (
-            <Folder className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
-          )}
+            <Folder className="w-4 h-4 shrink-0" style={{ color: 'var(--text-secondary)' }} />
+          ))}
           <span
             className="truncate"
             title={currentPath ?? 'No project open'}
           >
             {currentPath ? getDisplayName(currentPath) : 'Open Project'}
           </span>
-          <ChevronDown className="w-4 h-4" style={{ color: 'var(--text-secondary)' }} />
+          <ChevronDown className={`${compact ? 'w-3 h-3' : 'w-4 h-4'} shrink-0`} style={{ color: 'var(--text-secondary)' }} />
         </button>
         {/* Close button - separate to avoid nested button issue */}
-        {currentPath && (
+        {currentPath && !compact && (
           <button
             type="button"
             onClick={handleCloseWorkspace}
@@ -151,7 +157,7 @@ export function ProjectSelector({
           className="fixed z-[9999] min-w-[280px] max-w-[400px] py-1 overflow-hidden"
           style={{
             top: dropdownPos.top,
-            right: dropdownPos.right,
+            ...(dropdownPos.left != null ? { left: dropdownPos.left } : { right: dropdownPos.right }),
             backgroundColor: colors.bgSecondary,
             border: `1px solid ${colors.border}`,
             borderRadius: colors.radius,

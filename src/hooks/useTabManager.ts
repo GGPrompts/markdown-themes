@@ -24,12 +24,14 @@ export interface TabMetadata {
   subagentConversation?: boolean;
 }
 
+export type ViewTabType = 'git-graph' | 'working-tree' | 'beads-board';
+
 export interface Tab {
   id: string;
   path: string;
   isPreview: boolean;
   isPinned: boolean;
-  type: 'file' | 'diff' | 'conversation';
+  type: 'file' | 'diff' | 'conversation' | ViewTabType;
   diffData?: DiffData;
   conversationData?: ConversationData;
   metadata?: TabMetadata;
@@ -46,6 +48,13 @@ interface OpenTabOptions {
   metadata?: TabMetadata;
 }
 
+// Well-known paths for view tabs (not real files)
+const VIEW_TAB_PATHS: Record<ViewTabType, string> = {
+  'git-graph': '__git-graph__',
+  'working-tree': '__working-tree__',
+  'beads-board': '__beads-board__',
+};
+
 interface UseTabManagerResult {
   tabs: Tab[];
   activeTabId: string | null;
@@ -54,6 +63,8 @@ interface UseTabManagerResult {
   openDiffTab: (base: string, file: string, head?: string) => void;
   openConversationTab: (path: string, data: ConversationData) => void;
   closeConversationTab: (sessionId: string) => void;
+  openViewTab: (viewType: ViewTabType) => string;
+  closeViewTab: (viewType: ViewTabType) => void;
   pinTab: (id: string) => void;
   unpinTab: (id: string) => void;
   closeTab: (id: string) => void;
@@ -322,6 +333,45 @@ export function useTabManager(options: UseTabManagerOptions = {}): UseTabManager
     setActiveTabId(newTab.id);
   }, []);
 
+  const openViewTab = useCallback((viewType: ViewTabType): string => {
+    const currentTabs = tabsRef.current;
+    const existing = currentTabs.find((t) => t.type === viewType);
+    if (existing) {
+      setActiveTabId(existing.id);
+      return existing.id;
+    }
+
+    const newTab: Tab = {
+      id: generateTabId(),
+      path: VIEW_TAB_PATHS[viewType],
+      isPreview: false,
+      isPinned: true,
+      type: viewType,
+    };
+    setTabs((prevTabs) => [...prevTabs, newTab]);
+    setActiveTabId(newTab.id);
+    return newTab.id;
+  }, []);
+
+  const closeViewTab = useCallback((viewType: ViewTabType) => {
+    setTabs((prevTabs) => {
+      const tab = prevTabs.find((t) => t.type === viewType);
+      if (!tab) return prevTabs;
+
+      const tabIndex = prevTabs.findIndex((t) => t.id === tab.id);
+      const newTabs = prevTabs.filter((t) => t.id !== tab.id);
+
+      setActiveTabId((currentActiveId) => {
+        if (currentActiveId !== tab.id) return currentActiveId;
+        if (newTabs.length === 0) return null;
+        const nextIndex = Math.min(tabIndex, newTabs.length - 1);
+        return newTabs[nextIndex].id;
+      });
+
+      return newTabs;
+    });
+  }, []);
+
   const closeConversationTab = useCallback((sessionId: string) => {
     setTabs((prevTabs) => {
       const tabToClose = prevTabs.find(
@@ -357,6 +407,8 @@ export function useTabManager(options: UseTabManagerOptions = {}): UseTabManager
     openDiffTab,
     openConversationTab,
     closeConversationTab,
+    openViewTab,
+    closeViewTab,
     pinTab,
     unpinTab,
     closeTab,

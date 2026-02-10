@@ -9,7 +9,7 @@ import { useWorkspaceContext } from '../context/WorkspaceContext';
 import { usePageState } from '../context/PageStateContext';
 import { useAppStore } from '../hooks/useAppStore';
 import { useAIChatContext } from '../context/AIChatContext';
-import { useTabManager } from '../hooks/useTabManager';
+import { useTabManager, type Tab } from '../hooks/useTabManager';
 import { useSplitView } from '../hooks/useSplitView';
 import { useRightPaneTabs } from '../hooks/useRightPaneTabs';
 import { ViewerContainer } from '../components/ViewerContainer';
@@ -20,8 +20,6 @@ import { RightPaneTabBar } from '../components/RightPaneTabBar';
 import { SplitView } from '../components/SplitView';
 import { GitGraph, WorkingTree, MultiRepoView } from '../components/git';
 import { BeadsBoard } from '../components/beads/BeadsBoard';
-import { BeadsDetail } from '../components/beads/BeadsDetail';
-import type { BeadsIssue } from '../lib/api';
 import { DiffViewer } from '../components/viewers/DiffViewer';
 import { ArchiveModal } from '../components/ArchiveModal';
 import { FileContextMenu } from '../components/FileContextMenu';
@@ -259,6 +257,8 @@ export function Files() {
     openDiffTab,
     openConversationTab,
     closeConversationTab,
+    openViewTab,
+    closeViewTab,
     pinTab,
     unpinTab,
     closeTab,
@@ -293,7 +293,7 @@ export function Files() {
     show: false, x: 0, y: 0,
     tabId: '', filePath: '', fileName: '',
     isPinned: false, isPreview: false,
-    tabType: 'file' as 'file' | 'diff' | 'conversation',
+    tabType: 'file' as Tab['type'],
     pane: 'left' as 'left' | 'right',
   });
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -302,11 +302,6 @@ export function Files() {
 
   // Counter incremented after git operations (commit, stage, etc.) to trigger Sidebar git status refresh
   const [gitStatusVersion, setGitStatusVersion] = useState(0);
-
-  // Main pane view mode: file viewer, git graph, or working tree
-  // When not split, git graph/working tree render in the main pane
-  const [mainPaneView, setMainPaneView] = useState<'file' | 'git-graph' | 'working-tree' | 'beads-board' | 'beads-detail'>('file');
-  const [selectedBeadsIssue, setSelectedBeadsIssue] = useState<BeadsIssue | null>(null);
 
   // Track recently closed files to prevent circular auto-reopening (path -> close timestamp)
   const recentlyClosedRef = useRef<Map<string, number>>(new Map());
@@ -383,34 +378,35 @@ export function Files() {
     onStateChange: handleSplitStateChange,
   });
 
-  // When split view closes and right pane had git-graph/working-tree, move it to main pane
-  // When split view opens and main pane has git-graph/working-tree, move it to right pane
+  // When split view closes and right pane had git-graph/working-tree/beads-board, move it to a tab
+  // When split view opens and active tab is a view type, move it to right pane
   const prevIsSplitRef = useRef(isSplit);
   useEffect(() => {
     if (prevIsSplitRef.current && !isSplit) {
-      // Split just closed - if right pane had git view, move to main
+      // Split just closed - if right pane had git view, create a tab for it
       if (rightPaneContent?.type === 'git-graph') {
-        setMainPaneView('git-graph');
+        openViewTab('git-graph');
       } else if (rightPaneContent?.type === 'working-tree') {
-        setMainPaneView('working-tree');
+        openViewTab('working-tree');
       } else if (rightPaneContent?.type === 'beads-board') {
-        setMainPaneView('beads-board');
+        openViewTab('beads-board');
       }
     } else if (!prevIsSplitRef.current && isSplit) {
-      // Split just opened - if main had git view, move to right pane
-      if (mainPaneView === 'git-graph') {
+      // Split just opened - if active tab is a view type, move to right pane
+      const viewType = activeTab?.type;
+      if (viewType === 'git-graph') {
         setRightPaneGitGraph();
-        setMainPaneView('file');
-      } else if (mainPaneView === 'working-tree') {
+        closeViewTab('git-graph');
+      } else if (viewType === 'working-tree') {
         setRightPaneWorkingTree();
-        setMainPaneView('file');
-      } else if (mainPaneView === 'beads-board') {
+        closeViewTab('working-tree');
+      } else if (viewType === 'beads-board') {
         setRightPaneBeadsBoard();
-        setMainPaneView('file');
+        closeViewTab('beads-board');
       }
     }
     prevIsSplitRef.current = isSplit;
-  }, [isSplit, rightPaneContent?.type, mainPaneView, setRightPaneGitGraph, setRightPaneWorkingTree, setRightPaneBeadsBoard]);
+  }, [isSplit, rightPaneContent?.type, activeTab?.type, setRightPaneGitGraph, setRightPaneWorkingTree, setRightPaneBeadsBoard, openViewTab, closeViewTab]);
 
   // Right pane tabs state with persistence
   const handleRightPaneTabsStateChange = useCallback(
@@ -852,10 +848,17 @@ export function Files() {
         setRightPaneGitGraph();
       }
     } else {
-      // Non-split mode: toggle in main pane
-      setMainPaneView((prev) => prev === 'git-graph' ? 'file' : 'git-graph');
+      // Non-split mode: toggle as tab
+      const existingTab = tabs.find((t) => t.type === 'git-graph');
+      if (existingTab && existingTab.id === activeTabId) {
+        closeViewTab('git-graph');
+      } else if (existingTab) {
+        setActiveTab(existingTab.id);
+      } else {
+        openViewTab('git-graph');
+      }
     }
-  }, [isSplit, rightPaneContent, setRightFile, setRightPaneGitGraph]);
+  }, [isSplit, rightPaneContent, setRightFile, setRightPaneGitGraph, tabs, activeTabId, closeViewTab, setActiveTab, openViewTab]);
 
   // Handle working tree toggle
   const handleWorkingTreeToggle = useCallback(() => {
@@ -867,10 +870,17 @@ export function Files() {
         setRightPaneWorkingTree();
       }
     } else {
-      // Non-split mode: toggle in main pane
-      setMainPaneView((prev) => prev === 'working-tree' ? 'file' : 'working-tree');
+      // Non-split mode: toggle as tab
+      const existingTab = tabs.find((t) => t.type === 'working-tree');
+      if (existingTab && existingTab.id === activeTabId) {
+        closeViewTab('working-tree');
+      } else if (existingTab) {
+        setActiveTab(existingTab.id);
+      } else {
+        openViewTab('working-tree');
+      }
     }
-  }, [isSplit, rightPaneContent, setRightFile, setRightPaneWorkingTree]);
+  }, [isSplit, rightPaneContent, setRightFile, setRightPaneWorkingTree, tabs, activeTabId, closeViewTab, setActiveTab, openViewTab]);
 
   // Handle beads board toggle
   const handleBeadsBoardToggle = useCallback(() => {
@@ -881,15 +891,17 @@ export function Files() {
         setRightPaneBeadsBoard();
       }
     } else {
-      setMainPaneView((prev) => prev === 'beads-board' ? 'file' : 'beads-board');
+      // Non-split mode: toggle as tab
+      const existingTab = tabs.find((t) => t.type === 'beads-board');
+      if (existingTab && existingTab.id === activeTabId) {
+        closeViewTab('beads-board');
+      } else if (existingTab) {
+        setActiveTab(existingTab.id);
+      } else {
+        openViewTab('beads-board');
+      }
     }
-  }, [isSplit, rightPaneContent, setRightFile, setRightPaneBeadsBoard]);
-
-  // Handle beads issue selection (show detail in main pane)
-  const handleBeadsIssueSelect = useCallback((issue: BeadsIssue) => {
-    setSelectedBeadsIssue(issue);
-    setMainPaneView('beads-detail');
-  }, []);
+  }, [isSplit, rightPaneContent, setRightFile, setRightPaneBeadsBoard, tabs, activeTabId, closeViewTab, setActiveTab, openViewTab]);
 
   // Handle chat panel toggle (now a separate third column)
   const handleChatPanelToggle = useCallback(() => {
@@ -930,7 +942,7 @@ export function Files() {
       fileName,
       isPinned: tab.isPinned,
       isPreview: tab.isPreview,
-      tabType: (tab.type ?? 'file') as 'file' | 'diff' | 'conversation',
+      tabType: (tab.type ?? 'file') as Tab['type'],
       pane,
     });
   }, []);
@@ -1136,9 +1148,9 @@ export function Files() {
                 onTabUnpin={unpinTab}
                 streamingFilePath={streamingFile}
                 onTabContextMenu={(e, tab) => handleTabContextMenu(e, tab, 'left')}
-                isGitGraph={mainPaneView === 'git-graph' || rightPaneContent?.type === 'git-graph'}
-                isWorkingTree={mainPaneView === 'working-tree' || rightPaneContent?.type === 'working-tree'}
-                isBeadsBoard={mainPaneView === 'beads-board' || rightPaneContent?.type === 'beads-board'}
+                isGitGraph={tabs.some((t) => t.type === 'git-graph') || rightPaneContent?.type === 'git-graph'}
+                isWorkingTree={tabs.some((t) => t.type === 'working-tree') || rightPaneContent?.type === 'working-tree'}
+                isBeadsBoard={tabs.some((t) => t.type === 'beads-board') || rightPaneContent?.type === 'beads-board'}
                 onGitGraphToggle={handleGitGraphToggle}
                 onWorkingTreeToggle={handleWorkingTreeToggle}
                 onBeadsBoardToggle={handleBeadsBoardToggle}
@@ -1150,8 +1162,8 @@ export function Files() {
                 onSplitToggle={toggleSplit}
               />
 
-              {/* Git graph in main pane (non-split mode) */}
-              {mainPaneView === 'git-graph' && workspacePath && (
+              {/* Git graph in main pane (as tab) */}
+              {activeTab?.type === 'git-graph' && workspacePath && (
                 <GitGraph
                   repoPath={workspacePath}
                   onCommitSelect={(hash) => console.log('Selected commit:', hash)}
@@ -1162,50 +1174,34 @@ export function Files() {
                 />
               )}
 
-              {/* Working tree in main pane (non-split mode) */}
-              {mainPaneView === 'working-tree' && workspacePath && (
+              {/* Working tree in main pane (as tab) */}
+              {activeTab?.type === 'working-tree' && workspacePath && (
                 isGitRepo ? (
                   <WorkingTree
                     repoPath={workspacePath}
                     fontSize={appState.fontSize}
-                    onFileSelect={(path) => {
-                      setMainPaneView('file');
-                      handleFileSelect(path);
-                    }}
+                    onFileSelect={handleFileSelect}
                     onCommitSuccess={handleCommitSuccess}
                   />
                 ) : (
                   <MultiRepoView
                     projectsDir={workspacePath}
                     fontSize={appState.fontSize}
-                    onFileSelect={(path) => {
-                      setMainPaneView('file');
-                      handleFileSelect(path);
-                    }}
+                    onFileSelect={handleFileSelect}
                   />
                 )
               )}
 
-              {/* Beads board in main pane (non-split mode) */}
-              {mainPaneView === 'beads-board' && (
+              {/* Beads board in main pane (as tab) */}
+              {activeTab?.type === 'beads-board' && (
                 <BeadsBoard
                   workspacePath={workspacePath}
                   fontSize={appState.fontSize}
-                  onIssueSelect={handleBeadsIssueSelect}
-                />
-              )}
-
-              {/* Beads issue detail in main pane */}
-              {mainPaneView === 'beads-detail' && selectedBeadsIssue && (
-                <BeadsDetail
-                  issue={selectedBeadsIssue}
-                  fontSize={appState.fontSize}
-                  onBack={() => setMainPaneView(isSplit ? 'file' : 'beads-board')}
                 />
               )}
 
               {/* File viewer content (default main pane view) */}
-              {mainPaneView === 'file' && (
+              {(!activeTab || activeTab.type === 'file' || activeTab.type === 'diff' || activeTab.type === 'conversation') && (
                 <>
                   {(activeTab?.type === 'file' || activeTab?.type === 'conversation') && loading && (
                     <div className="flex items-center justify-center h-full">
@@ -1407,7 +1403,6 @@ export function Files() {
                 <BeadsBoard
                   workspacePath={workspacePath}
                   fontSize={appState.fontSize}
-                  onIssueSelect={handleBeadsIssueSelect}
                 />
               )}
 

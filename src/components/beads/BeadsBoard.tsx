@@ -2,11 +2,11 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { RefreshCw, ChevronDown, ChevronRight, Inbox } from 'lucide-react';
 import { fetchBeadsIssues, type BeadsIssue } from '../../lib/api';
 import { BeadsCard } from './BeadsCard';
+import { BeadsDetail } from './BeadsDetail';
 
 interface BeadsBoardProps {
   workspacePath: string | null;
   fontSize?: number;
-  onIssueSelect?: (issue: BeadsIssue) => void;
 }
 
 interface ColumnDef {
@@ -23,10 +23,11 @@ const COLUMNS: ColumnDef[] = [
   { key: 'done', title: 'Done', defaultExpanded: false },
 ];
 
-export function BeadsBoard({ workspacePath, fontSize = 100, onIssueSelect }: BeadsBoardProps) {
+export function BeadsBoard({ workspacePath, fontSize = 100 }: BeadsBoardProps) {
   const [issues, setIssues] = useState<BeadsIssue[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedIssue, setSelectedIssue] = useState<BeadsIssue | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
     COLUMNS.forEach((col) => {
@@ -136,6 +137,17 @@ export function BeadsBoard({ workspacePath, fontSize = 100, onIssueSelect }: Bea
     );
   }
 
+  // Show detail view when an issue is selected
+  if (selectedIssue) {
+    return (
+      <BeadsDetail
+        issue={selectedIssue}
+        fontSize={fontSize}
+        onBack={() => setSelectedIssue(null)}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ fontSize: `${scale}rem` }}>
       {/* Top bar */}
@@ -230,7 +242,7 @@ export function BeadsBoard({ workspacePath, fontSize = 100, onIssueSelect }: Bea
                           key={issue.id}
                           issue={issue}
                           blockedByIds={blockedByMap.get(issue.id)}
-                          onSelect={onIssueSelect}
+                          onSelect={setSelectedIssue}
                         />
                       ))
                     )}

@@ -291,7 +291,7 @@ Some features require TabzChrome (port 8129) running alongside the Go backend:
 Note: Core file viewing and watching works with just the Go backend.
 
 ### GitGraph
-The TabBar has a git graph toggle (`Ctrl+G`) that shows commit history. When split, it opens in the right pane; when not split, it replaces the main pane via `mainPaneView` state. Same pattern for Working Tree (`Ctrl+Shift+G`).
+The TabBar has a git graph toggle (`Ctrl+G`) that shows commit history. When split, it opens in the right pane; when not split, it opens as a tab via `openViewTab()`. Same pattern for Working Tree (`Ctrl+Shift+G`) and Beads Board (`Ctrl+Shift+B`). View tabs coexist with file tabs — clicking a file tab switches back to the file viewer without closing the view tab.
 
 - **GitGraph** (`components/git/GitGraph.tsx`) - Renders commit history with canvas rail lines
 - **CommitDetails** (`components/git/CommitDetails.tsx`) - Expandable commit details shown when clicking a row
@@ -362,7 +362,7 @@ The app has no top navigation bar — all controls live in context:
   - Hidden when chat panel is open (X close button in ChatPanel header instead)
   - Auto-reveals when AI is generating (pulsing accent ring indicator)
   - Otherwise appears on mouse proximity
-- **`mainPaneView`** state (`'file' | 'git-graph' | 'working-tree'`): Controls what the main pane shows when not in split view. Git graph and working tree open here instead of forcing split.
+- **View tabs**: Git Graph, Working Tree, and Beads Board open as pinned tabs (via `openViewTab()` in `useTabManager`) that coexist with file tabs. When split opens, active view tabs move to the right pane; when split closes, right-pane views become tabs.
 
 ## Keyboard Shortcuts
 

@@ -48,20 +48,29 @@ function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, onUnpin
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
-  // For diff tabs, show "filename @ abc123"
-  // For conversation tabs, show task description or "Subagent" + sessionId prefix
-  // For files show just filename
-  const displayName = tab.type === 'diff' && tab.diffData
-    ? `${tab.diffData.file.split('/').pop()} @ ${tab.diffData.base.substring(0, 7)}`
-    : tab.type === 'conversation' && tab.conversationData
-      ? tab.conversationData.taskDescription || `Subagent ${tab.conversationData.sessionId.substring(0, 8)}`
-      : (tab.path.split('/').pop() ?? tab.path.split('\\').pop() ?? tab.path);
+  // Display names for different tab types
+  const VIEW_TAB_DISPLAY: Record<string, { name: string; tooltip: string }> = {
+    'git-graph': { name: 'Git Graph', tooltip: 'Git Graph (Ctrl+G)' },
+    'working-tree': { name: 'Working Tree', tooltip: 'Working Tree (Ctrl+Shift+G)' },
+    'beads-board': { name: 'Beads Board', tooltip: 'Beads Board (Ctrl+Shift+B)' },
+  };
 
-  const tooltipText = tab.type === 'diff' && tab.diffData
-    ? `Diff: ${tab.diffData.file} (${tab.diffData.base.substring(0, 7)})`
-    : tab.type === 'conversation' && tab.conversationData
-      ? `Subagent conversation: ${tab.conversationData.sessionId}\nPane: ${tab.conversationData.pane}\nWorking dir: ${tab.conversationData.workingDir}`
-      : tab.path;
+  const viewInfo = VIEW_TAB_DISPLAY[tab.type];
+  const displayName = viewInfo
+    ? viewInfo.name
+    : tab.type === 'diff' && tab.diffData
+      ? `${tab.diffData.file.split('/').pop()} @ ${tab.diffData.base.substring(0, 7)}`
+      : tab.type === 'conversation' && tab.conversationData
+        ? tab.conversationData.taskDescription || `Subagent ${tab.conversationData.sessionId.substring(0, 8)}`
+        : (tab.path.split('/').pop() ?? tab.path.split('\\').pop() ?? tab.path);
+
+  const tooltipText = viewInfo
+    ? viewInfo.tooltip
+    : tab.type === 'diff' && tab.diffData
+      ? `Diff: ${tab.diffData.file} (${tab.diffData.base.substring(0, 7)})`
+      : tab.type === 'conversation' && tab.conversationData
+        ? `Subagent conversation: ${tab.conversationData.sessionId}\nPane: ${tab.conversationData.pane}\nWorking dir: ${tab.conversationData.workingDir}`
+        : tab.path;
 
   const handleDoubleClick = () => {
     if (tab.isPreview) {
@@ -76,9 +85,11 @@ function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, onUnpin
     onClose();
   };
 
+  const isViewTab = tab.type === 'git-graph' || tab.type === 'working-tree' || tab.type === 'beads-board';
+
   const handleDragStart = (e: React.DragEvent) => {
-    // Only allow dragging file and conversation tabs, not diff tabs
-    if (tab.type === 'diff') {
+    // Only allow dragging file and conversation tabs, not diff or view tabs
+    if (tab.type === 'diff' || isViewTab) {
       e.preventDefault();
       return;
     }
@@ -398,6 +409,27 @@ function TabIcon({ tab }: { tab: Tab }) {
     return (
       <span className="w-4 h-4 flex items-center justify-center flex-shrink-0">
         <Users size={14} style={{ color: '#22c55e' }} />
+      </span>
+    );
+  }
+  if (tab.type === 'git-graph') {
+    return (
+      <span className="w-4 h-4 flex items-center justify-center flex-shrink-0">
+        <GitBranch size={14} style={{ color: 'var(--accent)' }} />
+      </span>
+    );
+  }
+  if (tab.type === 'working-tree') {
+    return (
+      <span className="w-4 h-4 flex items-center justify-center flex-shrink-0">
+        <GitPullRequestDraft size={14} style={{ color: 'var(--accent)' }} />
+      </span>
+    );
+  }
+  if (tab.type === 'beads-board') {
+    return (
+      <span className="w-4 h-4 flex items-center justify-center flex-shrink-0">
+        <LayoutGrid size={14} style={{ color: 'var(--accent)' }} />
       </span>
     );
   }

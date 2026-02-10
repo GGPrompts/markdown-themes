@@ -58,6 +58,7 @@ export interface ToolUseEvent {
 
 export interface ChatSettings {
   model?: string;
+  cwdOverride?: string;
   addDirs?: string[];
   pluginDirs?: string[];
   appendSystemPrompt?: string;
@@ -569,7 +570,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
         messages: allMessages,
         conversationId: currentConvId,
         claudeSessionId: conv?.claudeSessionId,
-        cwd: cwdRef.current ?? undefined,
+        cwd: currentSettings?.cwdOverride || (cwdRef.current ?? undefined),
         ...(reconnectEventId && reconnectEventId > 0 && { lastEventId: reconnectEventId }),
         ...(currentSettings?.model && { model: currentSettings.model }),
         ...(currentSettings?.addDirs?.length && { addDirs: currentSettings.addDirs }),

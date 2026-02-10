@@ -29,6 +29,7 @@ export function getSettingsSummary(settings?: ChatSettingsType): string | null {
   if (settings.model) parts.push(settings.model);
   const dirCount = (settings.addDirs?.length || 0) + (settings.pluginDirs?.length || 0);
   if (dirCount > 0) parts.push(`${dirCount} dir${dirCount > 1 ? 's' : ''}`);
+  if (settings.cwdOverride) parts.push(settings.cwdOverride.split('/').filter(Boolean).pop() || 'cwd');
   if (settings.agent) parts.push(settings.agent);
   if (settings.appendSystemPrompt) parts.push('prompt');
   if (settings.permissionMode) parts.push(settings.permissionMode);
@@ -37,7 +38,7 @@ export function getSettingsSummary(settings?: ChatSettingsType): string | null {
 
 export function ChatSettings({ settings, onSettingsChange, disabled }: ChatSettingsProps) {
   const [expanded, setExpanded] = useState(false);
-  const [pickerTarget, setPickerTarget] = useState<'addDirs' | 'pluginDirs' | null>(null);
+  const [pickerTarget, setPickerTarget] = useState<'addDirs' | 'pluginDirs' | 'cwdOverride' | null>(null);
 
   const summary = useMemo(() => getSettingsSummary(settings), [settings]);
 
@@ -47,9 +48,13 @@ export function ChatSettings({ settings, onSettingsChange, disabled }: ChatSetti
 
   const handleDirSelect = useCallback((path: string) => {
     if (!pickerTarget) return;
-    const current = settings[pickerTarget] || [];
-    if (!current.includes(path)) {
-      update({ [pickerTarget]: [...current, path] });
+    if (pickerTarget === 'cwdOverride') {
+      update({ cwdOverride: path });
+    } else {
+      const current = settings[pickerTarget] || [];
+      if (!current.includes(path)) {
+        update({ [pickerTarget]: [...current, path] });
+      }
     }
     setPickerTarget(null);
   }, [pickerTarget, settings, update]);
@@ -107,6 +112,47 @@ export function ChatSettings({ settings, onSettingsChange, disabled }: ChatSetti
             />
           </div>
 
+          {/* Working directory override */}
+          <div>
+            <div className="flex items-center gap-1 mb-1">
+              <label className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>Working directory</label>
+              <button
+                onClick={() => setPickerTarget('cwdOverride')}
+                className="p-0.5 rounded hover:opacity-80 transition-opacity"
+                style={{ color: 'var(--accent)' }}
+                title="Set working directory"
+              >
+                <FolderOpen size={12} />
+              </button>
+            </div>
+            {settings.cwdOverride ? (
+              <div
+                className="flex items-center gap-1.5 text-xs px-1.5 py-0.5 group"
+                style={{
+                  backgroundColor: 'var(--bg-primary)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius)',
+                }}
+              >
+                <FolderOpen size={11} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                <span className="truncate flex-1" style={{ color: 'var(--text-primary)' }}>
+                  {settings.cwdOverride}
+                </span>
+                <button
+                  onClick={() => update({ cwdOverride: undefined })}
+                  className="opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity shrink-0"
+                  style={{ color: 'var(--text-secondary)' }}
+                >
+                  <X size={11} />
+                </button>
+              </div>
+            ) : (
+              <span className="text-[11px]" style={{ color: 'var(--text-secondary)', opacity: 0.6 }}>
+                Inherited from workspace
+              </span>
+            )}
+          </div>
+
           {/* Directories */}
           <DirList
             label="Add directories"
@@ -148,7 +194,7 @@ export function ChatSettings({ settings, onSettingsChange, disabled }: ChatSetti
       {pickerTarget && (
         <FilePickerModal
           mode="folder"
-          title={pickerTarget === 'addDirs' ? 'Add directory' : 'Add plugin directory'}
+          title={pickerTarget === 'cwdOverride' ? 'Set working directory' : pickerTarget === 'addDirs' ? 'Add directory' : 'Add plugin directory'}
           onSelect={handleDirSelect}
           onCancel={() => setPickerTarget(null)}
         />

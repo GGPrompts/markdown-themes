@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
-import { MessageSquarePlus, Trash2, ChevronLeft, Bot, StopCircle, X, RefreshCw, ExternalLink } from 'lucide-react';
+import { MessageSquarePlus, Trash2, ChevronLeft, Bot, StopCircle, X, RefreshCw, ExternalLink, FolderOpen } from 'lucide-react';
 import { ChatMessageComponent } from './ChatMessage';
 import { ChatInput } from './ChatInput';
 import { ChatSettings, getSettingsSummary } from './ChatSettings';
@@ -661,7 +661,14 @@ function ConversationRow({
           className="text-xs truncate mt-0.5"
           style={{ color: 'var(--text-secondary)' }}
         >
-          {messageCount} message{messageCount !== 1 ? 's' : ''} · {preview}
+          {messageCount} message{messageCount !== 1 ? 's' : ''}
+          {conversation.settings?.cwdOverride && (
+            <span className="inline-flex items-center gap-0.5" style={{ color: 'var(--accent)', opacity: 0.8 }}>
+              {' · '}<FolderOpen size={9} className="inline" />{' '}
+              {conversation.settings.cwdOverride.split('/').filter(Boolean).pop()}
+            </span>
+          )}
+          {' · '}{preview}
         </p>
         {settingsSummary && (
           <span

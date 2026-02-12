@@ -205,7 +205,7 @@ export function Terminal({
       rows: 24,
       cursorBlink: true,
       fontSize,
-      fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Monaco, monospace",
+      fontFamily: "'JetBrains Mono NF', 'JetBrains Mono', 'Fira Code NF', 'Fira Code', 'CaskaydiaCove NF', 'Cascadia Code', Menlo, Monaco, monospace",
       theme: getXtermTheme(),
       allowTransparency: true,
       allowProposedApi: true,

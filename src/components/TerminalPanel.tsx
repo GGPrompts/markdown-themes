@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Plus, X, MoreVertical, Terminal as TerminalIcon } from 'lucide-react';
+import { Plus, X, MoreVertical, Terminal as TerminalIcon, Pencil, Trash2 } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { Terminal } from './Terminal';
 import { useTerminal, type TerminalTab, type RecoveredSession } from '../hooks/useTerminal';
 
@@ -10,7 +11,16 @@ interface TerminalProfile {
   name: string;
   command?: string;
   cwd?: string;
+  fontFamily?: string;
+  fontSize?: number;
 }
+
+const FONT_FAMILY_OPTIONS = [
+  { value: '', label: 'Default' },
+  { value: 'JetBrains Mono NF', label: 'JetBrains Mono NF' },
+  { value: 'Fira Code NF', label: 'Fira Code NF' },
+  { value: 'CaskaydiaCove NF', label: 'CaskaydiaCove NF' },
+];
 
 interface TerminalPanelProps {
   tabs: TerminalTab[];
@@ -37,6 +47,237 @@ function generateTerminalId(profileName?: string): string {
   return `mt-${name}-${hex}`;
 }
 
+function generateProfileId(name: string): string {
+  return sanitizeProfileName(name) + '-' + Math.random().toString(36).slice(2, 8);
+}
+
+// --- Profile Editor Modal ---
+
+interface ProfileEditorProps {
+  profile: TerminalProfile | null; // null = new profile
+  onSave: (profile: TerminalProfile) => void;
+  onCancel: () => void;
+}
+
+function ProfileEditor({ profile, onSave, onCancel }: ProfileEditorProps) {
+  const [name, setName] = useState(profile?.name || '');
+  const [fontFamily, setFontFamily] = useState(profile?.fontFamily || '');
+  const [fontSizeVal, setFontSizeVal] = useState(profile?.fontSize?.toString() || '');
+  const [command, setCommand] = useState(profile?.command || '');
+  const [cwd, setCwd] = useState(profile?.cwd || '');
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    nameInputRef.current?.focus();
+  }, []);
+
+  const handleSave = () => {
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
+    const parsedFontSize = fontSizeVal ? parseInt(fontSizeVal, 10) : undefined;
+    onSave({
+      id: profile?.id || generateProfileId(trimmedName),
+      name: trimmedName,
+      command: command.trim() || undefined,
+      cwd: cwd.trim() || undefined,
+      fontFamily: fontFamily || undefined,
+      fontSize: parsedFontSize && parsedFontSize >= 8 && parsedFontSize <= 32 ? parsedFontSize : undefined,
+    });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSave();
+    }
+    if (e.key === 'Escape') {
+      onCancel();
+    }
+  };
+
+  const inputStyle: React.CSSProperties = {
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    border: '1px solid rgba(255, 255, 255, 0.15)',
+    borderRadius: '6px',
+    padding: '6px 10px',
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: '13px',
+    outline: 'none',
+    width: '100%',
+  };
+
+  const labelStyle: React.CSSProperties = {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: '12px',
+    marginBottom: '4px',
+    display: 'block',
+  };
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}
+    >
+      <div
+        className="rounded-lg shadow-2xl"
+        style={{
+          backgroundColor: 'rgba(20, 20, 25, 0.95)',
+          backdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          width: '380px',
+          maxWidth: '90vw',
+        }}
+        onKeyDown={handleKeyDown}
+      >
+        {/* Header */}
+        <div
+          className="px-4 py-3 flex items-center justify-between"
+          style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}
+        >
+          <span style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: '14px', fontWeight: 500 }}>
+            {profile ? 'Edit Profile' : 'New Profile'}
+          </span>
+          <button
+            onClick={onCancel}
+            className="w-6 h-6 flex items-center justify-center rounded"
+            style={{ color: 'rgba(255, 255, 255, 0.5)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.5)';
+            }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* Form */}
+        <div className="px-4 py-3 flex flex-col gap-3">
+          {/* Name */}
+          <div>
+            <label style={labelStyle}>Name *</label>
+            <input
+              ref={nameInputRef}
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="My Profile"
+              style={inputStyle}
+              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent, #64ffda)'; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)'; }}
+            />
+          </div>
+
+          {/* Font family */}
+          <div>
+            <label style={labelStyle}>Font family</label>
+            <select
+              value={fontFamily}
+              onChange={(e) => setFontFamily(e.target.value)}
+              style={{ ...inputStyle, appearance: 'auto' as React.CSSProperties['appearance'] }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent, #64ffda)'; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)'; }}
+            >
+              {FONT_FAMILY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value} style={{ backgroundColor: '#1a1a1e', color: '#e0e0e0' }}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Font size */}
+          <div>
+            <label style={labelStyle}>Font size</label>
+            <input
+              type="number"
+              min={8}
+              max={32}
+              value={fontSizeVal}
+              onChange={(e) => setFontSizeVal(e.target.value)}
+              placeholder="14"
+              style={inputStyle}
+              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent, #64ffda)'; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)'; }}
+            />
+          </div>
+
+          {/* Command */}
+          <div>
+            <label style={labelStyle}>Command</label>
+            <input
+              type="text"
+              value={command}
+              onChange={(e) => setCommand(e.target.value)}
+              placeholder="bash"
+              style={inputStyle}
+              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent, #64ffda)'; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)'; }}
+            />
+          </div>
+
+          {/* Working directory */}
+          <div>
+            <label style={labelStyle}>Working directory</label>
+            <input
+              type="text"
+              value={cwd}
+              onChange={(e) => setCwd(e.target.value)}
+              placeholder="Current workspace"
+              style={inputStyle}
+              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent, #64ffda)'; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)'; }}
+            />
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div
+          className="px-4 py-3 flex items-center justify-end gap-2"
+          style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}
+        >
+          <button
+            onClick={onCancel}
+            className="px-3 py-1.5 rounded text-sm"
+            style={{
+              color: 'rgba(255, 255, 255, 0.7)',
+              backgroundColor: 'rgba(255, 255, 255, 0.06)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.06)'; }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={!name.trim()}
+            className="px-3 py-1.5 rounded text-sm font-medium"
+            style={{
+              backgroundColor: name.trim() ? 'var(--accent, #64ffda)' : 'rgba(255, 255, 255, 0.1)',
+              color: name.trim() ? 'rgba(0, 0, 0, 0.9)' : 'rgba(255, 255, 255, 0.3)',
+              cursor: name.trim() ? 'pointer' : 'not-allowed',
+            }}
+            onMouseEnter={(e) => {
+              if (name.trim()) e.currentTarget.style.opacity = '0.85';
+            }}
+            onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// --- Main Panel ---
+
 export function TerminalPanel({
   tabs,
   activeTabId,
@@ -48,6 +289,8 @@ export function TerminalPanel({
 }: TerminalPanelProps) {
   const [profiles, setProfiles] = useState<TerminalProfile[]>([]);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showProfileEditor, setShowProfileEditor] = useState(false);
+  const [editingProfile, setEditingProfile] = useState<TerminalProfile | null>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
   // Map of terminalId -> write function (set when Terminal calls onReady)
@@ -264,6 +507,49 @@ export function TerminalPanel({
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showProfileMenu]);
 
+  const saveProfilesToBackend = useCallback((updatedProfiles: TerminalProfile[]) => {
+    setProfiles(updatedProfiles);
+    fetch(`${API_BASE}/api/terminal/profiles`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedProfiles),
+    }).catch((err) => console.error('[TerminalPanel] Failed to save profiles:', err));
+  }, []);
+
+  const handleProfileSave = useCallback((savedProfile: TerminalProfile) => {
+    const existing = profiles.find((p) => p.id === savedProfile.id);
+    let updated: TerminalProfile[];
+    if (existing) {
+      updated = profiles.map((p) => (p.id === savedProfile.id ? savedProfile : p));
+    } else {
+      updated = [...profiles, savedProfile];
+    }
+    saveProfilesToBackend(updated);
+    setShowProfileEditor(false);
+    setEditingProfile(null);
+  }, [profiles, saveProfilesToBackend]);
+
+  const handleProfileDelete = useCallback((profileId: string) => {
+    const updated = profiles.filter((p) => p.id !== profileId);
+    // Ensure at least one profile remains
+    if (updated.length === 0) {
+      updated.push({ id: 'default-shell', name: 'Shell', cwd: '{{workspace}}' });
+    }
+    saveProfilesToBackend(updated);
+  }, [profiles, saveProfilesToBackend]);
+
+  const openNewProfile = useCallback(() => {
+    setEditingProfile(null);
+    setShowProfileEditor(true);
+    setShowProfileMenu(false);
+  }, []);
+
+  const openEditProfile = useCallback((profile: TerminalProfile) => {
+    setEditingProfile(profile);
+    setShowProfileEditor(true);
+    setShowProfileMenu(false);
+  }, []);
+
   const spawnTerminal = useCallback((profile?: TerminalProfile) => {
     const id = generateTerminalId(profile?.name);
     const cwd = (profile?.cwd || '{{workspace}}').replace('{{workspace}}', workspacePath);
@@ -275,6 +561,8 @@ export function TerminalPanel({
       cwd,
       command,
       profileName: profile?.name || 'Shell',
+      fontFamily: profile?.fontFamily,
+      fontSize: profile?.fontSize,
     };
 
     onTabsChange(prev => [...prev, newTab]);
@@ -340,7 +628,7 @@ export function TerminalPanel({
 
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--terminal-bg, var(--bg-primary))' }}>
-      {/* Tab bar — relative + z-10 so profile dropdown paints above the terminal container */}
+      {/* Tab bar -- relative + z-10 so profile dropdown paints above the terminal container */}
       <div
         className="flex items-center flex-shrink-0 relative z-10"
         style={{
@@ -430,7 +718,7 @@ export function TerminalPanel({
 
             {showProfileMenu && (
               <div
-                className="absolute right-0 top-full mt-1 z-50 rounded shadow-lg py-1 min-w-[180px]"
+                className="absolute right-0 top-full mt-1 z-50 rounded shadow-lg py-1 min-w-[220px]"
                 style={{
                   backgroundColor: 'rgba(0, 0, 0, 0.7)',
                   backdropFilter: 'blur(12px)',
@@ -438,9 +726,9 @@ export function TerminalPanel({
                 }}
               >
                 {profiles.map((profile) => (
-                  <button
+                  <div
                     key={profile.id}
-                    className="w-full text-left px-3 py-1.5 text-sm transition-colors"
+                    className="group flex items-center text-sm transition-colors"
                     style={{ color: 'rgba(255, 255, 255, 0.9)' }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
@@ -448,22 +736,85 @@ export function TerminalPanel({
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = 'transparent';
                     }}
-                    onClick={() => {
-                      spawnTerminal(profile);
-                      setShowProfileMenu(false);
-                    }}
                   >
-                    {profile.name}
-                    {profile.command && (
-                      <span
-                        className="block text-xs truncate"
+                    <button
+                      className="flex-1 text-left px-3 py-1.5 min-w-0"
+                      onClick={() => {
+                        spawnTerminal(profile);
+                        setShowProfileMenu(false);
+                      }}
+                    >
+                      <span className="block truncate">{profile.name}</span>
+                      {profile.command && (
+                        <span
+                          className="block text-xs truncate"
+                          style={{ color: 'rgba(255, 255, 255, 0.5)' }}
+                        >
+                          {profile.command}
+                        </span>
+                      )}
+                    </button>
+                    <div className="flex items-center gap-0.5 pr-2 opacity-0 group-hover:opacity-100 flex-shrink-0 transition-opacity">
+                      <button
+                        className="w-5 h-5 flex items-center justify-center rounded"
                         style={{ color: 'rgba(255, 255, 255, 0.5)' }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                          e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.color = 'rgba(255, 255, 255, 0.5)';
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditProfile(profile);
+                        }}
+                        title="Edit profile"
                       >
-                        {profile.command}
-                      </span>
-                    )}
-                  </button>
+                        <Pencil size={11} />
+                      </button>
+                      <button
+                        className="w-5 h-5 flex items-center justify-center rounded"
+                        style={{ color: 'rgba(255, 255, 255, 0.5)' }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
+                          e.currentTarget.style.color = '#ef4444';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.color = 'rgba(255, 255, 255, 0.5)';
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleProfileDelete(profile.id);
+                        }}
+                        title="Delete profile"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    </div>
+                  </div>
                 ))}
+
+                {/* Divider + New Profile */}
+                <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', margin: '4px 0' }} />
+                <button
+                  className="w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 transition-colors"
+                  style={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
+                  }}
+                  onClick={openNewProfile}
+                >
+                  <Plus size={12} />
+                  New Profile
+                </button>
               </div>
             )}
           </div>
@@ -504,7 +855,8 @@ export function TerminalPanel({
             <Terminal
               terminalId={tab.id}
               visible={tab.id === activeTabId}
-              fontSize={fontSize}
+              fontSize={tab.fontSize || fontSize}
+              fontFamily={tab.fontFamily}
               onTitleChange={(title) => handleTitleChange(tab.id, title)}
               onReady={(helpers) => handleTerminalReady(tab.id, tab.cwd, tab.command, tab.profileName, helpers)}
               onInput={(data) => handleTerminalInput(tab.id, data)}
@@ -513,6 +865,18 @@ export function TerminalPanel({
           </div>
         ))}
       </div>
+
+      {/* Profile editor modal */}
+      {showProfileEditor && (
+        <ProfileEditor
+          profile={editingProfile}
+          onSave={handleProfileSave}
+          onCancel={() => {
+            setShowProfileEditor(false);
+            setEditingProfile(null);
+          }}
+        />
+      )}
     </div>
   );
 }

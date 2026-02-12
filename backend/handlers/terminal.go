@@ -970,10 +970,12 @@ func (tm *TerminalManager) ListOrphanedTmuxSessions() []string {
 
 // TerminalProfile represents a saved terminal profile
 type TerminalProfile struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Command string `json:"command,omitempty"`
-	Cwd     string `json:"cwd,omitempty"`
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Command    string `json:"command,omitempty"`
+	Cwd        string `json:"cwd,omitempty"`
+	FontFamily string `json:"fontFamily,omitempty"`
+	FontSize   int    `json:"fontSize,omitempty"`
 }
 
 func profilesPath() string {

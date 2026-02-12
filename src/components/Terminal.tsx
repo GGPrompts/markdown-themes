@@ -20,6 +20,7 @@ interface TerminalProps {
   onInput?: (data: string) => void;
   onResize?: (cols: number, rows: number) => void;
   fontSize?: number;
+  fontFamily?: string;
 }
 
 /** Force all xterm internal elements transparent so --terminal-bg gradient shows through.
@@ -61,6 +62,8 @@ function getXtermTheme() {
   };
 }
 
+const DEFAULT_FONT_FAMILY = "'JetBrains Mono NF', 'JetBrains Mono', 'Fira Code NF', 'Fira Code', 'CaskaydiaCove NF', 'Cascadia Code', Menlo, Monaco, monospace";
+
 export function Terminal({
   terminalId,
   visible,
@@ -70,6 +73,7 @@ export function Terminal({
   onInput,
   onResize,
   fontSize = 14,
+  fontFamily,
 }: TerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
@@ -205,7 +209,7 @@ export function Terminal({
       rows: 24,
       cursorBlink: true,
       fontSize,
-      fontFamily: "'JetBrains Mono NF', 'JetBrains Mono', 'Fira Code NF', 'Fira Code', 'CaskaydiaCove NF', 'Cascadia Code', Menlo, Monaco, monospace",
+      fontFamily: fontFamily || DEFAULT_FONT_FAMILY,
       theme: getXtermTheme(),
       allowTransparency: true,
       allowProposedApi: true,
@@ -590,6 +594,14 @@ export function Terminal({
       fitAddonRef.current?.fit();
     }
   }, [fontSize]);
+
+  // Font family changes
+  useEffect(() => {
+    if (xtermRef.current) {
+      xtermRef.current.options.fontFamily = fontFamily || DEFAULT_FONT_FAMILY;
+      fitAddonRef.current?.fit();
+    }
+  }, [fontFamily]);
 
   return (
     <div

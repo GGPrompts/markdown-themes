@@ -35,6 +35,12 @@ type TerminalSession struct {
 
 	// Stop signal for the read goroutine
 	done chan struct{}
+
+	// Supersession: when a new PTY attachment replaces this one during
+	// reconnect, superseded is set to true so the output reader goroutine
+	// silently stops broadcasting and cleans up the old PTY.
+	superseded   bool
+	supersededMu sync.Mutex
 }
 
 // TerminalManager manages active terminal sessions
@@ -347,14 +353,34 @@ func (tm *TerminalManager) SpawnSession(id, cwd string, cols, rows uint16, comma
 
 // ReconnectSession attaches a new PTY to an existing tmux session.
 // The tmux session must already exist (checked by caller).
+// If an old PTY attachment exists, it is superseded: the old output reader
+// stops broadcasting and the old PTY fd is closed, preventing duplicate output.
 func (tm *TerminalManager) ReconnectSession(id, tmuxSessionName string, cols, rows uint16) (*TerminalSession, error) {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
-	// If we already have a live PTY for this session, just return it.
-	if existing, exists := tm.sessions[id]; exists {
-		log.Printf("[Terminal] ReconnectSession %s: already active, reusing", id)
-		return existing, nil
+	// If we already have a live PTY for this session, supersede it so its
+	// output reader stops broadcasting. This prevents duplicate output when
+	// a new PTY attachment races with the old one.
+	if oldSession, exists := tm.sessions[id]; exists {
+		log.Printf("[Terminal] ReconnectSession %s: superseding old PTY attachment", id)
+		oldSession.supersededMu.Lock()
+		oldSession.superseded = true
+		oldSession.supersededMu.Unlock()
+		// Remove from map so attachToTmux can register the new session.
+		delete(tm.sessions, id)
+		// Clean up old PTY fd and process in background.
+		go func() {
+			oldSession.ptmx.Close()
+			doneCh := make(chan error, 1)
+			go func() { doneCh <- oldSession.cmd.Wait() }()
+			select {
+			case <-doneCh:
+			case <-time.After(2 * time.Second):
+				oldSession.cmd.Process.Kill()
+			}
+			log.Printf("[Terminal] Old PTY for %s cleaned up after supersession", id)
+		}()
 	}
 
 	if cols == 0 {
@@ -445,7 +471,9 @@ func (tm *TerminalManager) attachToTmux(id, tmuxSessionName, cwd string, cols, r
 	return session, nil
 }
 
-// readPTY reads from the PTY and broadcasts to subscribed clients
+// readPTY reads from the PTY and broadcasts to subscribed clients.
+// If the session is superseded (a new PTY replaced this one during reconnect),
+// the loop exits silently to prevent duplicate output.
 func (tm *TerminalManager) readPTY(session *TerminalSession) {
 	buf := make([]byte, 32*1024)
 	for {
@@ -455,15 +483,41 @@ func (tm *TerminalManager) readPTY(session *TerminalSession) {
 		default:
 		}
 
+		// Check if this session has been superseded by a new PTY attachment.
+		session.supersededMu.Lock()
+		if session.superseded {
+			session.supersededMu.Unlock()
+			log.Printf("[Terminal] readPTY for %s: superseded, stopping output reader", session.ID)
+			return
+		}
+		session.supersededMu.Unlock()
+
 		n, err := session.ptmx.Read(buf)
-		if n > 0 && tm.broadcastFunc != nil {
-			data := make([]byte, n)
-			copy(data, buf[:n])
-			tm.broadcastFunc(session.ID, data)
+		if n > 0 {
+			// Re-check superseded after the (potentially blocking) read returns,
+			// so we don't broadcast stale data from the old PTY.
+			session.supersededMu.Lock()
+			isSuperseded := session.superseded
+			session.supersededMu.Unlock()
+			if isSuperseded {
+				log.Printf("[Terminal] readPTY for %s: superseded after read, dropping %d bytes", session.ID, n)
+				return
+			}
+			if tm.broadcastFunc != nil {
+				data := make([]byte, n)
+				copy(data, buf[:n])
+				tm.broadcastFunc(session.ID, data)
+			}
 		}
 		if err != nil {
 			if err != io.EOF {
-				log.Printf("[Terminal] Read error for %s: %v", session.ID, err)
+				// Suppress read errors for superseded sessions (fd was closed).
+				session.supersededMu.Lock()
+				isSuperseded := session.superseded
+				session.supersededMu.Unlock()
+				if !isSuperseded {
+					log.Printf("[Terminal] Read error for %s: %v", session.ID, err)
+				}
 			}
 			break
 		}

@@ -17,8 +17,8 @@ interface TerminalPanelProps {
   activeTabId: string | null;
   workspacePath: string;
   fontSize?: number;
-  onTabsChange: (tabs: TerminalTab[]) => void;
-  onActiveTabChange: (id: string | null) => void;
+  onTabsChange: React.Dispatch<React.SetStateAction<TerminalTab[]>>;
+  onActiveTabChange: React.Dispatch<React.SetStateAction<string | null>>;
   onClose: () => void;
 }
 
@@ -41,7 +41,7 @@ export function TerminalPanel({
 
   // Map of terminalId → write function (set when Terminal calls onReady)
   const terminalWritersRef = useRef<Map<string, {
-    write: (data: string) => void;
+    write: (data: string | Uint8Array) => void;
     fit: () => { cols: number; rows: number } | null;
     focus: () => void;
     clear: () => void;
@@ -51,7 +51,7 @@ export function TerminalPanel({
   const spawnedRef = useRef<Set<string>>(new Set());
 
   const { connected, spawn, sendInput, resize, close } = useTerminal({
-    onOutput: useCallback((terminalId: string, data: string) => {
+    onOutput: useCallback((terminalId: string, data: string | Uint8Array) => {
       const helpers = terminalWritersRef.current.get(terminalId);
       if (helpers) {
         helpers.write(data);
@@ -62,12 +62,16 @@ export function TerminalPanel({
     }, []),
     onClosed: useCallback((terminalId: string) => {
       spawnedRef.current.delete(terminalId);
-      onTabsChange(tabs.filter((t) => t.id !== terminalId));
-      if (activeTabId === terminalId) {
-        const remaining = tabs.filter((t) => t.id !== terminalId);
-        onActiveTabChange(remaining.length > 0 ? remaining[remaining.length - 1].id : null);
-      }
-    }, [tabs, activeTabId, onTabsChange, onActiveTabChange]),
+      onTabsChange(prev => {
+        const remaining = prev.filter((t) => t.id !== terminalId);
+        onActiveTabChange(prevActive =>
+          prevActive === terminalId
+            ? (remaining.length > 0 ? remaining[remaining.length - 1].id : null)
+            : prevActive
+        );
+        return remaining;
+      });
+    }, [onTabsChange, onActiveTabChange]),
     onError: useCallback((terminalId: string, error: string) => {
       console.error(`[Terminal] Error for ${terminalId}:`, error);
     }, []),
@@ -107,24 +111,29 @@ export function TerminalPanel({
       command,
     };
 
-    onTabsChange([...tabs, newTab]);
+    onTabsChange(prev => [...prev, newTab]);
     onActiveTabChange(id);
-  }, [tabs, workspacePath, onTabsChange, onActiveTabChange]);
+  }, [workspacePath, onTabsChange, onActiveTabChange]);
 
   const closeTab = useCallback((id: string) => {
     close(id);
-    const remaining = tabs.filter((t) => t.id !== id);
-    onTabsChange(remaining);
     terminalWritersRef.current.delete(id);
     spawnedRef.current.delete(id);
 
-    if (activeTabId === id) {
-      onActiveTabChange(remaining.length > 0 ? remaining[remaining.length - 1].id : null);
-    }
-  }, [tabs, activeTabId, close, onTabsChange, onActiveTabChange]);
+    onTabsChange(prev => {
+      const remaining = prev.filter((t) => t.id !== id);
+      // Also update active tab if we're closing the active one
+      onActiveTabChange(prevActive =>
+        prevActive === id
+          ? (remaining.length > 0 ? remaining[remaining.length - 1].id : null)
+          : prevActive
+      );
+      return remaining;
+    });
+  }, [close, onTabsChange, onActiveTabChange]);
 
   const handleTerminalReady = useCallback((terminalId: string, cwd: string, command: string | undefined, helpers: {
-    write: (data: string) => void;
+    write: (data: string | Uint8Array) => void;
     fit: () => { cols: number; rows: number } | null;
     focus: () => void;
     clear: () => void;
@@ -151,8 +160,8 @@ export function TerminalPanel({
   }, [resize]);
 
   const handleTitleChange = useCallback((terminalId: string, title: string) => {
-    onTabsChange(tabs.map((t) => (t.id === terminalId ? { ...t, title: title || t.title } : t)));
-  }, [tabs, onTabsChange]);
+    onTabsChange(prev => prev.map((t) => (t.id === terminalId ? { ...t, title: title || t.title } : t)));
+  }, [onTabsChange]);
 
   // Auto-spawn first terminal if none exist
   useEffect(() => {
@@ -162,13 +171,16 @@ export function TerminalPanel({
   }, [tabs.length, connected]); // Only on initial mount when connected
 
   return (
-    <div className="flex flex-col h-full" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+    <div className="flex flex-col h-full" style={{ background: 'var(--terminal-bg, var(--bg-primary))' }}>
       {/* Tab bar */}
       <div
         className="flex items-center overflow-x-auto flex-shrink-0"
         style={{
-          borderBottom: '1px solid var(--border)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           minHeight: '36px',
+          background: 'rgba(0, 0, 0, 0.3)',
+          backdropFilter: 'blur(8px)',
+          color: 'rgba(255, 255, 255, 0.7)',
         }}
       >
         {tabs.map((tab) => (
@@ -176,9 +188,9 @@ export function TerminalPanel({
             key={tab.id}
             className="flex items-center gap-1 px-3 py-1.5 text-sm cursor-pointer select-none min-w-0 max-w-[160px]"
             style={{
-              backgroundColor: tab.id === activeTabId ? 'var(--bg-primary)' : 'transparent',
+              backgroundColor: tab.id === activeTabId ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
               borderBottom: tab.id === activeTabId ? '2px solid var(--accent)' : '2px solid transparent',
-              color: tab.id === activeTabId ? 'var(--text-primary)' : 'var(--text-secondary)',
+              color: tab.id === activeTabId ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.55)',
             }}
             onClick={() => onActiveTabChange(tab.id)}
           >
@@ -186,7 +198,7 @@ export function TerminalPanel({
             <span className="truncate">{tab.title}</span>
             <button
               className="w-4 h-4 flex items-center justify-center rounded flex-shrink-0 opacity-0 hover:opacity-100 group-hover:opacity-60"
-              style={{ color: 'var(--text-secondary)' }}
+              style={{ color: 'rgba(255, 255, 255, 0.6)' }}
               onClick={(e) => {
                 e.stopPropagation();
                 closeTab(tab.id);
@@ -204,14 +216,14 @@ export function TerminalPanel({
           <button
             onClick={() => spawnTerminal()}
             className="w-6 h-6 flex items-center justify-center rounded transition-colors"
-            style={{ color: 'var(--text-secondary)' }}
+            style={{ color: 'rgba(255, 255, 255, 0.55)' }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
-              e.currentTarget.style.color = 'var(--text-primary)';
+              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.95)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = 'var(--text-secondary)';
+              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.55)';
             }}
             title="New terminal (Ctrl+Shift+T)"
           >
@@ -223,14 +235,14 @@ export function TerminalPanel({
             <button
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               className="w-6 h-6 flex items-center justify-center rounded transition-colors"
-              style={{ color: 'var(--text-secondary)' }}
+              style={{ color: 'rgba(255, 255, 255, 0.55)' }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
-                e.currentTarget.style.color = 'var(--text-primary)';
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.95)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = 'var(--text-secondary)';
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.55)';
               }}
               title="Terminal profiles"
             >
@@ -241,7 +253,8 @@ export function TerminalPanel({
               <div
                 className="absolute right-0 top-full mt-1 z-50 rounded shadow-lg py-1 min-w-[180px]"
                 style={{
-                  backgroundColor: 'var(--bg-primary)',
+                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                  backdropFilter: 'blur(12px)',
                   border: '1px solid var(--border)',
                 }}
               >
@@ -249,9 +262,9 @@ export function TerminalPanel({
                   <button
                     key={profile.id}
                     className="w-full text-left px-3 py-1.5 text-sm transition-colors"
-                    style={{ color: 'var(--text-primary)' }}
+                    style={{ color: 'rgba(255, 255, 255, 0.9)' }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
+                      e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = 'transparent';
@@ -265,7 +278,7 @@ export function TerminalPanel({
                     {profile.command && (
                       <span
                         className="block text-xs truncate"
-                        style={{ color: 'var(--text-secondary)' }}
+                        style={{ color: 'rgba(255, 255, 255, 0.5)' }}
                       >
                         {profile.command}
                       </span>
@@ -280,14 +293,14 @@ export function TerminalPanel({
           <button
             onClick={onClose}
             className="w-6 h-6 flex items-center justify-center rounded transition-colors"
-            style={{ color: 'var(--text-secondary)' }}
+            style={{ color: 'rgba(255, 255, 255, 0.55)' }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
-              e.currentTarget.style.color = 'var(--text-primary)';
+              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.95)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = 'var(--text-secondary)';
+              e.currentTarget.style.color = 'rgba(255, 255, 255, 0.55)';
             }}
             title="Close terminal panel"
           >
@@ -297,9 +310,9 @@ export function TerminalPanel({
       </div>
 
       {/* Terminal instances — all rendered, only active one visible */}
-      <div className="flex-1 relative overflow-hidden">
+      <div className="flex-1 relative overflow-hidden" style={{ background: 'var(--terminal-bg, var(--bg-primary))' }}>
         {!connected && tabs.length === 0 && (
-          <div className="flex items-center justify-center h-full" style={{ color: 'var(--text-secondary)' }}>
+          <div className="flex items-center justify-center h-full" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>
             <p className="text-sm">Connecting to backend...</p>
           </div>
         )}

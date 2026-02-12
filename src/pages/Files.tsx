@@ -1503,11 +1503,11 @@ export function Files() {
               <div className="absolute inset-y-0 left-0 right-0 group-hover:bg-[var(--accent)] transition-colors" />
             </div>
 
-            <div
-              className="h-full flex flex-col overflow-hidden"
-              style={{ width: `${thirdColumnWidth}px`, flexShrink: 0 }}
-            >
-              {thirdColumnMode === 'chat' ? (
+            {thirdColumnMode === 'chat' && (
+              <div
+                className="h-full flex flex-col overflow-hidden"
+                style={{ width: `${thirdColumnWidth}px`, flexShrink: 0 }}
+              >
                 <ChatPanel
                   currentFile={currentFile}
                   fontSize={appState.fontSize}
@@ -1522,20 +1522,30 @@ export function Files() {
                     });
                   }}
                 />
-              ) : (
-                <TerminalPanel
-                  tabs={terminalTabs}
-                  activeTabId={activeTerminalTabId}
-                  workspacePath={workspacePath || ''}
-                  fontSize={14}
-                  onTabsChange={setTerminalTabs}
-                  onActiveTabChange={setActiveTerminalTabId}
-                  onClose={handleTerminalToggle}
-                />
-              )}
-            </div>
+              </div>
+            )}
           </>
         )}
+
+        {/* Terminal panel — always mounted to preserve xterm instances, hidden via CSS */}
+        <div
+          className="h-full flex flex-col overflow-hidden"
+          style={{
+            width: `${thirdColumnWidth}px`,
+            flexShrink: 0,
+            display: thirdColumnOpen && thirdColumnMode === 'terminal' ? 'flex' : 'none',
+          }}
+        >
+          <TerminalPanel
+            tabs={terminalTabs}
+            activeTabId={activeTerminalTabId}
+            workspacePath={workspacePath || ''}
+            fontSize={14}
+            onTabsChange={setTerminalTabs}
+            onActiveTabChange={setActiveTerminalTabId}
+            onClose={handleTerminalToggle}
+          />
+        </div>
       </div>
 
       {/* Tab context menu */}

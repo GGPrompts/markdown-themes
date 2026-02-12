@@ -174,7 +174,7 @@ export function TerminalPanel({
     <div className="flex flex-col h-full" style={{ background: 'var(--terminal-bg, var(--bg-primary))' }}>
       {/* Tab bar */}
       <div
-        className="flex items-center overflow-x-auto flex-shrink-0"
+        className="flex items-center flex-shrink-0"
         style={{
           borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           minHeight: '36px',
@@ -183,36 +183,39 @@ export function TerminalPanel({
           color: 'rgba(255, 255, 255, 0.7)',
         }}
       >
-        {tabs.map((tab) => (
-          <div
-            key={tab.id}
-            className="flex items-center gap-1 px-3 py-1.5 text-sm cursor-pointer select-none min-w-0 max-w-[160px]"
-            style={{
-              backgroundColor: tab.id === activeTabId ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-              borderBottom: tab.id === activeTabId ? '2px solid var(--accent)' : '2px solid transparent',
-              color: tab.id === activeTabId ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.55)',
-            }}
-            onClick={() => onActiveTabChange(tab.id)}
-          >
-            <TerminalIcon size={12} className="flex-shrink-0" />
-            <span className="truncate">{tab.title}</span>
-            <button
-              className="w-4 h-4 flex items-center justify-center rounded flex-shrink-0 opacity-0 hover:opacity-100 group-hover:opacity-60"
-              style={{ color: 'rgba(255, 255, 255, 0.6)' }}
-              onClick={(e) => {
-                e.stopPropagation();
-                closeTab(tab.id);
+        {/* Scrollable tabs */}
+        <div className="flex items-center overflow-x-auto min-w-0 flex-1">
+          {tabs.map((tab) => (
+            <div
+              key={tab.id}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm cursor-pointer select-none min-w-0 max-w-[160px]"
+              style={{
+                backgroundColor: tab.id === activeTabId ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                borderBottom: tab.id === activeTabId ? '2px solid var(--accent)' : '2px solid transparent',
+                color: tab.id === activeTabId ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.55)',
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.opacity = ''; }}
+              onClick={() => onActiveTabChange(tab.id)}
             >
-              <X size={10} />
-            </button>
-          </div>
-        ))}
+              <TerminalIcon size={12} className="flex-shrink-0" />
+              <span className="truncate">{tab.title}</span>
+              <button
+                className="w-4 h-4 flex items-center justify-center rounded flex-shrink-0 opacity-0 hover:opacity-100 group-hover:opacity-60"
+                style={{ color: 'rgba(255, 255, 255, 0.6)' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeTab(tab.id);
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.opacity = ''; }}
+              >
+                <X size={10} />
+              </button>
+            </div>
+          ))}
+        </div>
 
         {/* New terminal / profiles */}
-        <div className="flex items-center ml-auto flex-shrink-0 px-1 gap-0.5">
+        <div className="flex items-center flex-shrink-0 px-1 gap-0.5">
           <button
             onClick={() => spawnTerminal()}
             className="w-6 h-6 flex items-center justify-center rounded transition-colors"

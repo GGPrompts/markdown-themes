@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -86,6 +87,74 @@ func getShell() string {
 	return "/bin/sh"
 }
 
+// parentTerminalVars lists environment variables set by terminal emulators
+// and multiplexers that should NOT leak into spawned PTY sessions.
+var parentTerminalVars = []string{
+	"TMUX",
+	"TMUX_PANE",
+	"TERM_PROGRAM",
+	"TERM_PROGRAM_VERSION",
+	"TERM_SESSION_ID",
+	"STY",                // GNU Screen
+	"WT_SESSION",         // Windows Terminal
+	"WEZTERM_EXECUTABLE", // WezTerm
+	"ALACRITTY_SOCKET",   // Alacritty
+	"KITTY_WINDOW_ID",    // Kitty
+	"ITERM_SESSION_ID",   // iTerm2
+}
+
+// buildPTYEnv constructs a clean environment for a child PTY session.
+// It starts from the current process environment, removes parent terminal
+// variables, adds markdown-themes identification vars, and layers in
+// PTY-specific settings (TERM, locale, color support, etc.).
+func buildPTYEnv(sessionID string, cols, rows uint16) []string {
+	// Parse os.Environ() into a map (last value wins for duplicates)
+	envMap := make(map[string]string, 64)
+	for _, entry := range os.Environ() {
+		if k, v, ok := strings.Cut(entry, "="); ok {
+			envMap[k] = v
+		}
+	}
+
+	// Remove parent terminal/multiplexer variables
+	for _, key := range parentTerminalVars {
+		delete(envMap, key)
+	}
+
+	// Markdown-themes identification
+	envMap["MDT_TERMINAL"] = "1"
+	envMap["MDT_SESSION_ID"] = sessionID
+
+	// Terminal type and geometry
+	envMap["TERM"] = "xterm-256color"
+	envMap["COLUMNS"] = fmt.Sprintf("%d", cols)
+	envMap["LINES"] = fmt.Sprintf("%d", rows)
+
+	// UTF-8 locale (needed for Bubbletea/lipgloss/ncurses TUI apps)
+	if envMap["LANG"] == "" {
+		envMap["LANG"] = "en_US.UTF-8"
+	}
+	if envMap["LC_ALL"] == "" {
+		envMap["LC_ALL"] = "en_US.UTF-8"
+	}
+
+	// Truecolor support detection for lipgloss/charm/termenv
+	envMap["COLORTERM"] = "truecolor"
+	// Tell lipgloss/charm about dark background (15=white fg, 0=black bg)
+	envMap["COLORFGBG"] = "15;0"
+	// Force ncurses to use UTF-8 box-drawing instead of ACS fallback
+	envMap["NCURSES_NO_UTF8_ACS"] = "1"
+	// Force color output in Node.js apps (chalk, etc.)
+	envMap["FORCE_COLOR"] = "1"
+
+	// Convert map back to []string
+	env := make([]string, 0, len(envMap))
+	for k, v := range envMap {
+		env = append(env, k+"="+v)
+	}
+	return env
+}
+
 // SpawnSession creates a new terminal session with a direct PTY
 func (tm *TerminalManager) SpawnSession(id, cwd string, cols, rows uint16, command string) (*TerminalSession, error) {
 	tm.mu.Lock()
@@ -120,32 +189,12 @@ func (tm *TerminalManager) SpawnSession(id, cwd string, cols, rows uint16, comma
 		cmd = exec.Command(shell, "-l")
 	}
 	cmd.Dir = cwd
-	// Ensure UTF-8 locale is set (needed for Bubbletea/lipgloss/ncurses TUI apps)
-	lang := os.Getenv("LANG")
-	if lang == "" {
-		lang = "en_US.UTF-8"
-	}
-	lcAll := os.Getenv("LC_ALL")
-	if lcAll == "" {
-		lcAll = "en_US.UTF-8"
-	}
 
-	cmd.Env = append(os.Environ(),
-		"TERM=xterm-256color",
-		fmt.Sprintf("COLUMNS=%d", cols),
-		fmt.Sprintf("LINES=%d", rows),
-		// UTF-8 locale for proper box-drawing and emoji rendering
-		fmt.Sprintf("LANG=%s", lang),
-		fmt.Sprintf("LC_ALL=%s", lcAll),
-		// Truecolor support detection for lipgloss/charm/termenv
-		"COLORTERM=truecolor",
-		// Tell lipgloss/charm about dark background (15=white fg, 0=black bg)
-		"COLORFGBG=15;0",
-		// Force ncurses to use UTF-8 box-drawing instead of ACS fallback
-		"NCURSES_NO_UTF8_ACS=1",
-		// Force color output in Node.js apps (chalk, etc.)
-		"FORCE_COLOR=1",
-	)
+	// Build a clean environment: start from os.Environ(), strip parent
+	// terminal variables that confuse child TUI apps (e.g. TMUX inherited
+	// from the host shell), then layer in our own PTY-specific vars.
+	env := buildPTYEnv(id, cols, rows)
+	cmd.Env = env
 
 	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{
 		Cols: cols,

@@ -7,8 +7,6 @@ export interface TerminalTab {
   cwd: string;
   command?: string;
   profileName?: string;
-  fontFamily?: string;
-  fontSize?: number;
   /** The tmux session name backing this terminal (same as id for mt-* terminals) */
   tmuxSession?: string;
   /** True while waiting for a staggered reconnection to fire or complete */

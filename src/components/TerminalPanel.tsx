@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Plus, X, MoreVertical, Terminal as TerminalIcon, Pencil, Trash2 } from 'lucide-react';
+import { Plus, X, MoreVertical, Terminal as TerminalIcon, Pencil, Trash2, Minus, Type } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { Terminal } from './Terminal';
 import { useTerminal, type TerminalTab, type RecoveredSession } from '../hooks/useTerminal';
@@ -11,8 +11,6 @@ interface TerminalProfile {
   name: string;
   command?: string;
   cwd?: string;
-  fontFamily?: string;
-  fontSize?: number;
 }
 
 const FONT_FAMILY_OPTIONS = [
@@ -61,8 +59,6 @@ interface ProfileEditorProps {
 
 function ProfileEditor({ profile, onSave, onCancel }: ProfileEditorProps) {
   const [name, setName] = useState(profile?.name || '');
-  const [fontFamily, setFontFamily] = useState(profile?.fontFamily || '');
-  const [fontSizeVal, setFontSizeVal] = useState(profile?.fontSize?.toString() || '');
   const [command, setCommand] = useState(profile?.command || '');
   const [cwd, setCwd] = useState(profile?.cwd || '');
   const nameInputRef = useRef<HTMLInputElement>(null);
@@ -74,14 +70,11 @@ function ProfileEditor({ profile, onSave, onCancel }: ProfileEditorProps) {
   const handleSave = () => {
     const trimmedName = name.trim();
     if (!trimmedName) return;
-    const parsedFontSize = fontSizeVal ? parseInt(fontSizeVal, 10) : undefined;
     onSave({
       id: profile?.id || generateProfileId(trimmedName),
       name: trimmedName,
       command: command.trim() || undefined,
       cwd: cwd.trim() || undefined,
-      fontFamily: fontFamily || undefined,
-      fontSize: parsedFontSize && parsedFontSize >= 8 && parsedFontSize <= 32 ? parsedFontSize : undefined,
     });
   };
 
@@ -172,40 +165,6 @@ function ProfileEditor({ profile, onSave, onCancel }: ProfileEditorProps) {
             />
           </div>
 
-          {/* Font family */}
-          <div>
-            <label style={labelStyle}>Font family</label>
-            <select
-              value={fontFamily}
-              onChange={(e) => setFontFamily(e.target.value)}
-              style={{ ...inputStyle, appearance: 'auto' as React.CSSProperties['appearance'] }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent, #64ffda)'; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)'; }}
-            >
-              {FONT_FAMILY_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value} style={{ backgroundColor: '#1a1a1e', color: '#e0e0e0' }}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Font size */}
-          <div>
-            <label style={labelStyle}>Font size</label>
-            <input
-              type="number"
-              min={8}
-              max={32}
-              value={fontSizeVal}
-              onChange={(e) => setFontSizeVal(e.target.value)}
-              placeholder="14"
-              style={inputStyle}
-              onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent, #64ffda)'; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)'; }}
-            />
-          </div>
-
           {/* Command */}
           <div>
             <label style={labelStyle}>Command</label>
@@ -290,6 +249,10 @@ export function TerminalPanel({
   const [profiles, setProfiles] = useState<TerminalProfile[]>([]);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showProfileEditor, setShowProfileEditor] = useState(false);
+  const [showFontMenu, setShowFontMenu] = useState(false);
+  const [globalFontFamily, setGlobalFontFamily] = useState('');
+  const [globalFontSize, setGlobalFontSize] = useState(fontSize);
+  const fontMenuRef = useRef<HTMLDivElement>(null);
   const [editingProfile, setEditingProfile] = useState<TerminalProfile | null>(null);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -507,6 +470,18 @@ export function TerminalPanel({
     return () => document.removeEventListener('mousedown', handleClick);
   }, [showProfileMenu]);
 
+  // Close font menu on outside click
+  useEffect(() => {
+    if (!showFontMenu) return;
+    const handleClick = (e: MouseEvent) => {
+      if (fontMenuRef.current && !fontMenuRef.current.contains(e.target as Node)) {
+        setShowFontMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showFontMenu]);
+
   const saveProfilesToBackend = useCallback((updatedProfiles: TerminalProfile[]) => {
     setProfiles(updatedProfiles);
     fetch(`${API_BASE}/api/terminal/profiles`, {
@@ -561,8 +536,6 @@ export function TerminalPanel({
       cwd,
       command,
       profileName: profile?.name || 'Shell',
-      fontFamily: profile?.fontFamily,
-      fontSize: profile?.fontSize,
     };
 
     onTabsChange(prev => [...prev, newTab]);
@@ -819,6 +792,88 @@ export function TerminalPanel({
             )}
           </div>
 
+          {/* Font settings */}
+          <div className="relative" ref={fontMenuRef}>
+            <button
+              onClick={() => setShowFontMenu(!showFontMenu)}
+              className="w-6 h-6 flex items-center justify-center rounded transition-colors"
+              style={{ color: 'rgba(255, 255, 255, 0.55)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.95)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = 'rgba(255, 255, 255, 0.55)';
+              }}
+              title="Font settings"
+            >
+              <Type size={13} />
+            </button>
+
+            {showFontMenu && (
+              <div
+                className="absolute right-0 top-full mt-1 z-50 rounded shadow-lg py-2 px-3"
+                style={{
+                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid var(--border)',
+                  minWidth: '200px',
+                }}
+              >
+                {/* Font size */}
+                <div className="flex items-center justify-between mb-2">
+                  <span style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px' }}>Size</span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      className="w-5 h-5 flex items-center justify-center rounded"
+                      style={{ color: 'rgba(255, 255, 255, 0.7)', backgroundColor: 'rgba(255, 255, 255, 0.06)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.06)'; }}
+                      onClick={() => setGlobalFontSize(s => Math.max(8, s - 1))}
+                    >
+                      <Minus size={10} />
+                    </button>
+                    <span style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: '12px', minWidth: '24px', textAlign: 'center' }}>
+                      {globalFontSize}
+                    </span>
+                    <button
+                      className="w-5 h-5 flex items-center justify-center rounded"
+                      style={{ color: 'rgba(255, 255, 255, 0.7)', backgroundColor: 'rgba(255, 255, 255, 0.06)' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.06)'; }}
+                      onClick={() => setGlobalFontSize(s => Math.min(32, s + 1))}
+                    >
+                      <Plus size={10} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Font family */}
+                <div>
+                  <span style={{ color: 'rgba(255, 255, 255, 0.6)', fontSize: '12px', display: 'block', marginBottom: '4px' }}>Font</span>
+                  {FONT_FAMILY_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      className="w-full text-left px-2 py-1 text-xs rounded transition-colors"
+                      style={{
+                        color: (globalFontFamily || '') === opt.value ? 'var(--accent, #64ffda)' : 'rgba(255, 255, 255, 0.8)',
+                        backgroundColor: (globalFontFamily || '') === opt.value ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = (globalFontFamily || '') === opt.value ? 'rgba(255, 255, 255, 0.08)' : 'transparent';
+                      }}
+                      onClick={() => setGlobalFontFamily(opt.value)}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Close panel */}
           <button
             onClick={onClose}
@@ -855,8 +910,8 @@ export function TerminalPanel({
             <Terminal
               terminalId={tab.id}
               visible={tab.id === activeTabId}
-              fontSize={tab.fontSize || fontSize}
-              fontFamily={tab.fontFamily}
+              fontSize={globalFontSize}
+              fontFamily={globalFontFamily || undefined}
               onTitleChange={(title) => handleTitleChange(tab.id, title)}
               onReady={(helpers) => handleTerminalReady(tab.id, tab.cwd, tab.command, tab.profileName, helpers)}
               onInput={(data) => handleTerminalInput(tab.id, data)}

@@ -8,6 +8,8 @@ import '@xterm/xterm/css/xterm.css';
 interface TerminalProps {
   terminalId: string;
   visible: boolean;
+  /** When true, set xterm scrollback to 0 (tmux manages scrollback with 10K lines). */
+  tmuxManaged?: boolean;
   onTitleChange?: (title: string) => void;
   onReady?: (helpers: {
     write: (data: string | Uint8Array) => void;
@@ -62,6 +64,7 @@ function getXtermTheme() {
 export function Terminal({
   terminalId,
   visible,
+  tmuxManaged = true,
   onTitleChange,
   onReady,
   onInput,
@@ -129,7 +132,9 @@ export function Terminal({
       theme: getXtermTheme(),
       allowTransparency: true,
       allowProposedApi: true,
-      scrollback: 10000,
+      // When tmux manages the terminal, set scrollback to 0 since tmux
+      // handles scrollback with 10K lines via .tmux-markdown-themes.conf.
+      scrollback: tmuxManaged ? 0 : 10000,
       minimumContrastRatio: 4.5,
     });
 

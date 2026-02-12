@@ -50,7 +50,7 @@ export function TerminalPanel({
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
 
-  // Map of terminalId → write function (set when Terminal calls onReady)
+  // Map of terminalId -> write function (set when Terminal calls onReady)
   const terminalWritersRef = useRef<Map<string, {
     write: (data: string | Uint8Array) => void;
     fit: () => { cols: number; rows: number } | null;
@@ -61,18 +61,42 @@ export function TerminalPanel({
   // Track which terminals have been spawned on the backend
   const spawnedRef = useRef<Set<string>>(new Set());
 
-  const { connected, spawn, sendInput, resize, close } = useTerminal({
+  // Track tabs that need reconnection after WS reconnect
+  const pendingReconnectsRef = useRef<Set<string>>(new Set());
+
+  // Track whether we've connected at least once (to distinguish initial connect vs reconnect)
+  const hasConnectedRef = useRef(false);
+
+  // Ref to current tabs for use in onConnected callback
+  const tabsRef = useRef(tabs);
+  useEffect(() => { tabsRef.current = tabs; }, [tabs]);
+
+  // Ref to the reconnect function -- populated after useTerminal returns.
+  // This breaks the circular dependency where onConnected needs reconnect
+  // but reconnect comes from the same useTerminal call.
+  const reconnectRef = useRef<(id: string, cols: number, rows: number) => void>(() => {});
+
+  const { connected, spawn, reconnect, sendInput, resize, close } = useTerminal({
     onOutput: useCallback((terminalId: string, data: string | Uint8Array) => {
       const helpers = terminalWritersRef.current.get(terminalId);
       if (helpers) {
         helpers.write(data);
       }
     }, []),
-    onSpawned: useCallback((info: { terminalId: string; cwd: string }) => {
+    onSpawned: useCallback((info: { terminalId: string; tmuxSession?: string; cwd: string; reconnected?: boolean }) => {
       spawnedRef.current.add(info.terminalId);
-    }, []),
+      pendingReconnectsRef.current.delete(info.terminalId);
+
+      // Store the tmux session name on the tab
+      if (info.tmuxSession) {
+        onTabsChange(prev => prev.map(t =>
+          t.id === info.terminalId ? { ...t, tmuxSession: info.tmuxSession } : t
+        ));
+      }
+    }, [onTabsChange]),
     onClosed: useCallback((terminalId: string) => {
       spawnedRef.current.delete(terminalId);
+      pendingReconnectsRef.current.delete(terminalId);
       onTabsChange(prev => {
         const remaining = prev.filter((t) => t.id !== terminalId);
         onActiveTabChange(prevActive =>
@@ -85,8 +109,46 @@ export function TerminalPanel({
     }, [onTabsChange, onActiveTabChange]),
     onError: useCallback((terminalId: string, error: string) => {
       console.error(`[Terminal] Error for ${terminalId}:`, error);
+      // If reconnect fails (tmux session gone), remove the tab
+      if (error.includes('tmux session not found') && pendingReconnectsRef.current.has(terminalId)) {
+        pendingReconnectsRef.current.delete(terminalId);
+        spawnedRef.current.delete(terminalId);
+        onTabsChange(prev => {
+          const remaining = prev.filter((t) => t.id !== terminalId);
+          onActiveTabChange(prevActive =>
+            prevActive === terminalId
+              ? (remaining.length > 0 ? remaining[remaining.length - 1].id : null)
+              : prevActive
+          );
+          return remaining;
+        });
+      }
+    }, [onTabsChange, onActiveTabChange]),
+    onConnected: useCallback(() => {
+      if (!hasConnectedRef.current) {
+        hasConnectedRef.current = true;
+        return;
+      }
+      // WebSocket reconnected -- reconnect all tabs that have tmux sessions
+      const currentTabs = tabsRef.current;
+      for (const tab of currentTabs) {
+        // Only reconnect tabs that had been spawned (have tmux sessions)
+        if (spawnedRef.current.has(tab.id) || tab.tmuxSession) {
+          const helpers = terminalWritersRef.current.get(tab.id);
+          if (helpers) {
+            const dims = helpers.fit();
+            const cols = dims?.cols || 120;
+            const rows = dims?.rows || 30;
+            pendingReconnectsRef.current.add(tab.id);
+            reconnectRef.current(tab.id, cols, rows);
+          }
+        }
+      }
     }, []),
   });
+
+  // Keep reconnectRef pointing to the latest reconnect function
+  reconnectRef.current = reconnect;
 
   // Load profiles on mount
   useEffect(() => {
@@ -131,6 +193,7 @@ export function TerminalPanel({
     close(id);
     terminalWritersRef.current.delete(id);
     spawnedRef.current.delete(id);
+    pendingReconnectsRef.current.delete(id);
 
     onTabsChange(prev => {
       const remaining = prev.filter((t) => t.id !== id);
@@ -325,7 +388,7 @@ export function TerminalPanel({
         </div>
       </div>
 
-      {/* Terminal instances — all rendered, only active one visible */}
+      {/* Terminal instances -- all rendered, only active one visible */}
       <div className="flex-1 relative overflow-hidden" style={{ background: 'var(--terminal-bg, var(--bg-primary))' }}>
         {!connected && tabs.length === 0 && (
           <div className="flex items-center justify-center h-full" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>

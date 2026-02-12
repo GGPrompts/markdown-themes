@@ -17,13 +17,14 @@ import (
 	"github.com/creack/pty"
 )
 
-// TerminalSession represents an active terminal with a direct PTY
+// TerminalSession represents an active terminal with a PTY attached to a tmux session
 type TerminalSession struct {
-	ID        string    `json:"id"`
-	Cwd       string    `json:"cwd"`
-	Cols      uint16    `json:"cols"`
-	Rows      uint16    `json:"rows"`
-	CreatedAt time.Time `json:"createdAt"`
+	ID          string    `json:"id"`
+	TmuxSession string    `json:"tmuxSession"` // tmux session name (same as ID for mt-* terminals)
+	Cwd         string    `json:"cwd"`
+	Cols        uint16    `json:"cols"`
+	Rows        uint16    `json:"rows"`
+	CreatedAt   time.Time `json:"createdAt"`
 
 	ptmx *os.File
 	cmd  *exec.Cmd
@@ -149,6 +150,56 @@ func getShell() string {
 	return "/bin/sh"
 }
 
+// tmuxConfigPath returns the absolute path to the self-contained tmux config.
+func tmuxConfigPath() string {
+	// Look relative to the running binary first, then fall back to cwd.
+	// The config lives at the project root: .tmux-markdown-themes.conf
+	exe, err := os.Executable()
+	if err == nil {
+		candidate := filepath.Join(filepath.Dir(exe), ".tmux-markdown-themes.conf")
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+	cwd, _ := os.Getwd()
+	candidate := filepath.Join(cwd, ".tmux-markdown-themes.conf")
+	if _, err := os.Stat(candidate); err == nil {
+		return candidate
+	}
+	// Final fallback: walk up from the executable looking for the project root
+	if exe != "" {
+		dir := filepath.Dir(exe)
+		for i := 0; i < 5; i++ {
+			candidate = filepath.Join(dir, ".tmux-markdown-themes.conf")
+			if _, err := os.Stat(candidate); err == nil {
+				return candidate
+			}
+			dir = filepath.Dir(dir)
+		}
+	}
+	return ".tmux-markdown-themes.conf" // last resort, let tmux fail with a clear error
+}
+
+// tmuxCmd creates an exec.Cmd for tmux with our self-contained config via -f flag.
+func tmuxCmd(args ...string) *exec.Cmd {
+	fullArgs := append([]string{"-f", tmuxConfigPath()}, args...)
+	return exec.Command("tmux", fullArgs...)
+}
+
+// tmuxHasSession checks whether a tmux session with the given name exists.
+func tmuxHasSession(name string) bool {
+	cmd := tmuxCmd("has-session", "-t", name)
+	return cmd.Run() == nil
+}
+
+// tmuxKillSession kills a tmux session by name.
+func tmuxKillSession(name string) {
+	cmd := tmuxCmd("kill-session", "-t", name)
+	if err := cmd.Run(); err != nil {
+		log.Printf("[Terminal] tmux kill-session %s: %v", name, err)
+	}
+}
+
 // parentTerminalVars lists environment variables set by terminal emulators
 // and multiplexers that should NOT leak into spawned PTY sessions.
 var parentTerminalVars = []string{
@@ -217,7 +268,10 @@ func buildPTYEnv(sessionID string, cols, rows uint16) []string {
 	return env
 }
 
-// SpawnSession creates a new terminal session with a direct PTY
+// SpawnSession creates a new terminal session backed by a tmux session.
+// It first creates a detached tmux session, force-reloads the config, then
+// attaches a PTY to the tmux session. The tmux session survives PTY/WebSocket
+// disconnects so clients can reconnect later.
 func (tm *TerminalManager) SpawnSession(id, cwd string, cols, rows uint16, command string) (*TerminalSession, error) {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
@@ -241,21 +295,93 @@ func (tm *TerminalManager) SpawnSession(id, cwd string, cols, rows uint16, comma
 		rows = 24
 	}
 
-	// Spawn shell directly — same as node-pty approach
-	shell := getShell()
-	var cmd *exec.Cmd
-	if command != "" {
-		// Run command in a login shell
-		cmd = exec.Command(shell, "-l", "-c", command)
-	} else {
-		cmd = exec.Command(shell, "-l")
-	}
-	cmd.Dir = cwd
+	// The tmux session name matches the terminal ID (mt-{profile}-{uuid}).
+	tmuxSessionName := id
+	configPath := tmuxConfigPath()
 
-	// Build a clean environment: start from os.Environ(), strip parent
-	// terminal variables that confuse child TUI apps (e.g. TMUX inherited
-	// from the host shell), then layer in our own PTY-specific vars.
+	// Build clean env for the tmux session.
 	env := buildPTYEnv(id, cols, rows)
+
+	// Step 1: Create detached tmux session.
+	// If a command was specified, wrap it in a login shell invocation.
+	shell := getShell()
+	var shellCmd string
+	if command != "" {
+		shellCmd = shell + " -l -c " + command
+	} else {
+		shellCmd = shell + " -l"
+	}
+
+	createArgs := []string{
+		"-f", configPath,
+		"new-session", "-d",
+		"-s", tmuxSessionName,
+		"-c", cwd,
+		"-x", fmt.Sprintf("%d", cols),
+		"-y", fmt.Sprintf("%d", rows),
+		shellCmd,
+	}
+	createCmd := exec.Command("tmux", createArgs...)
+	createCmd.Env = env
+	if out, err := createCmd.CombinedOutput(); err != nil {
+		return nil, fmt.Errorf("tmux new-session failed: %w (output: %s)", err, strings.TrimSpace(string(out)))
+	}
+
+	// Step 2: Force-reload config to handle pre-existing tmux server with different settings.
+	reloadCmd := tmuxCmd("source-file", configPath)
+	if out, err := reloadCmd.CombinedOutput(); err != nil {
+		log.Printf("[Terminal] tmux source-file warning: %v (output: %s)", err, strings.TrimSpace(string(out)))
+	}
+
+	// Step 3: Attach PTY to the tmux session.
+	session, err := tm.attachToTmux(id, tmuxSessionName, cwd, cols, rows, env)
+	if err != nil {
+		// Clean up the tmux session we just created.
+		tmuxKillSession(tmuxSessionName)
+		return nil, err
+	}
+
+	log.Printf("[Terminal] Session %s spawned (tmux: %s, cwd: %s, %dx%d)", id, tmuxSessionName, cwd, cols, rows)
+	return session, nil
+}
+
+// ReconnectSession attaches a new PTY to an existing tmux session.
+// The tmux session must already exist (checked by caller).
+func (tm *TerminalManager) ReconnectSession(id, tmuxSessionName string, cols, rows uint16) (*TerminalSession, error) {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
+	// If we already have a live PTY for this session, just return it.
+	if existing, exists := tm.sessions[id]; exists {
+		log.Printf("[Terminal] ReconnectSession %s: already active, reusing", id)
+		return existing, nil
+	}
+
+	if cols == 0 {
+		cols = 80
+	}
+	if rows == 0 {
+		rows = 24
+	}
+
+	env := buildPTYEnv(id, cols, rows)
+	session, err := tm.attachToTmux(id, tmuxSessionName, "", cols, rows, env)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("[Terminal] Session %s reconnected to tmux session %s", id, tmuxSessionName)
+	return session, nil
+}
+
+// attachToTmux creates a PTY running `tmux attach-session -t <name>` and
+// registers it in the session map. Caller must hold tm.mu.
+func (tm *TerminalManager) attachToTmux(id, tmuxSessionName, cwd string, cols, rows uint16, env []string) (*TerminalSession, error) {
+	configPath := tmuxConfigPath()
+	cmd := exec.Command("tmux", "-f", configPath, "attach-session", "-t", tmuxSessionName)
+	if cwd != "" {
+		cmd.Dir = cwd
+	}
 	cmd.Env = env
 
 	ptmx, err := pty.StartWithSize(cmd, &pty.Winsize{
@@ -263,19 +389,20 @@ func (tm *TerminalManager) SpawnSession(id, cwd string, cols, rows uint16, comma
 		Rows: rows,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to start PTY: %w", err)
+		return nil, fmt.Errorf("failed to attach PTY to tmux session %s: %w", tmuxSessionName, err)
 	}
 
 	session := &TerminalSession{
-		ID:        id,
-		Cwd:       cwd,
-		Cols:      cols,
-		Rows:      rows,
-		CreatedAt: time.Now(),
-		ptmx:      ptmx,
-		cmd:       cmd,
-		clients:   make(map[interface{}]bool),
-		done:      make(chan struct{}),
+		ID:          id,
+		TmuxSession: tmuxSessionName,
+		Cwd:         cwd,
+		Cols:        cols,
+		Rows:        rows,
+		CreatedAt:   time.Now(),
+		ptmx:        ptmx,
+		cmd:         cmd,
+		clients:     make(map[interface{}]bool),
+		done:        make(chan struct{}),
 	}
 
 	tm.sessions[id] = session
@@ -283,16 +410,16 @@ func (tm *TerminalManager) SpawnSession(id, cwd string, cols, rows uint16, comma
 	// Start reading PTY output in background
 	go tm.readPTY(session)
 
-	// Wait for process exit in background to clean up
+	// Wait for attach process exit in background.
+	// Note: When the PTY (tmux attach) exits, the tmux session itself keeps running.
+	// This allows reconnection later.
 	go func() {
 		cmd.Wait()
-		// Process exited — clean up if not already closed
 		tm.mu.Lock()
 		_, stillActive := tm.sessions[id]
 		if stillActive {
 			delete(tm.sessions, id)
 		}
-		// Cancel any pending grace timer for this session.
 		if timer, exists := tm.disconnectTimers[id]; exists {
 			timer.Stop()
 			delete(tm.disconnectTimers, id)
@@ -301,14 +428,20 @@ func (tm *TerminalManager) SpawnSession(id, cwd string, cols, rows uint16, comma
 
 		if stillActive {
 			session.ptmx.Close()
-			log.Printf("[Terminal] Session %s shell exited", id)
-			if tm.closedFunc != nil {
-				tm.closedFunc(id)
+			// Only notify closed if the tmux session itself is dead.
+			// If tmux session still exists, it means the PTY attach exited
+			// but the session is alive for reconnection.
+			if !tmuxHasSession(tmuxSessionName) {
+				log.Printf("[Terminal] Session %s tmux session exited", id)
+				if tm.closedFunc != nil {
+					tm.closedFunc(id)
+				}
+			} else {
+				log.Printf("[Terminal] Session %s PTY detached, tmux session %s still alive", id, tmuxSessionName)
 			}
 		}
 	}()
 
-	log.Printf("[Terminal] Session %s spawned (shell: %s, cwd: %s, %dx%d)", id, shell, cwd, cols, rows)
 	return session, nil
 }
 
@@ -373,7 +506,7 @@ func (tm *TerminalManager) ResizeSession(id string, cols, rows uint16) error {
 	return nil
 }
 
-// CloseSession kills a terminal session
+// CloseSession kills a terminal session AND its underlying tmux session.
 func (tm *TerminalManager) CloseSession(id string) error {
 	tm.mu.Lock()
 	session, ok := tm.sessions[id]
@@ -387,12 +520,13 @@ func (tm *TerminalManager) CloseSession(id string) error {
 		timer.Stop()
 		delete(tm.disconnectTimers, id)
 	}
+	tmuxName := session.TmuxSession
 	tm.mu.Unlock()
 
 	// Signal read goroutine to stop
 	close(session.done)
 
-	// Close PTY (sends SIGHUP to shell)
+	// Close PTY (sends SIGHUP to the tmux attach process)
 	session.ptmx.Close()
 
 	// Wait for process to exit (with timeout)
@@ -404,7 +538,46 @@ func (tm *TerminalManager) CloseSession(id string) error {
 		session.cmd.Process.Kill()
 	}
 
-	log.Printf("[Terminal] Session %s closed", id)
+	// Kill the tmux session so it doesn't linger
+	if tmuxName != "" {
+		tmuxKillSession(tmuxName)
+	}
+
+	log.Printf("[Terminal] Session %s closed (tmux %s killed)", id, tmuxName)
+	return nil
+}
+
+// DisconnectSession detaches the PTY from a terminal without killing the
+// tmux session. This allows the client to reconnect later.
+func (tm *TerminalManager) DisconnectSession(id string) error {
+	tm.mu.Lock()
+	session, ok := tm.sessions[id]
+	if !ok {
+		tm.mu.Unlock()
+		return fmt.Errorf("session %s not found", id)
+	}
+	delete(tm.sessions, id)
+	if timer, exists := tm.disconnectTimers[id]; exists {
+		timer.Stop()
+		delete(tm.disconnectTimers, id)
+	}
+	tm.mu.Unlock()
+
+	// Signal read goroutine to stop
+	close(session.done)
+
+	// Close PTY — the tmux session stays alive
+	session.ptmx.Close()
+
+	doneCh := make(chan error, 1)
+	go func() { doneCh <- session.cmd.Wait() }()
+	select {
+	case <-doneCh:
+	case <-time.After(2 * time.Second):
+		session.cmd.Process.Kill()
+	}
+
+	log.Printf("[Terminal] Session %s disconnected (tmux %s still alive)", id, session.TmuxSession)
 	return nil
 }
 
@@ -529,18 +702,16 @@ func (tm *TerminalManager) startGraceTimer(sessionID string) {
 			return
 		}
 
-		// Still zero subscribers -- kill the PTY.
+		// Still zero subscribers -- disconnect (keep tmux alive) rather than close.
 		tm.mu.Lock()
 		delete(tm.disconnectTimers, sessionID)
 		tm.mu.Unlock()
 
-		log.Printf("[Terminal] Grace period expired for session %s, closing PTY", sessionID)
-		if err := tm.CloseSession(sessionID); err != nil {
-			log.Printf("[Terminal] Failed to close session %s after grace period: %v", sessionID, err)
+		log.Printf("[Terminal] Grace period expired for session %s, disconnecting PTY (tmux stays alive)", sessionID)
+		if err := tm.DisconnectSession(sessionID); err != nil {
+			log.Printf("[Terminal] Failed to disconnect session %s after grace period: %v", sessionID, err)
 		}
-		if tm.closedFunc != nil {
-			tm.closedFunc(sessionID)
-		}
+		// Do NOT call closedFunc — the tmux session is still alive and can be reconnected.
 	})
 }
 
@@ -557,7 +728,8 @@ func (tm *TerminalManager) cancelGraceTimer(sessionID string) {
 	}
 }
 
-// Shutdown stops all grace-period timers and closes every active PTY session.
+// Shutdown stops all grace-period timers, closes every active PTY session, and
+// kills all mt-* tmux sessions (including orphans from previous runs).
 func (tm *TerminalManager) Shutdown() {
 	tm.mu.Lock()
 	// Cancel all pending timers first.
@@ -577,7 +749,24 @@ func (tm *TerminalManager) Shutdown() {
 			log.Printf("[Terminal] Shutdown: failed to close session %s: %v", id, err)
 		}
 	}
-	log.Printf("[Terminal] Shutdown complete, closed %d sessions", len(ids))
+
+	// Also kill any orphaned mt-* tmux sessions
+	orphans := tm.ListOrphanedTmuxSessions()
+	for _, name := range orphans {
+		tmuxKillSession(name)
+	}
+
+	log.Printf("[Terminal] Shutdown complete, closed %d active + %d orphan sessions", len(ids), len(orphans))
+}
+
+// ScanOrphanedSessions scans for mt-* tmux sessions that exist without an
+// active PTY attachment. Called on backend startup to log available sessions.
+func (tm *TerminalManager) ScanOrphanedSessions() {
+	orphans := tm.ListOrphanedTmuxSessions()
+	if len(orphans) > 0 {
+		log.Printf("[Terminal] Found %d orphaned mt-* tmux sessions: %v", len(orphans), orphans)
+		log.Printf("[Terminal] These can be reconnected to by the frontend")
+	}
 }
 
 // ListSessions returns info about all active sessions
@@ -588,14 +777,47 @@ func (tm *TerminalManager) ListSessions() []TerminalSession {
 	result := make([]TerminalSession, 0, len(tm.sessions))
 	for _, s := range tm.sessions {
 		result = append(result, TerminalSession{
-			ID:        s.ID,
-			Cwd:       s.Cwd,
-			Cols:      s.Cols,
-			Rows:      s.Rows,
-			CreatedAt: s.CreatedAt,
+			ID:          s.ID,
+			TmuxSession: s.TmuxSession,
+			Cwd:         s.Cwd,
+			Cols:        s.Cols,
+			Rows:        s.Rows,
+			CreatedAt:   s.CreatedAt,
 		})
 	}
 	return result
+}
+
+// ListOrphanedTmuxSessions returns mt-* tmux sessions that have no active
+// PTY attachment in the manager. These are sessions that survived a backend
+// restart or WebSocket disconnect.
+func (tm *TerminalManager) ListOrphanedTmuxSessions() []string {
+	cmd := tmuxCmd("list-sessions", "-F", "#{session_name}")
+	out, err := cmd.Output()
+	if err != nil {
+		// No tmux server running or no sessions — that's fine.
+		return nil
+	}
+
+	tm.mu.RLock()
+	defer tm.mu.RUnlock()
+
+	var orphans []string
+	for _, name := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		// Only consider sessions with our prefix
+		if !strings.HasPrefix(name, "mt-") {
+			continue
+		}
+		// Check if we already have an active PTY for this
+		if _, active := tm.sessions[name]; !active {
+			orphans = append(orphans, name)
+		}
+	}
+	return orphans
 }
 
 // --- Profile management ---
@@ -650,12 +872,14 @@ func SaveProfiles(profiles []TerminalProfile) error {
 
 // --- HTTP Handlers ---
 
-// TerminalList returns active terminal sessions
+// TerminalList returns active terminal sessions and orphaned tmux sessions
 func TerminalList(w http.ResponseWriter, r *http.Request) {
 	tm := GetTerminalManager()
 	active := tm.ListSessions()
+	orphans := tm.ListOrphanedTmuxSessions()
 	json.NewEncoder(w).Encode(map[string]interface{}{
-		"active": active,
+		"active":  active,
+		"orphans": orphans,
 	})
 }
 
@@ -734,12 +958,68 @@ func HandleTerminalMessage(msgType string, raw json.RawMessage, clientSend func(
 		tm.AddClient(session.ID, client)
 
 		clientSend(map[string]interface{}{
-			"type":       "terminal-spawned",
-			"terminalId": session.ID,
-			"cwd":        session.Cwd,
-			"cols":       session.Cols,
-			"rows":       session.Rows,
+			"type":        "terminal-spawned",
+			"terminalId":  session.ID,
+			"tmuxSession": session.TmuxSession,
+			"cwd":         session.Cwd,
+			"cols":        session.Cols,
+			"rows":        session.Rows,
 		})
+
+	case "terminal-reconnect":
+		// Reconnect to an existing tmux session. The tmux session name is the
+		// terminal ID (mt-{profile}-{uuid}), which the frontend persists.
+		tmuxName := msg.TerminalID // tmux session name == terminal ID
+		if tmuxName == "" {
+			clientSend(map[string]interface{}{
+				"type":       "terminal-error",
+				"terminalId": msg.TerminalID,
+				"error":      "missing terminalId for reconnect",
+			})
+			return
+		}
+
+		// Verify the tmux session exists
+		if !tmuxHasSession(tmuxName) {
+			clientSend(map[string]interface{}{
+				"type":       "terminal-error",
+				"terminalId": msg.TerminalID,
+				"error":      "tmux session not found: " + tmuxName,
+			})
+			return
+		}
+
+		cols := uint16(msg.Cols)
+		rows := uint16(msg.Rows)
+		session, err := tm.ReconnectSession(msg.TerminalID, tmuxName, cols, rows)
+		if err != nil {
+			clientSend(map[string]interface{}{
+				"type":       "terminal-error",
+				"terminalId": msg.TerminalID,
+				"error":      err.Error(),
+			})
+			return
+		}
+
+		tm.AddClient(session.ID, client)
+
+		clientSend(map[string]interface{}{
+			"type":        "terminal-spawned",
+			"terminalId":  session.ID,
+			"tmuxSession": session.TmuxSession,
+			"cwd":         session.Cwd,
+			"cols":        session.Cols,
+			"rows":        session.Rows,
+			"reconnected": true,
+		})
+
+	case "terminal-disconnect":
+		// Graceful disconnect: close PTY but keep tmux session alive.
+		tm.RemoveClient(msg.TerminalID, client)
+		if err := tm.DisconnectSession(msg.TerminalID); err != nil {
+			// Not an error if session doesn't exist (already disconnected)
+			log.Printf("[Terminal] Disconnect note: %v", err)
+		}
 
 	case "terminal-input":
 		data, err := base64.StdEncoding.DecodeString(msg.Data)
@@ -757,6 +1037,7 @@ func HandleTerminalMessage(msgType string, raw json.RawMessage, clientSend func(
 		}
 
 	case "terminal-close":
+		// DESTRUCTIVE: kills PTY AND tmux session
 		tm.RemoveClient(msg.TerminalID, client)
 		if err := tm.CloseSession(msg.TerminalID); err != nil {
 			log.Printf("[Terminal] Close error: %v", err)
@@ -764,9 +1045,11 @@ func HandleTerminalMessage(msgType string, raw json.RawMessage, clientSend func(
 
 	case "terminal-list":
 		active := tm.ListSessions()
+		orphans := tm.ListOrphanedTmuxSessions()
 		clientSend(map[string]interface{}{
-			"type":   "terminal-list",
-			"active": active,
+			"type":    "terminal-list",
+			"active":  active,
+			"orphans": orphans,
 		})
 	}
 }

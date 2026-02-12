@@ -141,7 +141,7 @@ export function useTerminal({ onOutput, onSpawned, onClosed, onError }: UseTermi
     sendMessage({
       type: 'terminal-input',
       terminalId: id,
-      data: btoa(data),
+      data: btoa(String.fromCharCode(...new TextEncoder().encode(data))),
     });
   }, [sendMessage]);
 

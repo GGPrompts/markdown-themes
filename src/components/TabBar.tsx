@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileDiff, Users, GitBranch, GitPullRequestDraft, Keyboard, Crosshair, Columns, LayoutGrid } from 'lucide-react';
+import { FileDiff, Users, GitBranch, GitPullRequestDraft, Keyboard, Crosshair, Columns, LayoutGrid, Terminal } from 'lucide-react';
 import type { Tab } from '../hooks/useTabManager';
 import { getFileIconInfo } from '../utils/fileIcons';
 
@@ -30,6 +30,9 @@ interface TabBarProps {
   /** Split view state */
   isSplit?: boolean;
   onSplitToggle?: () => void;
+  /** Terminal toggle */
+  isTerminalOpen?: boolean;
+  onTerminalToggle?: () => void;
 }
 
 interface TabItemProps {
@@ -177,8 +180,8 @@ function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, onUnpin
   );
 }
 
-export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, onTabUnpin, pane = 'left', streamingFilePath, onTabContextMenu, isGitGraph, isWorkingTree, isBeadsBoard, onGitGraphToggle, onWorkingTreeToggle, onBeadsBoardToggle, onHotkeysClick, isFollowMode, onFollowModeToggle, activeSubagentCount, isSplit, onSplitToggle }: TabBarProps) {
-  const hasActions = !!(onGitGraphToggle || onWorkingTreeToggle || onBeadsBoardToggle || onHotkeysClick || onFollowModeToggle || onSplitToggle);
+export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, onTabUnpin, pane = 'left', streamingFilePath, onTabContextMenu, isGitGraph, isWorkingTree, isBeadsBoard, onGitGraphToggle, onWorkingTreeToggle, onBeadsBoardToggle, onHotkeysClick, isFollowMode, onFollowModeToggle, activeSubagentCount, isSplit, onSplitToggle, isTerminalOpen, onTerminalToggle }: TabBarProps) {
+  const hasActions = !!(onGitGraphToggle || onWorkingTreeToggle || onBeadsBoardToggle || onHotkeysClick || onFollowModeToggle || onSplitToggle || onTerminalToggle);
 
   if (tabs.length === 0 && !hasActions) {
     return null;
@@ -325,6 +328,31 @@ export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, o
               title={isBeadsBoard ? 'Close beads board (Ctrl+Shift+B)' : 'Show beads board (Ctrl+Shift+B)'}
             >
               <LayoutGrid size={16} />
+            </button>
+          )}
+          {onTerminalToggle && (
+            <button
+              onClick={onTerminalToggle}
+              className="w-7 h-7 flex items-center justify-center rounded transition-colors"
+              style={{
+                backgroundColor: isTerminalOpen ? 'var(--accent)' : 'transparent',
+                color: isTerminalOpen ? 'var(--bg-primary)' : 'var(--text-secondary)',
+              }}
+              onMouseEnter={(e) => {
+                if (!isTerminalOpen) {
+                  e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isTerminalOpen) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                }
+              }}
+              title={isTerminalOpen ? 'Close terminal (Ctrl+`)' : 'Open terminal (Ctrl+`)'}
+            >
+              <Terminal size={16} />
             </button>
           )}
           {onHotkeysClick && (

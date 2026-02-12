@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -9,6 +10,8 @@ import (
 	"sync"
 
 	"github.com/gorilla/websocket"
+
+	"markdown-themes-backend/handlers"
 )
 
 // isValidPath rejects paths that contain newlines or are unreasonably long.
@@ -59,6 +62,34 @@ func NewHub() *Hub {
 		unregister: make(chan *Client),
 	}
 	h.watcher = NewFileWatcher(h)
+
+	// Wire up terminal manager broadcast: PTY output → subscribed WS clients
+	tm := handlers.GetTerminalManager()
+	tm.SetBroadcastFunc(func(sessionID string, data []byte) {
+		encoded := base64.StdEncoding.EncodeToString(data)
+		msg := map[string]interface{}{
+			"type":       "terminal-output",
+			"terminalId": sessionID,
+			"data":       encoded,
+		}
+		for _, c := range tm.GetClients(sessionID) {
+			if client, ok := c.(*Client); ok {
+				h.SendToClient(client, msg)
+			}
+		}
+	})
+	tm.SetClosedFunc(func(sessionID string) {
+		msg := map[string]interface{}{
+			"type":       "terminal-closed",
+			"terminalId": sessionID,
+		}
+		for _, c := range tm.GetClients(sessionID) {
+			if client, ok := c.(*Client); ok {
+				h.SendToClient(client, msg)
+			}
+		}
+	})
+
 	return h
 }
 
@@ -84,6 +115,9 @@ func (h *Hub) Run() {
 					h.watcher.RemoveWorkspaceWatch(path, client)
 				}
 				client.mu.Unlock()
+
+				// Clean up terminal subscriptions
+				handlers.GetTerminalManager().RemoveAllClientSessions(client)
 
 				delete(h.clients, client)
 				close(client.send)
@@ -170,6 +204,15 @@ func (c *Client) readPump() {
 		var msg IncomingMessage
 		if err := json.Unmarshal(message, &msg); err != nil {
 			log.Printf("[WebSocket] Invalid message: %v", err)
+			continue
+		}
+
+		// Route terminal messages to the terminal handler
+		if strings.HasPrefix(msg.Type, "terminal-") {
+			clientSend := func(m interface{}) {
+				c.hub.SendToClient(c, m)
+			}
+			handlers.HandleTerminalMessage(msg.Type, json.RawMessage(message), clientSend, c)
 			continue
 		}
 

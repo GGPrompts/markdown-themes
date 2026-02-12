@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import type { Tab } from '../hooks/useTabManager';
 import type { RightPaneContent } from '../hooks/useSplitView';
+import type { TerminalTab } from '../hooks/useTerminal';
 
 const STORAGE_KEY = 'markdown-themes-page-state';
 
@@ -19,12 +20,16 @@ interface FilesPageState {
   rightPaneContent: RightPaneContent | null;
   rightPaneTabs: RightPaneTab[];
   rightActiveTabId: string | null;
-  // Chat panel state (third column)
-  chatPanelOpen: boolean;
-  chatPanelWidth: number;
+  // Third column state (switchable between chat and terminal)
+  thirdColumnMode: 'chat' | 'terminal';
+  thirdColumnOpen: boolean;
+  thirdColumnWidth: number;
   // Chat tab state (multi-conversation tabs)
   chatTabs: string[];
   activeChatTabId: string | null;
+  // Terminal tab state
+  terminalTabs: TerminalTab[];
+  activeTerminalTabId: string | null;
 }
 
 export type { RightPaneTab };
@@ -48,10 +53,13 @@ const defaultState: PageState = {
     rightPaneContent: null,
     rightPaneTabs: [],
     rightActiveTabId: null,
-    chatPanelOpen: false,
-    chatPanelWidth: 400,
+    thirdColumnMode: 'terminal',
+    thirdColumnOpen: false,
+    thirdColumnWidth: 480,
     chatTabs: [],
     activeChatTabId: null,
+    terminalTabs: [],
+    activeTerminalTabId: null,
   },
 };
 
@@ -70,10 +78,13 @@ function loadPageState(): PageState {
         rightPaneContent: parsed.files?.rightPaneContent ?? defaultState.files.rightPaneContent,
         rightPaneTabs: parsed.files?.rightPaneTabs ?? defaultState.files.rightPaneTabs,
         rightActiveTabId: parsed.files?.rightActiveTabId ?? defaultState.files.rightActiveTabId,
-        chatPanelOpen: parsed.files?.chatPanelOpen ?? defaultState.files.chatPanelOpen,
-        chatPanelWidth: parsed.files?.chatPanelWidth ?? defaultState.files.chatPanelWidth,
+        thirdColumnMode: parsed.files?.thirdColumnMode ?? defaultState.files.thirdColumnMode,
+        thirdColumnOpen: parsed.files?.thirdColumnOpen ?? defaultState.files.thirdColumnOpen,
+        thirdColumnWidth: parsed.files?.thirdColumnWidth ?? defaultState.files.thirdColumnWidth,
         chatTabs: parsed.files?.chatTabs ?? defaultState.files.chatTabs,
         activeChatTabId: parsed.files?.activeChatTabId ?? defaultState.files.activeChatTabId,
+        terminalTabs: parsed.files?.terminalTabs ?? defaultState.files.terminalTabs,
+        activeTerminalTabId: parsed.files?.activeTerminalTabId ?? defaultState.files.activeTerminalTabId,
       },
     };
   } catch {

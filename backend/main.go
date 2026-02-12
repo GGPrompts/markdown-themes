@@ -106,6 +106,11 @@ func main() {
 		r.Post("/git/repos/{repo}/discard", handlers.GitRepoDiscard)
 		r.Post("/git/repos/{repo}/generate-message", handlers.GitRepoGenerateMessage)
 
+		// Terminal
+		r.Get("/terminal/list", handlers.TerminalList)
+		r.Get("/terminal/profiles", handlers.TerminalProfiles)
+		r.Post("/terminal/profiles", handlers.SaveTerminalProfile)
+
 		// Beads
 		r.Get("/beads/issues", handlers.BeadsIssues)
 

@@ -25,6 +25,8 @@ import { ArchiveModal } from '../components/ArchiveModal';
 import { FileContextMenu } from '../components/FileContextMenu';
 import { ChatPanel } from '../components/chat';
 import { ChatBubble } from '../components/ChatBubble';
+import { TerminalPanel } from '../components/TerminalPanel';
+import type { TerminalTab } from '../hooks/useTerminal';
 import { fetchFileContent } from '../lib/api';
 import { parseFrontmatter } from '../utils/frontmatter';
 import { themes } from '../themes';
@@ -449,45 +451,69 @@ export function Files() {
     }
   }, [rightPaneTabs.length, rightPaneContent?.type, isSplit, setRightFile, closeSplit]);
 
-  // Chat panel state (third column, independent of split view)
-  const [chatPanelOpen, setChatPanelOpen] = useState(filesState.chatPanelOpen);
-  const [chatPanelWidth, setChatPanelWidth] = useState(filesState.chatPanelWidth);
-  const chatResizeRef = useRef<HTMLDivElement>(null);
+  // Third column state (switchable between chat and terminal)
+  const [thirdColumnMode, setThirdColumnMode] = useState<'chat' | 'terminal'>(filesState.thirdColumnMode);
+  const [thirdColumnOpen, setThirdColumnOpen] = useState(filesState.thirdColumnOpen);
+  const [thirdColumnWidth, setThirdColumnWidth] = useState(filesState.thirdColumnWidth);
+  const thirdColumnResizeRef = useRef<HTMLDivElement>(null);
 
-  // Persist chat panel state changes
+  // Terminal tab state
+  const [terminalTabs, setTerminalTabs] = useState<TerminalTab[]>(filesState.terminalTabs);
+  const [activeTerminalTabId, setActiveTerminalTabId] = useState<string | null>(filesState.activeTerminalTabId);
+
+  // Persist third column state changes
   useEffect(() => {
-    setFilesState({ chatPanelOpen, chatPanelWidth });
-  }, [chatPanelOpen, chatPanelWidth, setFilesState]);
+    setFilesState({
+      thirdColumnMode,
+      thirdColumnOpen,
+      thirdColumnWidth,
+      terminalTabs,
+      activeTerminalTabId,
+    });
+  }, [thirdColumnMode, thirdColumnOpen, thirdColumnWidth, terminalTabs, activeTerminalTabId, setFilesState]);
+
+  // Toggle terminal panel
+  const toggleTerminalPanel = useCallback(() => {
+    setThirdColumnOpen((prev) => {
+      if (!prev) setThirdColumnMode('terminal');
+      return !prev || thirdColumnMode !== 'terminal';
+    });
+    if (!thirdColumnOpen) setThirdColumnMode('terminal');
+  }, [thirdColumnOpen, thirdColumnMode]);
 
   // Toggle chat panel
   const toggleChatPanel = useCallback(() => {
-    setChatPanelOpen((prev) => !prev);
-  }, []);
+    setThirdColumnOpen((prev) => {
+      if (!prev) setThirdColumnMode('chat');
+      return !prev || thirdColumnMode !== 'chat';
+    });
+    if (!thirdColumnOpen) setThirdColumnMode('chat');
+  }, [thirdColumnOpen, thirdColumnMode]);
 
   // AI Chat integration for "Send to Chat", "Resume in Chat", and generating status
   const { sendToChat, resumeConversation, isGenerating } = useAIChatContext();
   const handleSendToChat = useCallback((content: string) => {
-    // Open chat panel if not already open
-    setChatPanelOpen(true);
+    setThirdColumnOpen(true);
+    setThirdColumnMode('chat');
     sendToChat(content);
   }, [sendToChat]);
 
   const handleResumeInChat = useCallback((sessionId: string) => {
-    setChatPanelOpen(true);
+    setThirdColumnOpen(true);
+    setThirdColumnMode('chat');
     resumeConversation(sessionId);
   }, [resumeConversation]);
 
-  // Handle chat panel resize
-  const handleChatResizeMouseDown = useCallback((e: React.MouseEvent) => {
+  // Handle third column resize
+  const handleThirdColumnResizeMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     const startX = e.clientX;
-    const startWidth = chatPanelWidth;
+    const startWidth = thirdColumnWidth;
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
-      // Calculate new width (dragging left increases width, right decreases)
       const deltaX = startX - moveEvent.clientX;
-      const newWidth = Math.max(280, Math.min(800, startWidth + deltaX));
-      setChatPanelWidth(newWidth);
+      const newWidth = Math.max(280, Math.min(900, startWidth + deltaX));
+      setThirdColumnWidth(newWidth);
     };
 
     const handleMouseUp = () => {
@@ -503,7 +529,7 @@ export function Files() {
     document.body.classList.add('resizing');
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
-  }, [chatPanelWidth]);
+  }, [thirdColumnWidth]);
 
   const currentFileExt = currentFile?.split('.').pop()?.toLowerCase();
   const isCurrentFileBinary = currentFileExt ? BINARY_EXTENSIONS.has(currentFileExt) : false;
@@ -903,10 +929,15 @@ export function Files() {
     }
   }, [isSplit, rightPaneContent, setRightFile, setRightPaneBeadsBoard, tabs, activeTabId, closeViewTab, setActiveTab, openViewTab]);
 
-  // Handle chat panel toggle (now a separate third column)
+  // Handle chat panel toggle
   const handleChatPanelToggle = useCallback(() => {
     toggleChatPanel();
   }, [toggleChatPanel]);
+
+  // Handle terminal panel toggle
+  const handleTerminalToggle = useCallback(() => {
+    toggleTerminalPanel();
+  }, [toggleTerminalPanel]);
 
   // Handle hotkeys button - open HOTKEYS.md in right pane
   const handleHotkeysClick = useCallback(async () => {
@@ -1063,6 +1094,24 @@ export function Files() {
         return;
       }
 
+      // Ctrl + ` - Toggle terminal panel
+      if ((e.ctrlKey || e.metaKey) && e.key === '`') {
+        e.preventDefault();
+        handleTerminalToggle();
+        return;
+      }
+
+      // Ctrl + Shift + T - New terminal tab
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T') {
+        e.preventDefault();
+        // Open terminal panel if not open, tab creation handled by TerminalPanel auto-spawn
+        if (!thirdColumnOpen || thirdColumnMode !== 'terminal') {
+          setThirdColumnOpen(true);
+          setThirdColumnMode('terminal');
+        }
+        return;
+      }
+
       // ? - Show keyboard shortcuts
       if (e.key === '?') {
         e.preventDefault();
@@ -1081,7 +1130,7 @@ export function Files() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSplit, handleGitGraphToggle, handleWorkingTreeToggle, handleBeadsBoardToggle, handleChatPanelToggle, handleHotkeysClick]);
+  }, [toggleSplit, handleGitGraphToggle, handleWorkingTreeToggle, handleBeadsBoardToggle, handleChatPanelToggle, handleTerminalToggle, handleHotkeysClick, thirdColumnOpen, thirdColumnMode]);
 
   return (
     <>
@@ -1160,6 +1209,8 @@ export function Files() {
                 activeSubagentCount={activeSubagentCount}
                 isSplit={isSplit}
                 onSplitToggle={toggleSplit}
+                isTerminalOpen={thirdColumnOpen && thirdColumnMode === 'terminal'}
+                onTerminalToggle={handleTerminalToggle}
               />
 
               {/* Git graph in main pane (as tab) */}
@@ -1439,38 +1490,49 @@ export function Files() {
           }
         />
 
-        {/* Chat Panel - Third column, independent of split view */}
-        {chatPanelOpen && (
+        {/* Third column — Chat or Terminal panel */}
+        {thirdColumnOpen && (
           <>
-            {/* Resize handle for chat panel */}
+            {/* Resize handle */}
             <div
-              ref={chatResizeRef}
+              ref={thirdColumnResizeRef}
               className="w-1 flex-shrink-0 relative group cursor-col-resize"
               style={{ backgroundColor: 'var(--border)' }}
-              onMouseDown={handleChatResizeMouseDown}
+              onMouseDown={handleThirdColumnResizeMouseDown}
             >
               <div className="absolute inset-y-0 left-0 right-0 group-hover:bg-[var(--accent)] transition-colors" />
             </div>
 
-            {/* Chat panel */}
             <div
               className="h-full flex flex-col overflow-hidden"
-              style={{ width: `${chatPanelWidth}px`, flexShrink: 0 }}
+              style={{ width: `${thirdColumnWidth}px`, flexShrink: 0 }}
             >
-              <ChatPanel
-                currentFile={currentFile}
-                fontSize={appState.fontSize}
-                onClose={handleChatPanelToggle}
-                onViewConversation={(path, sessionId, title) => {
-                  openConversationTab(path, {
-                    sessionId,
-                    workingDir: workspacePath || '',
-                    pane: '',
-                    taskDescription: title,
-                    autoClose: false,
-                  });
-                }}
-              />
+              {thirdColumnMode === 'chat' ? (
+                <ChatPanel
+                  currentFile={currentFile}
+                  fontSize={appState.fontSize}
+                  onClose={handleChatPanelToggle}
+                  onViewConversation={(path, sessionId, title) => {
+                    openConversationTab(path, {
+                      sessionId,
+                      workingDir: workspacePath || '',
+                      pane: '',
+                      taskDescription: title,
+                      autoClose: false,
+                    });
+                  }}
+                />
+              ) : (
+                <TerminalPanel
+                  tabs={terminalTabs}
+                  activeTabId={activeTerminalTabId}
+                  workspacePath={workspacePath || ''}
+                  fontSize={appState.fontSize}
+                  onTabsChange={setTerminalTabs}
+                  onActiveTabChange={setActiveTerminalTabId}
+                  onClose={handleTerminalToggle}
+                />
+              )}
             </div>
           </>
         )}
@@ -1513,8 +1575,10 @@ export function Files() {
       {/* Floating chat bubble */}
       <ChatBubble
         isGenerating={isGenerating}
-        isChatOpen={chatPanelOpen}
+        isChatOpen={thirdColumnOpen && thirdColumnMode === 'chat'}
+        isTerminalOpen={thirdColumnOpen && thirdColumnMode === 'terminal'}
         onToggleChat={handleChatPanelToggle}
+        onToggleTerminal={handleTerminalToggle}
       />
     </>
   );

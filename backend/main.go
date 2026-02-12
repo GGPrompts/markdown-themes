@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -137,7 +141,23 @@ func main() {
 	log.Printf("API: http://localhost:%s/api", port)
 	log.Printf("WebSocket: ws://localhost:%s/ws", port)
 
-	if err := http.ListenAndServe(":"+port, r); err != nil {
+	srv := &http.Server{Addr: ":" + port, Handler: r}
+
+	// Graceful shutdown: on SIGINT/SIGTERM, close PTYs before exiting.
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-quit
+		log.Println("Shutting down...")
+		handlers.GetTerminalManager().Shutdown()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(ctx); err != nil {
+			log.Printf("HTTP server shutdown error: %v", err)
+		}
+	}()
+
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
 }

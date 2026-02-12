@@ -37,8 +37,9 @@ type TerminalSession struct {
 
 // TerminalManager manages active terminal sessions
 type TerminalManager struct {
-	sessions map[string]*TerminalSession
-	mu       sync.RWMutex
+	sessions         map[string]*TerminalSession
+	disconnectTimers map[string]*time.Timer
+	mu               sync.RWMutex
 
 	// Callback to broadcast terminal output to subscribed clients
 	broadcastFunc func(sessionID string, data []byte)
@@ -55,7 +56,8 @@ var (
 func GetTerminalManager() *TerminalManager {
 	termManagerOnce.Do(func() {
 		termManager = &TerminalManager{
-			sessions: make(map[string]*TerminalSession),
+			sessions:         make(map[string]*TerminalSession),
+			disconnectTimers: make(map[string]*time.Timer),
 		}
 	})
 	return termManager
@@ -179,6 +181,11 @@ func (tm *TerminalManager) SpawnSession(id, cwd string, cols, rows uint16, comma
 		if stillActive {
 			delete(tm.sessions, id)
 		}
+		// Cancel any pending grace timer for this session.
+		if timer, exists := tm.disconnectTimers[id]; exists {
+			timer.Stop()
+			delete(tm.disconnectTimers, id)
+		}
 		tm.mu.Unlock()
 
 		if stillActive {
@@ -264,6 +271,11 @@ func (tm *TerminalManager) CloseSession(id string) error {
 		return fmt.Errorf("session %s not found", id)
 	}
 	delete(tm.sessions, id)
+	// Cancel any pending grace timer so it does not fire after close.
+	if timer, exists := tm.disconnectTimers[id]; exists {
+		timer.Stop()
+		delete(tm.disconnectTimers, id)
+	}
 	tm.mu.Unlock()
 
 	// Signal read goroutine to stop
@@ -285,7 +297,8 @@ func (tm *TerminalManager) CloseSession(id string) error {
 	return nil
 }
 
-// AddClient subscribes a client to a session's output
+// AddClient subscribes a client to a session's output.
+// If a grace-period timer is pending (no subscribers), it is cancelled.
 func (tm *TerminalManager) AddClient(sessionID string, client interface{}) {
 	tm.mu.RLock()
 	session, ok := tm.sessions[sessionID]
@@ -296,9 +309,13 @@ func (tm *TerminalManager) AddClient(sessionID string, client interface{}) {
 	session.mu.Lock()
 	session.clients[client] = true
 	session.mu.Unlock()
+
+	tm.cancelGraceTimer(sessionID)
 }
 
-// RemoveClient unsubscribes a client from a session's output
+// RemoveClient unsubscribes a client from a session's output.
+// If the session has zero subscribers after removal, a 30-second grace timer
+// starts. If no one reconnects before it fires, the PTY is killed.
 func (tm *TerminalManager) RemoveClient(sessionID string, client interface{}) {
 	tm.mu.RLock()
 	session, ok := tm.sessions[sessionID]
@@ -308,7 +325,12 @@ func (tm *TerminalManager) RemoveClient(sessionID string, client interface{}) {
 	}
 	session.mu.Lock()
 	delete(session.clients, client)
+	remaining := len(session.clients)
 	session.mu.Unlock()
+
+	if remaining == 0 {
+		tm.startGraceTimer(sessionID)
+	}
 }
 
 // GetClients returns all subscribed clients for a session
@@ -328,20 +350,123 @@ func (tm *TerminalManager) GetClients(sessionID string) []interface{} {
 	return clients
 }
 
-// RemoveAllClientSessions removes a client from all sessions it's subscribed to
+// RemoveAllClientSessions removes a client from all sessions it's subscribed to.
+// For any session that drops to zero subscribers, a 30-second grace timer starts.
 func (tm *TerminalManager) RemoveAllClientSessions(client interface{}) {
 	tm.mu.RLock()
-	sessions := make([]*TerminalSession, 0)
-	for _, s := range tm.sessions {
-		sessions = append(sessions, s)
+	type sessionInfo struct {
+		session *TerminalSession
+		id      string
+	}
+	infos := make([]sessionInfo, 0, len(tm.sessions))
+	for id, s := range tm.sessions {
+		infos = append(infos, sessionInfo{session: s, id: id})
 	}
 	tm.mu.RUnlock()
 
-	for _, session := range sessions {
-		session.mu.Lock()
-		delete(session.clients, client)
-		session.mu.Unlock()
+	for _, info := range infos {
+		info.session.mu.Lock()
+		delete(info.session.clients, client)
+		remaining := len(info.session.clients)
+		info.session.mu.Unlock()
+
+		if remaining == 0 {
+			tm.startGraceTimer(info.id)
+		}
 	}
+}
+
+// gracePeriod is the time to wait before killing a PTY with no subscribers.
+const gracePeriod = 30 * time.Second
+
+// startGraceTimer begins a countdown for a session with zero subscribers.
+// When the timer fires, if the session still has zero subscribers, CloseSession
+// is called. The caller must NOT hold tm.mu.
+func (tm *TerminalManager) startGraceTimer(sessionID string) {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
+	// If a timer already exists for this session, leave it running.
+	if _, exists := tm.disconnectTimers[sessionID]; exists {
+		return
+	}
+
+	log.Printf("[Terminal] Session %s has 0 subscribers, starting %v grace timer", sessionID, gracePeriod)
+
+	tm.disconnectTimers[sessionID] = time.AfterFunc(gracePeriod, func() {
+		// Timer fired -- check if the session still has zero subscribers.
+		tm.mu.RLock()
+		session, ok := tm.sessions[sessionID]
+		tm.mu.RUnlock()
+		if !ok {
+			// Session already gone (manually closed or process exited).
+			tm.mu.Lock()
+			delete(tm.disconnectTimers, sessionID)
+			tm.mu.Unlock()
+			return
+		}
+
+		session.mu.Lock()
+		count := len(session.clients)
+		session.mu.Unlock()
+
+		if count > 0 {
+			// Someone reconnected in the meantime -- do nothing.
+			tm.mu.Lock()
+			delete(tm.disconnectTimers, sessionID)
+			tm.mu.Unlock()
+			return
+		}
+
+		// Still zero subscribers -- kill the PTY.
+		tm.mu.Lock()
+		delete(tm.disconnectTimers, sessionID)
+		tm.mu.Unlock()
+
+		log.Printf("[Terminal] Grace period expired for session %s, closing PTY", sessionID)
+		if err := tm.CloseSession(sessionID); err != nil {
+			log.Printf("[Terminal] Failed to close session %s after grace period: %v", sessionID, err)
+		}
+		if tm.closedFunc != nil {
+			tm.closedFunc(sessionID)
+		}
+	})
+}
+
+// cancelGraceTimer stops the grace-period timer for a session, if one is
+// running. The caller must NOT hold tm.mu.
+func (tm *TerminalManager) cancelGraceTimer(sessionID string) {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
+	if timer, exists := tm.disconnectTimers[sessionID]; exists {
+		timer.Stop()
+		delete(tm.disconnectTimers, sessionID)
+		log.Printf("[Terminal] Grace timer cancelled for session %s (subscriber reconnected)", sessionID)
+	}
+}
+
+// Shutdown stops all grace-period timers and closes every active PTY session.
+func (tm *TerminalManager) Shutdown() {
+	tm.mu.Lock()
+	// Cancel all pending timers first.
+	for id, timer := range tm.disconnectTimers {
+		timer.Stop()
+		delete(tm.disconnectTimers, id)
+	}
+	// Collect session IDs to close (can't call CloseSession while holding mu).
+	ids := make([]string, 0, len(tm.sessions))
+	for id := range tm.sessions {
+		ids = append(ids, id)
+	}
+	tm.mu.Unlock()
+
+	for _, id := range ids {
+		if err := tm.CloseSession(id); err != nil {
+			log.Printf("[Terminal] Shutdown: failed to close session %s: %v", id, err)
+		}
+	}
+	log.Printf("[Terminal] Shutdown complete, closed %d sessions", len(ids))
 }
 
 // ListSessions returns info about all active sessions

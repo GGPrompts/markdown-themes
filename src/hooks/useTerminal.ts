@@ -6,6 +6,7 @@ export interface TerminalTab {
   title: string;
   cwd: string;
   command?: string;
+  profileName?: string;
 }
 
 interface UseTerminalOptions {
@@ -117,7 +118,7 @@ export function useTerminal({ onOutput, onSpawned, onClosed, onError }: UseTermi
     }
   }, []);
 
-  const spawn = useCallback((id: string, cwd: string, cols: number, rows: number, command?: string) => {
+  const spawn = useCallback((id: string, cwd: string, cols: number, rows: number, command?: string, requestId?: string, profileName?: string) => {
     sendMessage({
       type: 'terminal-spawn',
       terminalId: id,
@@ -125,6 +126,8 @@ export function useTerminal({ onOutput, onSpawned, onClosed, onError }: UseTermi
       cols,
       rows,
       command,
+      requestId,
+      profileName,
     });
   }, [sendMessage]);
 

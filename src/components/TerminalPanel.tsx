@@ -120,6 +120,7 @@ export function TerminalPanel({
       title: profile?.name || 'Shell',
       cwd,
       command,
+      profileName: profile?.name || 'Shell',
     };
 
     onTabsChange(prev => [...prev, newTab]);
@@ -143,7 +144,7 @@ export function TerminalPanel({
     });
   }, [close, onTabsChange, onActiveTabChange]);
 
-  const handleTerminalReady = useCallback((terminalId: string, cwd: string, command: string | undefined, helpers: {
+  const handleTerminalReady = useCallback((terminalId: string, cwd: string, command: string | undefined, profileName: string | undefined, helpers: {
     write: (data: string | Uint8Array) => void;
     fit: () => { cols: number; rows: number } | null;
     focus: () => void;
@@ -156,7 +157,8 @@ export function TerminalPanel({
       const dims = helpers.fit();
       const cols = dims?.cols || 120;
       const rows = dims?.rows || 30;
-      spawn(terminalId, cwd, cols, rows, command);
+      const requestId = crypto.randomUUID();
+      spawn(terminalId, cwd, cols, rows, command, requestId, profileName);
     }
   }, [spawn]);
 
@@ -341,7 +343,7 @@ export function TerminalPanel({
               visible={tab.id === activeTabId}
               fontSize={fontSize}
               onTitleChange={(title) => handleTitleChange(tab.id, title)}
-              onReady={(helpers) => handleTerminalReady(tab.id, tab.cwd, tab.command, helpers)}
+              onReady={(helpers) => handleTerminalReady(tab.id, tab.cwd, tab.command, tab.profileName, helpers)}
               onInput={(data) => handleTerminalInput(tab.id, data)}
               onResize={(cols, rows) => handleTerminalResize(tab.id, cols, rows)}
             />

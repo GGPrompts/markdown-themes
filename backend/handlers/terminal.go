@@ -42,6 +42,12 @@ type TerminalManager struct {
 	disconnectTimers map[string]*time.Timer
 	mu               sync.RWMutex
 
+	// Spawn deduplication: request-level (exact requestId) and semantic-level
+	// (same profile+cwd within a short window). Both use a 5-second TTL.
+	recentSpawnRequests map[string]time.Time // requestId → timestamp
+	recentSpawnKeys     map[string]time.Time // "{profile}_{cwd}" → timestamp
+	dedupMu             sync.Mutex
+
 	// Callback to broadcast terminal output to subscribed clients
 	broadcastFunc func(sessionID string, data []byte)
 	// Callback to notify session closed
@@ -53,15 +59,71 @@ var (
 	termManagerOnce sync.Once
 )
 
+// spawnDedupTTL is how long request IDs and spawn keys are remembered.
+const spawnDedupTTL = 5 * time.Second
+
 // GetTerminalManager returns the singleton TerminalManager
 func GetTerminalManager() *TerminalManager {
 	termManagerOnce.Do(func() {
 		termManager = &TerminalManager{
-			sessions:         make(map[string]*TerminalSession),
-			disconnectTimers: make(map[string]*time.Timer),
+			sessions:            make(map[string]*TerminalSession),
+			disconnectTimers:    make(map[string]*time.Timer),
+			recentSpawnRequests: make(map[string]time.Time),
+			recentSpawnKeys:     make(map[string]time.Time),
 		}
+		// Background goroutine prunes stale dedup entries every 10 seconds.
+		go termManager.pruneSpawnDedup()
 	})
 	return termManager
+}
+
+// pruneSpawnDedup periodically removes expired entries from the dedup maps.
+func (tm *TerminalManager) pruneSpawnDedup() {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		now := time.Now()
+		tm.dedupMu.Lock()
+		for id, t := range tm.recentSpawnRequests {
+			if now.Sub(t) > spawnDedupTTL {
+				delete(tm.recentSpawnRequests, id)
+			}
+		}
+		for key, t := range tm.recentSpawnKeys {
+			if now.Sub(t) > spawnDedupTTL {
+				delete(tm.recentSpawnKeys, key)
+			}
+		}
+		tm.dedupMu.Unlock()
+	}
+}
+
+// CheckSpawnDedup returns an error if the requestId or spawn key
+// (profileName + cwd) was already seen within the dedup window.
+// On success it records both so future duplicates are rejected.
+func (tm *TerminalManager) CheckSpawnDedup(requestID, spawnKey string) error {
+	tm.dedupMu.Lock()
+	defer tm.dedupMu.Unlock()
+
+	now := time.Now()
+
+	// Layer 1: exact request-ID dedup (catches React StrictMode double-fires)
+	if requestID != "" {
+		if t, seen := tm.recentSpawnRequests[requestID]; seen && now.Sub(t) <= spawnDedupTTL {
+			return fmt.Errorf("duplicate spawn request %s (seen %v ago)", requestID, now.Sub(t).Round(time.Millisecond))
+		}
+		tm.recentSpawnRequests[requestID] = now
+	}
+
+	// Layer 2: semantic spawn-key dedup (catches rapid clicks generating different IDs)
+	if spawnKey != "" {
+		if t, seen := tm.recentSpawnKeys[spawnKey]; seen && now.Sub(t) <= spawnDedupTTL {
+			return fmt.Errorf("duplicate spawn key %q (seen %v ago)", spawnKey, now.Sub(t).Round(time.Millisecond))
+		}
+		tm.recentSpawnKeys[spawnKey] = now
+	}
+
+	return nil
 }
 
 // SetBroadcastFunc sets the callback for broadcasting terminal output
@@ -626,12 +688,14 @@ func HandleTerminalMessage(msgType string, raw json.RawMessage, clientSend func(
 	tm := GetTerminalManager()
 
 	var msg struct {
-		TerminalID string `json:"terminalId"`
-		Cwd        string `json:"cwd,omitempty"`
-		Command    string `json:"command,omitempty"`
-		Data       string `json:"data,omitempty"`
-		Cols       int    `json:"cols,omitempty"`
-		Rows       int    `json:"rows,omitempty"`
+		TerminalID  string `json:"terminalId"`
+		Cwd         string `json:"cwd,omitempty"`
+		Command     string `json:"command,omitempty"`
+		Data        string `json:"data,omitempty"`
+		Cols        int    `json:"cols,omitempty"`
+		Rows        int    `json:"rows,omitempty"`
+		RequestID   string `json:"requestId,omitempty"`
+		ProfileName string `json:"profileName,omitempty"`
 	}
 	if err := json.Unmarshal(raw, &msg); err != nil {
 		log.Printf("[Terminal] Failed to parse message: %v", err)
@@ -642,6 +706,20 @@ func HandleTerminalMessage(msgType string, raw json.RawMessage, clientSend func(
 	case "terminal-spawn":
 		cols := uint16(msg.Cols)
 		rows := uint16(msg.Rows)
+
+		// Two-layer spawn deduplication:
+		// 1. requestId — catches identical retry of the same request (React StrictMode, reconnect)
+		// 2. spawnKey  — catches semantically identical spawns with different IDs (rapid clicks)
+		spawnKey := msg.ProfileName + "_" + msg.Cwd
+		if err := tm.CheckSpawnDedup(msg.RequestID, spawnKey); err != nil {
+			log.Printf("[Terminal] Spawn rejected (dedup): %v", err)
+			clientSend(map[string]interface{}{
+				"type":       "terminal-error",
+				"terminalId": msg.TerminalID,
+				"error":      "duplicate spawn rejected: " + err.Error(),
+			})
+			return
+		}
 
 		session, err := tm.SpawnSession(msg.TerminalID, msg.Cwd, cols, rows, msg.Command)
 		if err != nil {

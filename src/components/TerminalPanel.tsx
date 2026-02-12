@@ -340,9 +340,9 @@ export function TerminalPanel({
 
   return (
     <div className="flex flex-col h-full" style={{ background: 'var(--terminal-bg, var(--bg-primary))' }}>
-      {/* Tab bar */}
+      {/* Tab bar — relative + z-10 so profile dropdown paints above the terminal container */}
       <div
-        className="flex items-center flex-shrink-0"
+        className="flex items-center flex-shrink-0 relative z-10"
         style={{
           borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           minHeight: '36px',

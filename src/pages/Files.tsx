@@ -1054,11 +1054,15 @@ export function Files() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't handle if user is typing in an input or focused in a terminal
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      // Don't handle if user is typing in an input/textarea or focused in a terminal.
+      // Check both e.target and document.activeElement — the CanvasAddon can cause
+      // the event target and focused element to differ.
+      const target = e.target as HTMLElement;
+      const active = document.activeElement as HTMLElement | null;
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
         return;
       }
-      if ((e.target as HTMLElement).closest?.('.terminal-container')) {
+      if (target?.closest?.('.terminal-container') || active?.closest?.('.terminal-container')) {
         return;
       }
 

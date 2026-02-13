@@ -29,6 +29,9 @@
   --text-secondary: var(--muted);
   --accent: var(--fern);
   --terminal-bg: linear-gradient(145deg, #0a1a12 0%, #122a1e 40%, #081510 100%);
+  --terminal-fg: var(--sage);
+  --terminal-cursor: var(--fern);
+  --terminal-cursor-accent: #0a1a12;
   --accent-hover: var(--moss);
   --border: var(--line);
 

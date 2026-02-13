@@ -46,6 +46,9 @@
   --text-muted: var(--slate);
   --accent: var(--terracotta);
   --terminal-bg: linear-gradient(145deg, #1c2833 0%, #2c3e50 40%, #1a252f 100%);
+  --terminal-fg: var(--frost);
+  --terminal-cursor: var(--terracotta-light);
+  --terminal-cursor-accent: #1c2833;
   --accent-hover: #B86D4E;
   --accent-secondary: var(--forest);
   --border: var(--mist);

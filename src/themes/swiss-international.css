@@ -37,6 +37,9 @@
   --text-muted: var(--gray-500);
   --accent: var(--swiss-red);
   --terminal-bg: linear-gradient(145deg, #0a0a0a 0%, #1a1a1a 40%, #0f0f0f 100%);
+  --terminal-fg: var(--gray-100);
+  --terminal-cursor: var(--swiss-red);
+  --terminal-cursor-accent: #0a0a0a;
   --accent-hover: var(--swiss-red-dark);
   --accent-secondary: var(--swiss-black);
   --border: var(--gray-300);

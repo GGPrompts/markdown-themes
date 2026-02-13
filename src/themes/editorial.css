@@ -37,6 +37,9 @@
   --text-muted: var(--ink-muted);
   --accent: var(--accent-primary);
   --terminal-bg: linear-gradient(145deg, #1a0a10 0%, #2a1520 40%, #140810 100%);
+  --terminal-fg: var(--newsprint);
+  --terminal-cursor: var(--accent-light);
+  --terminal-cursor-accent: #1a0a10;
   --accent-hover: var(--accent-warm);
   --border: var(--rule-medium);
   --code-bg: var(--paper-warm);

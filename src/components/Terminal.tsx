@@ -38,10 +38,10 @@ function getXtermTheme() {
   const v = (name: string) => s.getPropertyValue(name).trim();
   return {
     background: 'transparent',
-    foreground: v('--text-primary') || '#e0e0e0',
-    cursor: v('--accent') || '#64ffda',
-    cursorAccent: v('--bg-secondary') || '#1a1a2e',
-    selectionBackground: (v('--accent') || '#64ffda') + '40',
+    foreground: v('--terminal-fg') || v('--text-primary') || '#e0e0e0',
+    cursor: v('--terminal-cursor') || v('--accent') || '#64ffda',
+    cursorAccent: v('--terminal-cursor-accent') || v('--bg-secondary') || '#1a1a2e',
+    selectionBackground: (v('--terminal-cursor') || v('--accent') || '#64ffda') + '40',
     selectionForeground: undefined,
     // ANSI colors — sensible defaults
     black: '#282a36',

@@ -34,6 +34,9 @@
   --text-muted: #6B6B8A;
   --accent: var(--riso-pink);
   --terminal-bg: linear-gradient(145deg, #1a1018 0%, #2a1828 40%, #140a12 100%);
+  --terminal-fg: var(--riso-cream);
+  --terminal-cursor: var(--riso-pink);
+  --terminal-cursor-accent: #1a1018;
   --accent-hover: var(--riso-pink-light);
   --accent-secondary: var(--riso-teal);
   --border: var(--riso-black);

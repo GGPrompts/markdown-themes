@@ -56,6 +56,9 @@
   --text-muted: var(--ink-light);
   --accent: var(--bamboo);
   --terminal-bg: linear-gradient(145deg, #1a1f18 0%, #2a2e25 40%, #141810 100%);
+  --terminal-fg: var(--sand);
+  --terminal-cursor: var(--bamboo);
+  --terminal-cursor-accent: #1a1f18;
   --accent-hover: var(--bamboo-dark);
   --accent-secondary: var(--vermillion);
   --border: var(--ink-mist);

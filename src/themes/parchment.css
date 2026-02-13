@@ -47,6 +47,9 @@
   --text-secondary: var(--ink-brown);
   --accent: var(--vermillion);
   --terminal-bg: linear-gradient(145deg, #2a1f0e 0%, #3d2e18 40%, #1f170a 100%);
+  --terminal-fg: var(--parchment-light);
+  --terminal-cursor: var(--gold-light);
+  --terminal-cursor-accent: #2a1f0e;
   --accent-hover: var(--burgundy);
   --border: var(--ink-light);
   --radius: 0;

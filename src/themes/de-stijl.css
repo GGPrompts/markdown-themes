@@ -26,6 +26,9 @@
   --text-muted: var(--medium-gray);
   --accent: var(--stijl-red);
   --terminal-bg: linear-gradient(145deg, #0a0a0a 0%, #1a1a1a 40%, #000000 100%);
+  --terminal-fg: var(--stijl-white);
+  --terminal-cursor: var(--stijl-red);
+  --terminal-cursor-accent: #0a0a0a;
   --accent-hover: #B00718;
   --accent-secondary: var(--stijl-blue);
   --border: var(--stijl-black);

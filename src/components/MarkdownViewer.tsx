@@ -6,6 +6,7 @@ import { createMermaidPlugin } from '@streamdown/mermaid';
 import { math } from '@streamdown/math';
 import 'katex/dist/katex.min.css';
 import { useGitDiff } from '../hooks/useGitDiff';
+import { useCodeBlockPlayButtons } from '../hooks/useCodeBlockPlayButtons';
 import { mapLinesToBlocks } from '../utils/markdownDiff';
 import { MermaidFullscreen } from './MermaidFullscreen';
 
@@ -83,6 +84,9 @@ const cssVarsTheme = createCssVariablesTheme({
 export const MarkdownViewer = forwardRef<MarkdownViewerHandle, MarkdownViewerProps>(function MarkdownViewer({ content, isStreaming = false, themeClassName, fontSize = 100, filePath = null, repoPath = null }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [mermaidKey, setMermaidKey] = useState(0);
+
+  // Inject play buttons into shell code blocks
+  useCodeBlockPlayButtons(containerRef, !isStreaming);
 
   // Git diff highlighting - disabled during streaming to avoid render thrashing
   const { changedLines: gitChangedLines } = useGitDiff({

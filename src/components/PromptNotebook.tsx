@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { Streamdown } from 'streamdown';
 import { createCodePlugin } from '@streamdown/code';
 import { createCssVariablesTheme } from 'shiki';
@@ -22,6 +22,7 @@ import {
 } from '../utils/promptyUtils';
 import { InlineField } from './InlineField';
 import { FilePickerModal } from './FilePickerModal';
+import { useCodeBlockPlayButtons } from '../hooks/useCodeBlockPlayButtons';
 
 interface PromptNotebookProps {
   content: string;
@@ -54,6 +55,10 @@ export function PromptNotebook({
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
   const [sendStatus, setSendStatus] = useState<'idle' | 'sent' | 'error'>('idle');
   const [showFrontmatter, setShowFrontmatter] = useState(true);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Inject play buttons into shell code blocks
+  useCodeBlockPlayButtons(contentRef, !isStreaming);
 
   // File picker modal state
   const [filePickerState, setFilePickerState] = useState<{
@@ -339,7 +344,7 @@ export function PromptNotebook({
       )}
 
       {/* Prompt content with markdown rendering and inline fields */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto" ref={contentRef}>
         <article className="prose prose-lg max-w-none p-8" style={{ zoom: fontSize / 100 }}>
           <Streamdown
             isAnimating={isStreaming}

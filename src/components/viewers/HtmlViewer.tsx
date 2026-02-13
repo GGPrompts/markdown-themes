@@ -1,5 +1,6 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { CodeViewer } from './CodeViewer';
+import { useTerminalContext } from '../../context/TerminalContext';
 
 const API_BASE = 'http://localhost:8130';
 
@@ -28,6 +29,8 @@ function getThemeColors(): { track: string; thumb: string; thumbHover: string; r
 
 export function HtmlViewer({ filePath, content, fontSize = 100, isStreaming = false }: HtmlViewerProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('preview');
+  const termCtx = useTerminalContext();
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const fileName = filePath.split('/').pop() || 'HTML file';
 
@@ -55,8 +58,10 @@ html { scrollbar-color: ${colors.thumb} ${colors.track}; scrollbar-width: thin; 
     // Intercept fragment-only link clicks so they scroll in-page
     // instead of navigating away from the srcdoc (which the <base> tag would cause)
     const fragmentScript = `<script>document.addEventListener('click',function(e){var a=e.target.closest('a[href^="#"]');if(a){e.preventDefault();var id=a.getAttribute('href').slice(1);if(!id){window.scrollTo({top:0,behavior:'smooth'});return;}var el=document.getElementById(id)||document.querySelector('[name="'+id+'"]');if(el)el.scrollIntoView({behavior:'smooth'});}});</script>`;
+    // Intercept clicks on elements with data-terminal-command attribute
+    const terminalCommandScript = `<script>document.addEventListener('click',function(e){var el=e.target.closest('[data-terminal-command]');if(el){e.preventDefault();var cmd=el.getAttribute('data-terminal-command');if(cmd){window.parent.postMessage({type:'terminal-command',command:cmd},'*');}}});</script>`;
 
-    const injected = baseTag + styleTag + fragmentScript;
+    const injected = baseTag + styleTag + fragmentScript + terminalCommandScript;
 
     // Inject into <head> if present, otherwise prepend
     if (/<head[\s>]/i.test(content)) {
@@ -68,6 +73,28 @@ html { scrollbar-color: ${colors.thumb} ${colors.track}; scrollbar-width: thin; 
   const handleOpenInBrowser = useCallback(() => {
     window.open(baseServeUrl, '_blank');
   }, [baseServeUrl]);
+
+  // Listen for terminal-command messages from iframe
+  useEffect(() => {
+    if (!termCtx) return;
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'terminal-command' && event.data.command) {
+        const command = event.data.command as string;
+        if (!termCtx.hasActiveTerminal) {
+          termCtx.openTerminal();
+          setTimeout(() => {
+            termCtx.sendToTerminal(command + '\n');
+          }, 800);
+        } else {
+          termCtx.sendToTerminal(command + '\n');
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [termCtx]);
 
   return (
     <div className="html-viewer h-full flex flex-col">
@@ -152,6 +179,7 @@ html { scrollbar-color: ${colors.thumb} ${colors.track}; scrollbar-width: thin; 
       {viewMode === 'preview' ? (
         <div className="flex-1 overflow-hidden relative">
           <iframe
+            ref={iframeRef}
             srcDoc={srcdoc}
             title={fileName}
             sandbox="allow-scripts"

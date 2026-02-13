@@ -28,6 +28,7 @@ import { FileContextMenu } from '../components/FileContextMenu';
 import { ChatPanel } from '../components/chat';
 import { ChatBubble } from '../components/ChatBubble';
 import { TerminalPanel } from '../components/TerminalPanel';
+import { TerminalProvider } from '../context/TerminalContext';
 import { NotepadPanel } from '../components/NotepadPanel';
 import type { TerminalTab } from '../hooks/useTerminal';
 import { fetchFileContent } from '../lib/api';
@@ -464,6 +465,18 @@ export function Files() {
   // Terminal tab state
   const [terminalTabs, setTerminalTabs] = useState<TerminalTab[]>(filesState.terminalTabs);
   const [activeTerminalTabId, setActiveTerminalTabId] = useState<string | null>(filesState.activeTerminalTabId);
+  const terminalSendInputRef = useRef<((id: string, data: string) => void) | null>(null);
+
+  // Stable sendInput wrapper for TerminalContext
+  const terminalSendInput = useCallback((id: string, data: string) => {
+    terminalSendInputRef.current?.(id, data);
+  }, []);
+
+  // Open terminal panel callback for TerminalContext
+  const openTerminalPanel = useCallback(() => {
+    setThirdColumnOpen(true);
+    setThirdColumnMode('terminal');
+  }, []);
 
   // Notepad panel state
   const [notepadOpen, setNotepadOpen] = useState(false);
@@ -1178,7 +1191,11 @@ export function Files() {
   }, [toggleSplit, handleGitGraphToggle, handleWorkingTreeToggle, handleBeadsBoardToggle, handleChatPanelToggle, handleTerminalToggle, toggleNotepadPanel, handleHotkeysClick, thirdColumnOpen, thirdColumnMode]);
 
   return (
-    <>
+    <TerminalProvider
+      sendInput={terminalSendInput}
+      activeTerminalTabId={activeTerminalTabId}
+      openTerminal={openTerminalPanel}
+    >
       <div className="flex-1 flex overflow-hidden">
         {workspacePath && sidebarVisible && (
           <Sidebar
@@ -1610,6 +1627,7 @@ export function Files() {
             onTabsChange={setTerminalTabs}
             onActiveTabChange={setActiveTerminalTabId}
             onClose={handleTerminalToggle}
+            sendInputRef={terminalSendInputRef}
           />
         </div>
       </div>
@@ -1656,6 +1674,6 @@ export function Files() {
         onToggleChat={handleChatPanelToggle}
         onToggleTerminal={handleTerminalToggle}
       />
-    </>
+    </TerminalProvider>
   );
 }

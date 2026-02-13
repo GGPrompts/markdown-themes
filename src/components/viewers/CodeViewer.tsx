@@ -4,6 +4,7 @@ import { codeToHtml, bundledLanguages } from 'shiki';
 import { createCssVariablesTheme } from 'shiki';
 import { useGitDiff, type GitDiffLineType, type DeletedLine } from '../../hooks/useGitDiff';
 import { findAllChangedLines } from '../../utils/markdownDiff';
+import { PlayButton, RunAllButton, isRunnableLine } from '../CodePlayButton';
 
 interface CodeViewerProps {
   content: string;
@@ -127,6 +128,14 @@ function getLanguageFromPath(filePath: string): string {
   return 'text';
 }
 
+/** Languages/file types where per-line play buttons are shown in the gutter */
+const SHELL_LANGUAGES = new Set(['bash', 'sh', 'zsh', 'fish', 'powershell', 'bat', 'makefile']);
+
+function isShellFile(filePath: string): boolean {
+  const lang = getLanguageFromPath(filePath);
+  return SHELL_LANGUAGES.has(lang);
+}
+
 // Type for combined line highlighting (git diff + recent edit)
 interface LineHighlight {
   gitDiff?: GitDiffLineType;
@@ -153,7 +162,9 @@ export function CodeViewer({ content, filePath, fontSize = 100, isStreaming = fa
   });
 
   const language = useMemo(() => getLanguageFromPath(filePath), [filePath]);
-  const lineCount = useMemo(() => content.split('\n').length, [content]);
+  const contentLines = useMemo(() => content.split('\n'), [content]);
+  const lineCount = contentLines.length;
+  const showPlayButtons = useMemo(() => isShellFile(filePath), [filePath]);
 
   // Clear recent edit timer
   const clearRecentEditTimer = useCallback(() => {
@@ -363,16 +374,28 @@ export function CodeViewer({ content, filePath, fontSize = 100, isStreaming = fa
   return (
     <div className="code-viewer h-full" style={{ zoom: fontSize / 100, position: 'relative' }}>
       <ScrollbarMarkers changedLines={gitChangedLines} deletedLines={gitDeletedLines} totalLines={lineCount} scrollContainerRef={scrollContainerRef} />
+      {/* Run All header for shell files */}
+      {showPlayButtons && (
+        <div
+          className="flex items-center justify-end px-3 py-1"
+          style={{
+            backgroundColor: 'var(--bg-secondary)',
+            borderBottom: '1px solid var(--border)',
+          }}
+        >
+          <RunAllButton lines={contentLines} />
+        </div>
+      )}
       <div className="flex">
         <div
-          className="line-numbers select-none text-right pr-4 pl-4 py-4 sticky left-0"
+          className="line-numbers select-none py-4 sticky left-0"
           style={{
             color: 'var(--text-secondary)',
             backgroundColor: 'var(--bg-secondary)',
             fontFamily: 'var(--font-mono)',
             fontSize: '0.875rem',
             lineHeight: '1.7',
-            minWidth: '3rem',
+            minWidth: showPlayButtons ? '4.5rem' : '3rem',
             borderRight: '1px solid var(--border)',
           }}
         >
@@ -384,6 +407,9 @@ export function CodeViewer({ content, filePath, fontSize = 100, isStreaming = fa
                   style={{
                     backgroundColor: 'var(--diff-deleted, rgba(239, 68, 68, 0.25))',
                     color: 'var(--text-secondary)',
+                    paddingLeft: '1rem',
+                    paddingRight: '1rem',
+                    textAlign: 'right',
                   }}
                 >
                   −
@@ -391,9 +417,27 @@ export function CodeViewer({ content, filePath, fontSize = 100, isStreaming = fa
               );
             }
             const styles = getLineStyles(line.lineNum);
+            const lineText = contentLines[line.lineNum - 1] || '';
+            const runnable = showPlayButtons && isRunnableLine(lineText);
             return (
-              <div key={line.lineNum} data-line={line.lineNum} style={styles.gutter}>
-                {line.lineNum}
+              <div
+                key={line.lineNum}
+                data-line={line.lineNum}
+                className="code-gutter-row"
+                style={{
+                  ...styles.gutter,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  gap: '2px',
+                  paddingLeft: '0.5rem',
+                  paddingRight: '1rem',
+                }}
+              >
+                {runnable && (
+                  <PlayButton command={lineText.trim()} size={10} />
+                )}
+                <span style={{ minWidth: '2ch', textAlign: 'right' }}>{line.lineNum}</span>
               </div>
             );
           })}

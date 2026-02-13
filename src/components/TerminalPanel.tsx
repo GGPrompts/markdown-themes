@@ -32,6 +32,8 @@ interface TerminalPanelProps {
   onTabsChange: React.Dispatch<React.SetStateAction<TerminalTab[]>>;
   onActiveTabChange: React.Dispatch<React.SetStateAction<string | null>>;
   onClose: () => void;
+  /** Ref that will be populated with the sendInput function for external use */
+  sendInputRef?: React.MutableRefObject<((id: string, data: string) => void) | null>;
 }
 
 // --- Profile Editor Modal ---
@@ -270,6 +272,7 @@ export function TerminalPanel({
   onTabsChange,
   onActiveTabChange,
   onClose,
+  sendInputRef,
 }: TerminalPanelProps) {
   const [profiles, setProfiles] = useState<TerminalProfile[]>([]);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -619,6 +622,18 @@ export function TerminalPanel({
   // Keep reconnectRef pointing to the latest reconnect function
   reconnectRef.current = reconnect;
   listSessionsRef.current = listSessions;
+
+  // Expose sendInput for external use (e.g., code block play buttons)
+  useEffect(() => {
+    if (sendInputRef) {
+      sendInputRef.current = sendInput;
+    }
+    return () => {
+      if (sendInputRef) {
+        sendInputRef.current = null;
+      }
+    };
+  }, [sendInput, sendInputRef]);
 
   // Load profiles on mount
   useEffect(() => {

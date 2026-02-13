@@ -381,6 +381,10 @@ export function TerminalPanel({
           );
           return remaining;
         });
+      } else if (error.includes('duplicate spawn')) {
+        // Dedup rejection — the backend already has this session from a prior
+        // spawn attempt (e.g. StrictMode double-fire). The optimistic add to
+        // spawnedRef is correct; just ignore the error.
       } else {
         // Clear reconnecting flag on other errors too
         onTabsChange(prev => prev.map(t =>
@@ -608,8 +612,13 @@ export function TerminalPanel({
   }) => {
     terminalWritersRef.current.set(terminalId, helpers);
 
-    // Spawn or reconnect on backend
+    // Spawn or reconnect on backend.
+    // Add to spawnedRef optimistically BEFORE sending to prevent StrictMode
+    // double-fires: the Terminal init effect runs twice (mount → cleanup →
+    // remount) and the second onReady would re-send spawn before the backend
+    // confirms the first, bypassing dedup and triggering a supersession race.
     if (!spawnedRef.current.has(terminalId)) {
+      spawnedRef.current.add(terminalId);
       const dims = helpers.fit();
       const cols = dims?.cols || 120;
       const rows = dims?.rows || 30;
@@ -947,7 +956,7 @@ export function TerminalPanel({
           <div
             key={tab.id}
             className="absolute inset-0"
-            style={{ visibility: tab.id === activeTabId ? 'visible' : 'hidden' }}
+            style={{ display: tab.id === activeTabId ? 'block' : 'none' }}
           >
             <Terminal
               terminalId={tab.id}

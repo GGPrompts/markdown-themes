@@ -358,20 +358,35 @@ export function Terminal({
     };
   }, [terminalId]); // Re-init only on terminalId change
 
-  // Handle visibility changes — re-fit when becoming visible
+  // Handle visibility changes — re-fit when becoming visible.
+  // The CanvasAddon loses its rendering context when the container is
+  // display:none, so we must re-fit, refresh the canvas, clear stale
+  // selections, and re-force transparency after the container is shown.
   useEffect(() => {
     if (visible && initialized) {
-      // Hide content until fit completes to prevent flash of stale dimensions
       setFitPending(true);
-      // Small delay to let DOM layout update
       const timer = setTimeout(() => {
+        const xterm = xtermRef.current;
+        if (!xterm) { setFitPending(false); return; }
+
+        // Clear any lingering selection from before the tab switch
+        xterm.clearSelection();
+
         const result = fit();
         if (result) {
           onResizeRef.current?.(result.cols, result.rows);
         }
-        xtermRef.current?.refresh(0, (xtermRef.current?.rows ?? 1) - 1);
+
+        // Full refresh to re-render the canvas after display:none
+        xterm.refresh(0, xterm.rows - 1);
+
+        // Re-force transparent backgrounds (xterm may re-apply inline styles)
+        if (containerRef.current) {
+          forceXtermTransparent(containerRef.current);
+        }
+
         setFitPending(false);
-        xtermRef.current?.focus();
+        xterm.focus();
       }, 50);
       return () => clearTimeout(timer);
     }

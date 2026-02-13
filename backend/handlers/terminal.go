@@ -456,13 +456,20 @@ func (tm *TerminalManager) attachToTmux(id, tmuxSessionName, cwd string, cols, r
 	go func() {
 		cmd.Wait()
 		tm.mu.Lock()
-		_, stillActive := tm.sessions[id]
-		if stillActive {
+		currentSession, stillActive := tm.sessions[id]
+		// Only clean up if this goroutine's session is still the current one.
+		// After supersession/reconnect, a new session replaces the old one in
+		// the map and we must NOT delete the replacement.
+		if stillActive && currentSession == session {
 			delete(tm.sessions, id)
+		} else {
+			stillActive = false
 		}
-		if timer, exists := tm.disconnectTimers[id]; exists {
-			timer.Stop()
-			delete(tm.disconnectTimers, id)
+		if stillActive {
+			if timer, exists := tm.disconnectTimers[id]; exists {
+				timer.Stop()
+				delete(tm.disconnectTimers, id)
+			}
 		}
 		tm.mu.Unlock()
 

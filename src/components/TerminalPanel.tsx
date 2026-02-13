@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { Terminal } from './Terminal';
 import { FilePickerModal } from './FilePickerModal';
 import { useTerminal, type TerminalTab, type RecoveredSession } from '../hooks/useTerminal';
+import { sanitizeProfileName, generateTerminalId, generateProfileId } from '../utils/terminalUtils';
 
 const API_BASE = 'http://localhost:8130';
 
@@ -29,25 +30,6 @@ interface TerminalPanelProps {
   onTabsChange: React.Dispatch<React.SetStateAction<TerminalTab[]>>;
   onActiveTabChange: React.Dispatch<React.SetStateAction<string | null>>;
   onClose: () => void;
-}
-
-function sanitizeProfileName(name: string): string {
-  const sanitized = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 20);
-  return sanitized || 'bash';
-}
-
-function generateTerminalId(profileName?: string): string {
-  const name = sanitizeProfileName(profileName || 'bash');
-  const hex = Math.random().toString(16).slice(2, 10).padEnd(8, '0');
-  return `mt-${name}-${hex}`;
-}
-
-function generateProfileId(name: string): string {
-  return sanitizeProfileName(name) + '-' + Math.random().toString(36).slice(2, 8);
 }
 
 // --- Profile Editor Modal ---

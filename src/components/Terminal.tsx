@@ -109,7 +109,7 @@ export function Terminal({
   const OUTPUT_QUIET_PERIOD = 500;    // ms after last output before resize is safe
   const MAX_RESIZE_DEFERRALS = 10;    // max retry attempts before aborting resize
   const RESIZE_DEBOUNCE_MS = 150;     // ResizeObserver debounce
-  const RESIZE_COOLDOWN_MS = 80;      // keep isResizing=true after fit() completes
+  const RESIZE_COOLDOWN_MS = 50;      // keep isResizing=true after fit() completes
   const RESIZE_TRICK_DEBOUNCE_MS = 500; // debounce between resize tricks to prevent redraw storms
 
   // Resize trick state (tmux two-step SIGWINCH pattern)
@@ -448,30 +448,23 @@ export function Terminal({
       isResizingRef.current = false;
       resizeCooldownRef.current = null;
 
-      // For tmux: clear write queues (resize trick redraws will handle content).
-      // For non-tmux: flush write queues normally.
-      if (tmuxManaged) {
-        writeQueueRef.current = [];
-        writeQueueBytesRef.current = [];
-      } else {
-        // Flush write queues via requestAnimationFrame for stability
-        const queue = writeQueueRef.current;
-        const bytesQueue = writeQueueBytesRef.current;
-        writeQueueRef.current = [];
-        writeQueueBytesRef.current = [];
+      // Flush write queues via requestAnimationFrame for stability
+      const queue = writeQueueRef.current;
+      const bytesQueue = writeQueueBytesRef.current;
+      writeQueueRef.current = [];
+      writeQueueBytesRef.current = [];
 
-        if (queue.length > 0 || bytesQueue.length > 0) {
-          requestAnimationFrame(() => {
-            const xterm = xtermRef.current;
-            if (!xterm) return;
-            for (const data of queue) {
-              xterm.write(data);
-            }
-            for (const data of bytesQueue) {
-              xterm.write(data);
-            }
-          });
-        }
+      if (queue.length > 0 || bytesQueue.length > 0) {
+        requestAnimationFrame(() => {
+          const xterm = xtermRef.current;
+          if (!xterm) return;
+          for (const data of queue) {
+            xterm.write(data);
+          }
+          for (const data of bytesQueue) {
+            xterm.write(data);
+          }
+        });
       }
     }, RESIZE_COOLDOWN_MS);
   }, [tmuxManaged]);

@@ -524,8 +524,8 @@ export function TerminalPanel({
         ...data.orphans,
       ]);
 
-      // If we have tabs from sessionStorage, they'll reconnect via handleTerminalReady.
-      // But if we have no tabs and backend has sessions, create tabs for them.
+      // If we have no tabs and backend has sessions, create tabs for them.
+      // If we have tabs, reconnect them below (after removing stale ones).
       if (currentTabs.length === 0 && allSessionIds.size > 0) {
         const newTabs: TerminalTab[] = [];
         for (const s of data.active) {
@@ -583,6 +583,34 @@ export function TerminalPanel({
             spawnedRef.current.delete(id);
             terminalWritersRef.current.delete(id);
           }
+        }
+
+        // Reconnect tabs restored from sessionStorage that match backend sessions.
+        // handleTerminalReady defers reconnection for tmuxSession tabs so that
+        // this handler can issue the reconnect when WS is guaranteed open.
+        const tabsToReconnect = currentTabs.filter(tab =>
+          allSessionIds.has(tab.id) && !spawnedRef.current.has(tab.id)
+        );
+        if (tabsToReconnect.length > 0) {
+          tabsToReconnect.sort((a, b) => a.id.localeCompare(b.id));
+          const reconnectIds = new Set(tabsToReconnect.map(t => t.id));
+          onTabsChange(prev => prev.map(t =>
+            reconnectIds.has(t.id) ? { ...t, reconnecting: true } : t
+          ));
+          tabsToReconnect.forEach((tab, index) => {
+            const timer = setTimeout(() => {
+              reconnectTimersRef.current.delete(timer);
+              const helpers = terminalWritersRef.current.get(tab.id);
+              if (helpers) {
+                const dims = helpers.fit();
+                const cols = dims?.cols || 120;
+                const rows = dims?.rows || 30;
+                pendingReconnectsRef.current.add(tab.id);
+                reconnectRef.current(tab.id, cols, rows);
+              }
+            }, index * 150);
+            reconnectTimersRef.current.add(timer);
+          });
         }
       }
     }, [onTabsChange, onActiveTabChange, workspacePath]),
@@ -712,30 +740,29 @@ export function TerminalPanel({
   }) => {
     terminalWritersRef.current.set(terminalId, helpers);
 
-    // Spawn or reconnect on backend.
-    // Add to spawnedRef optimistically BEFORE sending to prevent StrictMode
-    // double-fires: the Terminal init effect runs twice (mount → cleanup →
-    // remount) and the second onReady would re-send spawn before the backend
-    // confirms the first, bypassing dedup and triggering a supersession race.
+    // If this tab has a tmuxSession (restored from sessionStorage), DON'T
+    // try to reconnect here — the WebSocket likely isn't open yet on page
+    // refresh.  Instead, leave the tab out of spawnedRef so that
+    // onRecoveryComplete / onTerminalList / onConnected (reconnect path)
+    // will pick it up and issue the reconnect when WS is ready.
+    const tab = tabsRef.current.find(t => t.id === terminalId);
+    if (tab?.tmuxSession) {
+      // Just register helpers; recovery handlers will reconnect later
+      return;
+    }
+
+    // Fresh spawn — add to spawnedRef optimistically BEFORE sending to
+    // prevent StrictMode double-fires: the Terminal init effect runs twice
+    // (mount → cleanup → remount) and the second onReady would re-send
+    // spawn before the backend confirms the first, bypassing dedup and
+    // triggering a supersession race.
     if (!spawnedRef.current.has(terminalId)) {
       spawnedRef.current.add(terminalId);
       const dims = helpers.fit();
       const cols = dims?.cols || 120;
       const rows = dims?.rows || 30;
-
-      // If this tab has a tmuxSession (restored from sessionStorage), reconnect
-      // to the existing tmux session instead of spawning a new one
-      const tab = tabsRef.current.find(t => t.id === terminalId);
-      if (tab?.tmuxSession) {
-        pendingReconnectsRef.current.add(terminalId);
-        onTabsChange(prev => prev.map(t =>
-          t.id === terminalId ? { ...t, reconnecting: true } : t
-        ));
-        reconnectRef.current(terminalId, cols, rows);
-      } else {
-        const requestId = crypto.randomUUID();
-        spawn(terminalId, cwd, cols, rows, command, requestId, profileName);
-      }
+      const requestId = crypto.randomUUID();
+      spawn(terminalId, cwd, cols, rows, command, requestId, profileName);
     }
   }, [spawn, onTabsChange]);
 

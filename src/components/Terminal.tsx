@@ -119,6 +119,9 @@ export function Terminal({
   const postResizeCleanupRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const preResizeDimsRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
 
+  // 3-phase init fit timers (cleaned up on unmount)
+  const initPhaseTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
   // Safe write that buffers during resize — accepts Uint8Array for proper UTF-8
   const writeQueueBytesRef = useRef<Uint8Array[]>([]);
   const safeWrite = useCallback((data: string | Uint8Array) => {
@@ -279,7 +282,8 @@ export function Terminal({
       return true;
     });
 
-    // Initial fit
+    // 3-phase init fit matching TabzChrome's proven sequence.
+    // Phase 1 (0ms): local fit only, do NOT send resize to backend
     try {
       fitAddon.fit();
     } catch { /* ignore */ }
@@ -299,13 +303,32 @@ export function Terminal({
       clear: () => xterm.clear(),
     });
 
-    // Deferred second fit + refresh to catch layout settling
-    setTimeout(() => {
+    // Phase 2 (100ms): catch layout shifts, still no backend send
+    const phase2Timer = setTimeout(() => {
       try {
         fitAddon.fit();
-        xterm.refresh(0, xterm.rows - 1);
       } catch { /* ignore */ }
-    }, 150);
+    }, 100);
+
+    // Phase 3 (300ms): fit + send initial dims to backend
+    const phase3Timer = setTimeout(() => {
+      try {
+        fitAddon.fit();
+        onResizeRef.current?.(xterm.cols, xterm.rows);
+      } catch { /* ignore */ }
+    }, 300);
+
+    // Phase 3b (350ms): full refresh + optional clear for tmux
+    const phase3bTimer = setTimeout(() => {
+      try {
+        xterm.refresh(0, xterm.rows - 1);
+        if (tmuxManaged) {
+          xterm.clear();
+        }
+      } catch { /* ignore */ }
+    }, 350);
+
+    initPhaseTimersRef.current = [phase2Timer, phase3Timer, phase3bTimer];
 
     // Input guard: clear after 1000ms — device query responses only arrive during init
     const inputGuardTimer = setTimeout(() => {
@@ -346,6 +369,11 @@ export function Terminal({
     return () => {
       clearTimeout(inputGuardTimer);
       clearTimeout(outputGuardTimer);
+      // Clean up 3-phase init timers
+      for (const t of initPhaseTimersRef.current) {
+        clearTimeout(t);
+      }
+      initPhaseTimersRef.current = [];
       if (resizeTrickTimerRef.current) {
         clearTimeout(resizeTrickTimerRef.current);
         resizeTrickTimerRef.current = null;

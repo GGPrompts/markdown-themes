@@ -29,6 +29,7 @@ type ChatRequest struct {
 	TeammateMode       string        `json:"teammateMode,omitempty"`
 	Agent              string        `json:"agent,omitempty"`
 	LastEventID        int64         `json:"lastEventId,omitempty"`
+	Streaming          *bool         `json:"streaming,omitempty"` // nil/true = stream-json, false = json (no --verbose)
 }
 
 // BufferedEvent stores an SSE event with its sequential ID
@@ -238,10 +239,19 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Build the Claude CLI command
-	args := []string{
-		"--output-format", "stream-json",
-		"--verbose",
-		"-p", lastUserMessage,
+	useStreaming := req.Streaming == nil || *req.Streaming
+	var args []string
+	if useStreaming {
+		args = []string{
+			"--output-format", "stream-json",
+			"--verbose",
+			"-p", lastUserMessage,
+		}
+	} else {
+		args = []string{
+			"--output-format", "json",
+			"-p", lastUserMessage,
+		}
 	}
 
 	// Add allowed tools so Claude can actually use them in non-interactive mode
@@ -584,6 +594,19 @@ func Chat(w http.ResponseWriter, r *http.Request) {
 				duration, _ := event["duration_ms"].(float64)
 				log.Printf("[Chat] result usage: %v", usage)
 				log.Printf("[Chat] result modelUsage: %v", modelUsage)
+
+				// For non-streaming (--output-format json), content comes in result.result
+				// instead of streaming content_block_delta events
+				if accumulatedContent == "" {
+					if resultText, ok := event["result"].(string); ok && resultText != "" {
+						accumulatedContent = resultText
+						buf.appendEvent(map[string]interface{}{
+							"type":    "content",
+							"content": resultText,
+							"done":    false,
+						})
+					}
+				}
 
 				doneEvent := map[string]interface{}{
 					"type":            "done",

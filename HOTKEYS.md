@@ -12,7 +12,10 @@ Quick reference for all keyboard shortcuts in the app.
 | `Ctrl+\` | Toggle split view |
 | `Ctrl+Shift+C` or `Alt+]` | Toggle AI chat panel |
 | `Ctrl+G` | Toggle git graph in right pane |
+| `Ctrl+Shift+G` | Toggle working tree |
 | `Ctrl+Shift+B` | Toggle beads board |
+| `` Ctrl+` `` | Toggle terminal panel |
+| `Ctrl+Shift+T` | New terminal tab |
 | `Ctrl+Click` | Open file in right pane (when split view active) |
 | `Escape` | Clear focus |
 

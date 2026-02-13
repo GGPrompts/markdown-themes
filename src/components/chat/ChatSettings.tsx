@@ -33,6 +33,7 @@ export function getSettingsSummary(settings?: ChatSettingsType): string | null {
   if (settings.agent) parts.push(settings.agent);
   if (settings.appendSystemPrompt) parts.push('prompt');
   if (settings.permissionMode) parts.push(settings.permissionMode);
+  if (settings.streaming === false) parts.push('no-stream');
   return parts.length > 0 ? parts.join(' \u00b7 ') : null;
 }
 
@@ -90,8 +91,8 @@ export function ChatSettings({ settings, onSettingsChange, disabled }: ChatSetti
       {/* Expanded panel */}
       {expanded && (
         <div className="px-3 pb-3 pt-1 space-y-3">
-          {/* Row 1: Model + Permission + Teammate */}
-          <div className="flex gap-2 flex-wrap">
+          {/* Row 1: Model + Permission + Agent + Streaming */}
+          <div className="flex gap-2 flex-wrap items-end">
             <SelectField
               label="Model"
               value={settings.model || ''}
@@ -109,6 +110,11 @@ export function ChatSettings({ settings, onSettingsChange, disabled }: ChatSetti
               value={settings.agent || ''}
               onChange={v => update({ agent: v || undefined })}
               placeholder="e.g. my-agent"
+            />
+            <ToggleField
+              label="Stream"
+              value={settings.streaming !== false}
+              onChange={v => update({ streaming: v ? undefined : false })}
             />
           </div>
 
@@ -322,6 +328,35 @@ function DirList({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function ToggleField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex flex-col">
+      <label className="text-[11px] mb-0.5" style={{ color: 'var(--text-secondary)' }}>{label}</label>
+      <button
+        onClick={() => onChange(!value)}
+        className="text-xs px-1.5 py-1 cursor-pointer text-center"
+        style={{
+          backgroundColor: value ? 'var(--accent)' : 'var(--bg-primary)',
+          color: value ? 'var(--bg-primary)' : 'var(--text-secondary)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius)',
+          minWidth: '3rem',
+        }}
+      >
+        {value ? 'On' : 'Off'}
+      </button>
     </div>
   );
 }

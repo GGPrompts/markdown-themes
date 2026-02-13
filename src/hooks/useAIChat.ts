@@ -67,6 +67,7 @@ export interface ChatSettings {
   permissionMode?: string;
   teammateMode?: string;
   agent?: string;
+  streaming?: boolean; // false = use --output-format json (no --verbose, saves tokens)
 }
 
 export interface Conversation {
@@ -581,6 +582,7 @@ export function useAIChat(options: UseAIChatOptions = {}): UseAIChatResult {
         ...(currentSettings?.permissionMode && { permissionMode: currentSettings.permissionMode }),
         ...(currentSettings?.teammateMode && { teammateMode: currentSettings.teammateMode }),
         ...(currentSettings?.agent && { agent: currentSettings.agent }),
+        ...(currentSettings?.streaming === false && { streaming: false }),
       });
     };
 

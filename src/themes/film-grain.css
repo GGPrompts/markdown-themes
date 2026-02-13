@@ -39,9 +39,6 @@
   --text-secondary: var(--sepia);
   --accent: var(--amber);
   --terminal-bg: linear-gradient(145deg, #1a1610 0%, #2a2418 40%, #141008 100%);
-  --terminal-fg: var(--cream);
-  --terminal-cursor: var(--amber);
-  --terminal-cursor-accent: #1a1610;
   --accent-hover: var(--amber-dark);
   --border: var(--warm-gray-light);
 

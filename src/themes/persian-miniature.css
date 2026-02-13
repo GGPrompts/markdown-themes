@@ -49,9 +49,6 @@
   --text-muted: rgba(15, 36, 66, 0.55);
   --accent: var(--gold-leaf);
   --terminal-bg: linear-gradient(145deg, #1a1408 0%, #0a1a30 40%, #12100a 100%);
-  --terminal-fg: var(--ivory);
-  --terminal-cursor: var(--gold-bright);
-  --terminal-cursor-accent: #0a1a30;
   --accent-hover: var(--gold-bright);
   --accent-secondary: var(--lapis-lazuli);
   --border: var(--gold-leaf);

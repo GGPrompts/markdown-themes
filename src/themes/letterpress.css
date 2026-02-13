@@ -48,9 +48,6 @@
   --text-muted: var(--ink-sepia);
   --accent: var(--deep-red);
   --terminal-bg: linear-gradient(145deg, #1a150e 0%, #2a2218 40%, #14100a 100%);
-  --terminal-fg: var(--cream);
-  --terminal-cursor: var(--gold-light);
-  --terminal-cursor-accent: #1a150e;
   --accent-hover: var(--burgundy);
   --accent-secondary: var(--gold);
   --border: var(--ink-brown);

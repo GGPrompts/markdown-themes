@@ -4,6 +4,8 @@ import { CanvasAddon } from '@xterm/addon-canvas';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
+import { terminalPalettes, buildXtermTheme } from '../lib/terminalThemes';
+import type { ThemeId } from '../themes';
 import '@xterm/xterm/css/xterm.css';
 
 interface TerminalProps {
@@ -11,6 +13,8 @@ interface TerminalProps {
   visible: boolean;
   /** When true, set xterm scrollback to 0 (tmux manages scrollback with 10K lines). */
   tmuxManaged?: boolean;
+  /** App theme ID — drives terminal ANSI color palette. */
+  themeId?: ThemeId;
   onTitleChange?: (title: string) => void;
   onReady?: (helpers: {
     write: (data: string | Uint8Array) => void;
@@ -33,37 +37,9 @@ function forceXtermTransparent(container: HTMLElement) {
   });
 }
 
-function getXtermTheme(container?: HTMLElement | null) {
-  // Read from the themed element (has .theme-* class) so theme-specific
-  // variables like --terminal-fg resolve correctly. Falls back to <html>.
-  const el = container?.closest('[class*="theme-"]') ?? document.documentElement;
-  const s = getComputedStyle(el);
-  const v = (name: string) => s.getPropertyValue(name).trim();
-  return {
-    background: 'transparent',
-    foreground: v('--terminal-fg') || v('--text-primary') || '#e0e0e0',
-    cursor: v('--terminal-cursor') || v('--accent') || '#64ffda',
-    cursorAccent: v('--terminal-cursor-accent') || v('--bg-secondary') || '#1a1a2e',
-    selectionBackground: (v('--terminal-cursor') || v('--accent') || '#64ffda') + '40',
-    selectionForeground: undefined,
-    // ANSI colors — sensible defaults
-    black: '#282a36',
-    red: '#ff5555',
-    green: '#50fa7b',
-    yellow: '#f1fa8c',
-    blue: '#6272a4',
-    magenta: '#ff79c6',
-    cyan: '#8be9fd',
-    white: '#f8f8f2',
-    brightBlack: '#6272a4',
-    brightRed: '#ff6e6e',
-    brightGreen: '#69ff94',
-    brightYellow: '#ffffa5',
-    brightBlue: '#d6acff',
-    brightMagenta: '#ff92df',
-    brightCyan: '#a4ffff',
-    brightWhite: '#ffffff',
-  };
+function getXtermTheme(themeId?: ThemeId) {
+  const palette = terminalPalettes[themeId || 'default'] ?? terminalPalettes['default'];
+  return buildXtermTheme(palette);
 }
 
 const DEFAULT_FONT_FAMILY = "'JetBrains Mono NF', 'JetBrains Mono', 'Fira Code NF', 'Fira Code', 'CaskaydiaCove NF', 'Cascadia Code', Menlo, Monaco, monospace";
@@ -72,6 +48,7 @@ export function Terminal({
   terminalId,
   visible,
   tmuxManaged = true,
+  themeId,
   onTitleChange,
   onReady,
   onInput,
@@ -220,7 +197,7 @@ export function Terminal({
       cursorBlink: true,
       fontSize,
       fontFamily: fontFamily || DEFAULT_FONT_FAMILY,
-      theme: getXtermTheme(container),
+      theme: getXtermTheme(themeId),
       allowTransparency: true,
       allowProposedApi: true,
       scrollback: tmuxManaged ? 0 : 10000,
@@ -638,22 +615,16 @@ export function Terminal({
     };
   }, [initialized, tmuxManaged, triggerResizeTrick]);
 
-  // Theme updates via MutationObserver on theme container class changes
+  // Theme updates — re-apply palette when themeId changes
   useEffect(() => {
-    const themeEl = containerRef.current?.closest('[class*="theme-"]');
-    const target = themeEl ?? document.documentElement;
-    const observer = new MutationObserver(() => {
-      if (xtermRef.current) {
-        xtermRef.current.options.theme = getXtermTheme(containerRef.current);
-        // Re-force transparency after xterm re-applies the theme background
-        if (containerRef.current) {
-          requestAnimationFrame(() => forceXtermTransparent(containerRef.current!));
-        }
+    if (xtermRef.current) {
+      xtermRef.current.options.theme = getXtermTheme(themeId);
+      // Re-force transparency after xterm re-applies the theme background
+      if (containerRef.current) {
+        requestAnimationFrame(() => forceXtermTransparent(containerRef.current!));
       }
-    });
-    observer.observe(target, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
+    }
+  }, [themeId]);
 
   // Font size changes
   useEffect(() => {

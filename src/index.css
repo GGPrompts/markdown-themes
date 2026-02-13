@@ -71,9 +71,6 @@ body.resizing iframe {
 
   /* Terminal panel — dark gradient for default (light) theme */
   --terminal-bg: linear-gradient(145deg, #1e1b4b 0%, #1a1a2e 40%, #0f172a 100%);
-  --terminal-fg: #e0e0e8;
-  --terminal-cursor: #64ffda;
-  --terminal-cursor-accent: #1a1a2e;
 
   /* Status colors for git badges */
   --status-clean: #34d399;

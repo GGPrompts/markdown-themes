@@ -36,9 +36,6 @@
   --text-muted: var(--vga-dark-gray);
   --accent: var(--vga-dark-blue);
   --terminal-bg: linear-gradient(145deg, #000040 0%, #000080 40%, #000020 100%);
-  --terminal-fg: var(--vga-light-gray);
-  --terminal-cursor: var(--vga-cyan);
-  --terminal-cursor-accent: #000040;
   --accent-hover: var(--vga-blue);
   --accent-secondary: var(--vga-dark-cyan);
   --border: var(--vga-dark-gray);

@@ -29,9 +29,6 @@
   --text-inverted: var(--white);
   --accent: var(--red);
   --terminal-bg: linear-gradient(145deg, #0a0808 0%, #1a1010 40%, #080505 100%);
-  --terminal-fg: var(--white);
-  --terminal-cursor: var(--red-light);
-  --terminal-cursor-accent: #0a0808;
   --accent-hover: var(--red-light);
   --accent-secondary: var(--ochre);
   --border: var(--black);

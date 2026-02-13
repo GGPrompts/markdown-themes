@@ -46,9 +46,6 @@
   --text-muted: var(--ink-light);
   --accent: var(--accent-rust);
   --terminal-bg: linear-gradient(145deg, #1a1410 0%, #2a2018 40%, #141008 100%);
-  --terminal-fg: var(--surface-linen);
-  --terminal-cursor: var(--accent-rust-light);
-  --terminal-cursor-accent: #1a1410;
   --accent-hover: var(--accent-rust-dark);
   --border: var(--shadow-light);
 

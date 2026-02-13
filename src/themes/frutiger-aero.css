@@ -38,9 +38,6 @@
   --text-muted: var(--text-light);
   --accent: var(--sky-blue);
   --terminal-bg: linear-gradient(145deg, #0a2a40 0%, #1a3a4a 40%, #082030 100%);
-  --terminal-fg: var(--sky-blue-pale);
-  --terminal-cursor: var(--sky-blue-light);
-  --terminal-cursor-accent: #0a2a40;
   --accent-hover: var(--sky-blue-light);
   --accent-secondary: var(--grass-green);
   --border: var(--glass-border);

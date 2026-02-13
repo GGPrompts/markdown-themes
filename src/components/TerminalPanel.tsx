@@ -5,6 +5,7 @@ import { Terminal } from './Terminal';
 import { FilePickerModal } from './FilePickerModal';
 import { useTerminal, type TerminalTab, type RecoveredSession, type TerminalListResponse } from '../hooks/useTerminal';
 import { sanitizeProfileName, generateTerminalId, generateProfileId } from '../utils/terminalUtils';
+import type { ThemeId } from '../themes';
 
 const API_BASE = 'http://localhost:8130';
 
@@ -27,6 +28,7 @@ interface TerminalPanelProps {
   activeTabId: string | null;
   workspacePath: string;
   fontSize?: number;
+  themeId?: ThemeId;
   onTabsChange: React.Dispatch<React.SetStateAction<TerminalTab[]>>;
   onActiveTabChange: React.Dispatch<React.SetStateAction<string | null>>;
   onClose: () => void;
@@ -264,6 +266,7 @@ export function TerminalPanel({
   activeTabId,
   workspacePath,
   fontSize = 14,
+  themeId,
   onTabsChange,
   onActiveTabChange,
   onClose,
@@ -1071,6 +1074,7 @@ export function TerminalPanel({
             <Terminal
               terminalId={tab.id}
               visible={tab.id === activeTabId}
+              themeId={themeId}
               fontSize={globalFontSize}
               fontFamily={globalFontFamily || undefined}
               onTitleChange={(title) => handleTitleChange(tab.id, title)}

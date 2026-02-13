@@ -1572,6 +1572,7 @@ export function Files() {
             activeTabId={activeTerminalTabId}
             workspacePath={workspacePath || ''}
             fontSize={14}
+            themeId={appState.theme}
             onTabsChange={setTerminalTabs}
             onActiveTabChange={setActiveTerminalTabId}
             onClose={handleTerminalToggle}

@@ -174,13 +174,17 @@ export function Terminal({
     resizeTrickTimerRef.current = setTimeout(() => {
       resizeTrickTimerRef.current = null;
       if (!xtermRef.current || !fitAddonRef.current) return;
-      fitAddonRef.current.fit();
-      const finalCols = xtermRef.current.cols;
-      const finalRows = xtermRef.current.rows;
-      onResizeRef.current?.(finalCols, finalRows);
+      try {
+        fitAddonRef.current.fit();
+        const finalCols = xtermRef.current.cols;
+        const finalRows = xtermRef.current.rows;
+        onResizeRef.current?.(finalCols, finalRows);
 
-      // Update tracking to prevent redundant sends
-      prevDimensionsRef.current = { cols: finalCols, rows: finalRows };
+        // Update tracking to prevent redundant sends
+        prevDimensionsRef.current = { cols: finalCols, rows: finalRows };
+      } catch {
+        // Ignore fit errors — xterm viewport may not be ready during rapid resizes
+      }
     }, 200);
   }, []);
 

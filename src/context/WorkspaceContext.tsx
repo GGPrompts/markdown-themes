@@ -1,6 +1,6 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import { fetchFileTree, type FileTreeNode as APIFileTreeNode } from '../lib/api';
-import { useAppStore } from './AppStoreContext';
+import { useAppStore, type FileSortMode } from './AppStoreContext';
 
 export interface FileTreeNode {
   name: string;
@@ -8,6 +8,7 @@ export interface FileTreeNode {
   isDirectory: boolean;
   children?: FileTreeNode[];
   modified?: string;
+  size?: number;
 }
 
 interface WorkspaceContextValue {
@@ -98,26 +99,61 @@ function convertTree(node: APIFileTreeNode): FileTreeNode | null {
       name: node.name,
       path: node.path,
       isDirectory: false,
+      modified: node.modified,
+      size: node.size,
     };
   }
 }
 
-function sortTree(nodes: FileTreeNode[]): FileTreeNode[] {
+function getNewestTimestamp(node: FileTreeNode): string | undefined {
+  if (!node.isDirectory) return node.modified;
+  if (!node.children) return undefined;
+  let newest: string | undefined;
+  for (const child of node.children) {
+    const ts = getNewestTimestamp(child);
+    if (ts && (!newest || ts > newest)) {
+      newest = ts;
+    }
+  }
+  return newest;
+}
+
+function getTotalSize(node: FileTreeNode): number {
+  if (!node.isDirectory) return node.size ?? 0;
+  if (!node.children) return 0;
+  let total = 0;
+  for (const child of node.children) {
+    total += getTotalSize(child);
+  }
+  return total;
+}
+
+function sortTree(nodes: FileTreeNode[], mode: FileSortMode = 'alpha'): FileTreeNode[] {
   return nodes
     .map((node) => ({
       ...node,
-      children: node.children ? sortTree(node.children) : undefined,
+      children: node.children ? sortTree(node.children, mode) : undefined,
     }))
     .sort((a, b) => {
+      // Directories first in all modes
       if (a.isDirectory && !b.isDirectory) return -1;
       if (!a.isDirectory && b.isDirectory) return 1;
+
+      if (mode === 'modified') {
+        const tsA = getNewestTimestamp(a) || '';
+        const tsB = getNewestTimestamp(b) || '';
+        return tsB.localeCompare(tsA); // newest first
+      }
+      if (mode === 'size') {
+        return getTotalSize(b) - getTotalSize(a); // largest first
+      }
       return a.name.localeCompare(b.name);
     });
 }
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [workspacePath, setWorkspacePath] = useState<string | null>(null);
-  const [fileTree, setFileTree] = useState<FileTreeNode[]>([]);
+  const [rawFileTree, setRawFileTree] = useState<FileTreeNode[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isGitRepo, setIsGitRepo] = useState(false);
@@ -125,6 +161,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [loadingPaths, setLoadingPaths] = useState<Set<string>>(new Set());
 
   const { state: appState, isLoading: storeLoading, saveLastWorkspace, addRecentFolder } = useAppStore();
+
+  // Derive sorted tree from raw tree + sort mode
+  const fileTree = useMemo(
+    () => sortTree(rawFileTree, appState.fileSortMode),
+    [rawFileTree, appState.fileSortMode]
+  );
 
   const loadWorkspace = useCallback(async (path: string): Promise<boolean> => {
     setLoading(true);
@@ -139,16 +181,15 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const apiTree = await fetchFileTree(path, depth, false);
       const converted = convertTree(apiTree);
       const children = converted?.children || [];
-      const sorted = sortTree(children);
 
-      setFileTree(sorted);
+      setRawFileTree(children);
       setWorkspacePath(path);
       setIsGitRepo(apiTree.isGitRepo === true);
       return true;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       setError(`Failed to read workspace: ${message}`);
-      setFileTree([]);
+      setRawFileTree([]);
       setWorkspacePath(null);
       setIsGitRepo(false);
       return false;
@@ -171,7 +212,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const closeWorkspace = useCallback(() => {
     setWorkspacePath(null);
-    setFileTree([]);
+    setRawFileTree([]);
     setError(null);
     setIsGitRepo(false);
     setLoadedPaths(new Set());
@@ -203,17 +244,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const apiTree = await fetchFileTree(folderPath, 1, false);
       const converted = convertTree(apiTree);
       const newChildren = converted?.children || [];
-      const sortedChildren = sortTree(newChildren);
 
-      // Merge the children into the existing tree
-      setFileTree(prevTree => {
+      // Merge the children into the raw tree (sorting is derived)
+      setRawFileTree(prevTree => {
         const mergeChildren = (nodes: FileTreeNode[]): FileTreeNode[] => {
           return nodes.map(node => {
             if (node.path === folderPath && node.isDirectory) {
               // Found the target folder, update its children
               return {
                 ...node,
-                children: sortedChildren.length > 0 ? sortedChildren : undefined,
+                children: newChildren.length > 0 ? newChildren : undefined,
               };
             }
             if (node.children) {
@@ -266,13 +306,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         .then((apiTree) => {
           const converted = convertTree(apiTree);
           const children = converted?.children || [];
-          const sorted = sortTree(children);
 
           // For projects directories, preserve lazy-loaded children during refresh
           if (isProjectsDirectory(workspacePath)) {
-            setFileTree(prevTree => {
+            setRawFileTree(prevTree => {
               // Merge: keep existing children for folders that were lazy-loaded
-              return sorted.map(newNode => {
+              return children.map(newNode => {
                 const existingNode = prevTree.find(n => n.path === newNode.path);
                 if (existingNode?.children && newNode.isDirectory) {
                   // Preserve the lazy-loaded children
@@ -282,7 +321,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
               });
             });
           } else {
-            setFileTree(sorted);
+            setRawFileTree(children);
           }
         })
         .catch(() => {

@@ -4,7 +4,7 @@ import { useWorkspaceContext, type FileTreeNode } from '../context/WorkspaceCont
 import { useFileFilter, type ScopedFileTreeNode } from '../hooks/useFileFilter';
 import { FILTERS, type FilterId } from '../lib/filters';
 import { getFileIconInfo } from '../utils/fileIcons';
-import type { FavoriteItem } from '../context/AppStoreContext';
+import { useAppStore, type FavoriteItem } from '../context/AppStoreContext';
 import { FileContextMenu } from './FileContextMenu';
 import { ProjectSelector } from './ProjectSelector';
 import { fetchFileContent, fetchGitStatus, type GitStatusMap, type GitStatus } from '../lib/api';
@@ -426,6 +426,15 @@ function TreeItem({ node, currentFile, isSplit, onFileSelect, onFileDoubleClick,
       <IndentGuides depth={depth} />
       <FileIcon path={node.path} />
       <span className="truncate flex-1 min-w-0">{node.name}</span>
+      {node.size != null && (
+        <span
+          className="text-[10px] flex-shrink-0 whitespace-nowrap"
+          style={{ color: 'var(--text-secondary)', opacity: 0.7 }}
+          title={`${node.size.toLocaleString()} bytes`}
+        >
+          {formatFileSize(node.size)}
+        </span>
+      )}
       {node.modified && (
         <span
           className="text-[10px] flex-shrink-0 whitespace-nowrap"
@@ -601,6 +610,16 @@ function formatRelativeTime(isoDate: string): string {
   return `${years}y ago`;
 }
 
+/**
+ * Format a file size in bytes to a human-readable string.
+ */
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
+
 // Sidebar width constraints
 const MIN_SIDEBAR_WIDTH = 150;
 const MAX_SIDEBAR_WIDTH = 400;
@@ -610,6 +629,8 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
 
   // Get lazy loading state from workspace context
   const { loadedPaths, loadingPaths, loadChildren } = useWorkspaceContext();
+  const { state: appState, setFileSortMode } = useAppStore();
+  const fileSortMode = appState.fileSortMode;
 
   const [filterMenuOpen, setFilterMenuOpen] = useState(false);
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
@@ -1052,33 +1073,36 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
     >
       {/* Header - z-10 keeps it above scrolling file tree but below toolbar dropdowns (z-100) */}
       <div
-        className="flex items-center justify-between px-3 py-2.5 relative z-10"
+        className="relative z-10"
         style={{
           borderBottom: '1px solid var(--border)',
           backgroundColor: 'var(--bg-secondary)',
         }}
       >
-        {recentFolders && onFolderSelect && onCloseWorkspace ? (
-          <ProjectSelector
-            currentPath={workspacePath}
-            recentFolders={recentFolders}
-            onFolderSelect={onFolderSelect}
-            onClose={onCloseWorkspace}
-            compact
-          />
-        ) : (
-          <span
-            className="text-sm font-medium truncate"
-            style={{ color: 'var(--text-primary)' }}
-            title={workspacePath ?? ''}
-          >
-            {workspaceName}
-          </span>
-        )}
-        <div className="flex items-center gap-1">
+        {/* Row 1: Project name + Theme selector */}
+        <div className="flex items-center justify-between px-3 py-2">
+          <div className="flex-1 min-w-0">
+            {recentFolders && onFolderSelect && onCloseWorkspace ? (
+              <ProjectSelector
+                currentPath={workspacePath}
+                recentFolders={recentFolders}
+                onFolderSelect={onFolderSelect}
+                onClose={onCloseWorkspace}
+                compact
+              />
+            ) : (
+              <span
+                className="text-sm font-medium truncate block"
+                style={{ color: 'var(--text-primary)' }}
+                title={workspacePath ?? ''}
+              >
+                {workspaceName}
+              </span>
+            )}
+          </div>
           {/* Theme selector button */}
           {currentTheme && onThemeChange && (
-            <div className="relative">
+            <div className="relative flex-shrink-0 ml-2">
               <button
                 ref={themeButtonRef}
                 onClick={() => {
@@ -1162,6 +1186,41 @@ export function Sidebar({ fileTree, currentFile, workspacePath, homePath, isSpli
               )}
             </div>
           )}
+        </div>
+
+        {/* Row 2: Sort toggle + Expand/Collapse + Filter */}
+        <div className="flex items-center gap-1 px-3 pb-2">
+          {/* Sort toggle button — cycles: alpha → modified → size → alpha */}
+          <button
+            onClick={() => {
+              const next = fileSortMode === 'alpha' ? 'modified' : fileSortMode === 'modified' ? 'size' : 'alpha';
+              setFileSortMode(next);
+            }}
+            className="w-6 h-6 flex items-center justify-center rounded transition-colors"
+            style={{
+              color: fileSortMode !== 'alpha' ? 'var(--accent)' : 'var(--text-secondary)',
+              backgroundColor: fileSortMode !== 'alpha' ? 'color-mix(in srgb, var(--accent) 15%, transparent)' : 'transparent',
+            }}
+            onMouseEnter={(e) => {
+              if (fileSortMode === 'alpha') {
+                e.currentTarget.style.color = 'var(--text-primary)';
+                e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (fileSortMode === 'alpha') {
+                e.currentTarget.style.color = 'var(--text-secondary)';
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }
+            }}
+            title={
+              fileSortMode === 'alpha' ? 'Sort: A\u2013Z (click for Modified)' :
+              fileSortMode === 'modified' ? 'Sort: Modified (click for Size)' :
+              'Sort: Size (click for A\u2013Z)'
+            }
+          >
+            {fileSortMode === 'alpha' ? <SortAlphaIcon /> : fileSortMode === 'modified' ? <SortClockIcon /> : <SortSizeIcon />}
+          </button>
 
           {/* Expand all button */}
           <button
@@ -1639,6 +1698,37 @@ function StarFilledIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2">
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  );
+}
+
+function SortAlphaIcon() {
+  // A→Z sort icon
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M3 6h7M3 12h5M3 18h3" />
+      <path d="M16 6l4 12M14 18h8" />
+    </svg>
+  );
+}
+
+function SortClockIcon() {
+  // Clock icon for sort by modified
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 6v6l4 2" />
+    </svg>
+  );
+}
+
+function SortSizeIcon() {
+  // Stacked bars icon for sort by size
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <rect x="4" y="4" width="16" height="4" rx="1" />
+      <rect x="4" y="10" width="11" height="4" rx="1" />
+      <rect x="4" y="16" width="6" height="4" rx="1" />
     </svg>
   );
 }

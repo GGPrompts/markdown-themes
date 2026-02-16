@@ -18,6 +18,8 @@ export interface ArchivedConversation {
   tags?: string[];
 }
 
+export type FileSortMode = 'alpha' | 'modified' | 'size';
+
 export interface AppState {
   theme: ThemeId;
   recentFiles: string[];
@@ -29,6 +31,7 @@ export interface AppState {
   followStreamingMode: boolean;
   archiveLocation: string;
   archivedConversations: ArchivedConversation[];
+  fileSortMode: FileSortMode;
 }
 
 // Get default archive location based on home directory
@@ -55,6 +58,7 @@ const DEFAULT_STATE: AppState = {
   followStreamingMode: false,
   archiveLocation: getDefaultArchiveLocation(),
   archivedConversations: [],
+  fileSortMode: 'alpha',
 };
 
 interface AppStoreContextValue {
@@ -72,6 +76,7 @@ interface AppStoreContextValue {
   toggleFollowMode: () => void;
   saveArchiveLocation: (location: string) => void;
   addArchivedConversation: (archive: ArchivedConversation) => void;
+  setFileSortMode: (mode: FileSortMode) => void;
 }
 
 const AppStoreContext = createContext<AppStoreContextValue | null>(null);
@@ -96,6 +101,7 @@ function loadFromStorage(): AppState {
       followStreamingMode: parsed.followStreamingMode ?? DEFAULT_STATE.followStreamingMode,
       archiveLocation,
       archivedConversations: parsed.archivedConversations ?? DEFAULT_STATE.archivedConversations,
+      fileSortMode: parsed.fileSortMode ?? DEFAULT_STATE.fileSortMode,
     };
   } catch {
     return DEFAULT_STATE;
@@ -229,6 +235,14 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setFileSortMode = useCallback((mode: FileSortMode) => {
+    setState((prev) => {
+      const next = { ...prev, fileSortMode: mode };
+      saveToStorage(next);
+      return next;
+    });
+  }, []);
+
   return (
     <AppStoreContext.Provider
       value={{
@@ -246,6 +260,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
         toggleFollowMode,
         saveArchiveLocation,
         addArchivedConversation,
+        setFileSortMode,
       }}
     >
       {children}

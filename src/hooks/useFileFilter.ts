@@ -102,6 +102,7 @@ function convertApiTree(node: APIFileTreeNode, allowedHiddenNames: Set<string>):
       path: node.path,
       isDirectory: false,
       modified: node.modified,
+      size: node.size,
     };
   }
 }

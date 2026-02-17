@@ -23,6 +23,7 @@ interface UseRightPaneTabsResult {
   closeTab: (id: string) => void;
   setActiveTab: (id: string) => void;
   clearAllTabs: () => void;
+  reorderTab: (fromId: string, toId: string) => void;
 }
 
 function generateTabId(): string {
@@ -184,6 +185,19 @@ export function useRightPaneTabs(options: UseRightPaneTabsOptions = {}): UseRigh
     setActiveTabId(null);
   }, []);
 
+  const reorderTab = useCallback((fromId: string, toId: string) => {
+    if (fromId === toId) return;
+    setTabs((prevTabs) => {
+      const fromIndex = prevTabs.findIndex((t) => t.id === fromId);
+      const toIndex = prevTabs.findIndex((t) => t.id === toId);
+      if (fromIndex === -1 || toIndex === -1) return prevTabs;
+      const newTabs = [...prevTabs];
+      const [moved] = newTabs.splice(fromIndex, 1);
+      newTabs.splice(toIndex, 0, moved);
+      return newTabs;
+    });
+  }, []);
+
   return {
     tabs,
     activeTabId,
@@ -194,5 +208,6 @@ export function useRightPaneTabs(options: UseRightPaneTabsOptions = {}): UseRigh
     closeTab,
     setActiveTab,
     clearAllTabs,
+    reorderTab,
   };
 }

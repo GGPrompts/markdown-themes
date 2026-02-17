@@ -36,6 +36,8 @@ interface TabBarProps {
   /** Notepad toggle */
   isNotepadOpen?: boolean;
   onNotepadToggle?: () => void;
+  /** Tab reordering */
+  onReorderTab?: (fromId: string, toId: string) => void;
 }
 
 interface TabItemProps {
@@ -48,11 +50,13 @@ interface TabItemProps {
   onUnpin?: () => void;
   onContextMenu?: (e: React.MouseEvent) => void;
   pane: 'left' | 'right';
+  onReorder?: (fromId: string, toId: string) => void;
 }
 
-function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, onUnpin, onContextMenu, pane }: TabItemProps) {
+function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, onUnpin, onContextMenu, pane, onReorder }: TabItemProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [dropSide, setDropSide] = useState<'left' | 'right' | null>(null);
 
   // Display names for different tab types
   const VIEW_TAB_DISPLAY: Record<string, { name: string; tooltip: string }> = {
@@ -94,19 +98,44 @@ function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, onUnpin
   const isViewTab = tab.type === 'git-graph' || tab.type === 'working-tree' || tab.type === 'beads-board';
 
   const handleDragStart = (e: React.DragEvent) => {
-    // Only allow dragging file and conversation tabs, not diff or view tabs
-    if (tab.type === 'diff' || isViewTab) {
-      e.preventDefault();
-      return;
+    // Set tab ID for within-pane reordering
+    e.dataTransfer.setData('application/x-tab-id', tab.id);
+    e.dataTransfer.setData('application/x-tab-pane', pane);
+    // Also set text/plain for cross-pane transfer (file/conversation tabs only)
+    if (!isViewTab && tab.type !== 'diff') {
+      e.dataTransfer.setData('text/plain', `${pane}:${tab.path}`);
     }
-    // Include pane source so drop handler can close from origin
-    e.dataTransfer.setData('text/plain', `${pane}:${tab.path}`);
     e.dataTransfer.effectAllowed = 'move';
     setIsDragging(true);
   };
 
   const handleDragEnd = () => {
     setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    // Only handle reorder from same pane
+    const sourcePaneType = e.dataTransfer.types.includes('application/x-tab-id') ? 'reorder' : null;
+    if (!sourcePaneType) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const rect = e.currentTarget.getBoundingClientRect();
+    const midX = rect.left + rect.width / 2;
+    setDropSide(e.clientX < midX ? 'left' : 'right');
+  };
+
+  const handleDragLeave = () => {
+    setDropSide(null);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    setDropSide(null);
+    const fromId = e.dataTransfer.getData('application/x-tab-id');
+    const fromPane = e.dataTransfer.getData('application/x-tab-pane');
+    if (!fromId || fromPane !== pane || fromId === tab.id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    onReorder?.(fromId, tab.id);
   };
 
   // Show close button: always for pinned tabs, on hover for preview tabs
@@ -117,6 +146,9 @@ function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, onUnpin
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
       className="group flex items-center gap-1 px-3 py-2 text-sm cursor-pointer select-none min-w-0 max-w-[180px] transition-colors"
       style={{
         backgroundColor: isActive
@@ -127,6 +159,11 @@ function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, onUnpin
         borderBottom: isActive ? '2px solid var(--accent)' : '2px solid transparent',
         color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
         opacity: isDragging ? 0.5 : 1,
+        boxShadow: dropSide === 'left'
+          ? 'inset 2px 0 0 var(--accent)'
+          : dropSide === 'right'
+            ? 'inset -2px 0 0 var(--accent)'
+            : 'none',
       }}
       onClick={onSelect}
       onDoubleClick={handleDoubleClick}
@@ -183,7 +220,7 @@ function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, onUnpin
   );
 }
 
-export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, onTabUnpin, pane = 'left', streamingFilePath, onTabContextMenu, isGitGraph, isWorkingTree, isBeadsBoard, onGitGraphToggle, onWorkingTreeToggle, onBeadsBoardToggle, onHotkeysClick, isFollowMode, onFollowModeToggle, activeSubagentCount, isSplit, onSplitToggle, isTerminalOpen, onTerminalToggle, isNotepadOpen, onNotepadToggle }: TabBarProps) {
+export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, onTabUnpin, pane = 'left', streamingFilePath, onTabContextMenu, isGitGraph, isWorkingTree, isBeadsBoard, onGitGraphToggle, onWorkingTreeToggle, onBeadsBoardToggle, onHotkeysClick, isFollowMode, onFollowModeToggle, activeSubagentCount, isSplit, onSplitToggle, isTerminalOpen, onTerminalToggle, isNotepadOpen, onNotepadToggle, onReorderTab }: TabBarProps) {
   const hasActions = !!(onGitGraphToggle || onWorkingTreeToggle || onBeadsBoardToggle || onHotkeysClick || onFollowModeToggle || onSplitToggle || onTerminalToggle);
 
   if (tabs.length === 0 && !hasActions) {
@@ -211,6 +248,7 @@ export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, o
           onUnpin={onTabUnpin ? () => onTabUnpin(tab.id) : undefined}
           onContextMenu={onTabContextMenu ? (e) => onTabContextMenu(e, tab) : undefined}
           pane={pane}
+          onReorder={onReorderTab}
         />
       ))}
       {hasActions && (

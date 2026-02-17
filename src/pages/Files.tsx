@@ -270,6 +270,7 @@ export function Files() {
     unpinTab,
     closeTab,
     setActiveTab,
+    reorderTab,
   } = useTabManager({
     initialTabs: filesState.tabs,
     initialActiveTabId: filesState.activeTabId,
@@ -432,6 +433,7 @@ export function Files() {
     unpinTab: unpinRightTab,
     closeTab: closeRightTabInternal,
     setActiveTab: setRightActiveTab,
+    reorderTab: reorderRightTab,
   } = useRightPaneTabs({
     initialTabs: filesState.rightPaneTabs,
     initialActiveTabId: filesState.rightActiveTabId,
@@ -676,7 +678,7 @@ export function Files() {
         if (wasRecentlyClosed(streamingFile)) return;
         if (!shouldAutoOpen(streamingFile)) return;
 
-        openTab(streamingFile, true); // preview mode
+        openTab(streamingFile, { preview: true, metadata: { autoOpened: true } }); // preview mode
         addRecentFile(streamingFile);
       }
     }
@@ -722,14 +724,14 @@ export function Files() {
       newChangedFiles.forEach((filePath) => {
         if (!shouldAutoOpen(filePath)) return;
         autoOpenedFilesRef.current.add(filePath);
-        openRightTab(filePath, true);
+        openRightTab(filePath, { preview: true, addNew: true });
       });
     } else {
       // Non-split mode: open in main pane (just the most recent one)
       const latest = newChangedFiles[newChangedFiles.length - 1];
       if (shouldAutoOpen(latest)) {
         autoOpenedFilesRef.current.add(latest);
-        openTab(latest, true);
+        openTab(latest, { preview: true, metadata: { autoOpened: true } });
       }
     }
   }, [appState.followStreamingMode, isSplit, changedFiles, rightPaneTabs, tabs, openRightTab, openTab, shouldAutoOpen]);
@@ -1250,6 +1252,7 @@ export function Files() {
               onTabPin={pinRightTab}
               onTabUnpin={unpinRightTab}
               onTabContextMenu={(e, tab) => handleTabContextMenu(e, { ...tab, type: 'file' }, 'right')}
+              onReorderTab={reorderRightTab}
             />
           }
           leftPane={
@@ -1279,6 +1282,7 @@ export function Files() {
                 onTerminalToggle={handleTerminalToggle}
                 isNotepadOpen={notepadOpen}
                 onNotepadToggle={toggleNotepadPanel}
+                onReorderTab={reorderTab}
               />
 
               {/* Git graph in main pane (as tab) */}

@@ -10,6 +10,7 @@ interface RightPaneTabBarProps {
   onTabPin: (id: string) => void;
   onTabUnpin?: (id: string) => void;
   onTabContextMenu?: (e: React.MouseEvent, tab: RightPaneTab) => void;
+  onReorderTab?: (fromId: string, toId: string) => void;
 }
 
 interface TabItemProps {
@@ -20,16 +21,19 @@ interface TabItemProps {
   onPin: () => void;
   onUnpin?: () => void;
   onContextMenu?: (e: React.MouseEvent) => void;
+  onReorder?: (fromId: string, toId: string) => void;
 }
 
-function TabItem({ tab, isActive, onSelect, onClose, onPin, onUnpin, onContextMenu }: TabItemProps) {
+function TabItem({ tab, isActive, onSelect, onClose, onPin, onUnpin, onContextMenu, onReorder }: TabItemProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [dropSide, setDropSide] = useState<'left' | 'right' | null>(null);
 
   const displayName = tab.path.split('/').pop() ?? tab.path.split('\\').pop() ?? tab.path;
 
   const handleDragStart = (e: React.DragEvent) => {
-    // Include pane source so drop handler can close from origin
+    e.dataTransfer.setData('application/x-tab-id', tab.id);
+    e.dataTransfer.setData('application/x-tab-pane', 'right');
     e.dataTransfer.setData('text/plain', `right:${tab.path}`);
     e.dataTransfer.effectAllowed = 'move';
     setIsDragging(true);
@@ -37,6 +41,29 @@ function TabItem({ tab, isActive, onSelect, onClose, onPin, onUnpin, onContextMe
 
   const handleDragEnd = () => {
     setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!e.dataTransfer.types.includes('application/x-tab-id')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const rect = e.currentTarget.getBoundingClientRect();
+    const midX = rect.left + rect.width / 2;
+    setDropSide(e.clientX < midX ? 'left' : 'right');
+  };
+
+  const handleDragLeave = () => {
+    setDropSide(null);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    setDropSide(null);
+    const fromId = e.dataTransfer.getData('application/x-tab-id');
+    const fromPane = e.dataTransfer.getData('application/x-tab-pane');
+    if (!fromId || fromPane !== 'right' || fromId === tab.id) return;
+    e.preventDefault();
+    e.stopPropagation();
+    onReorder?.(fromId, tab.id);
   };
 
   const handleDoubleClick = () => {
@@ -60,6 +87,9 @@ function TabItem({ tab, isActive, onSelect, onClose, onPin, onUnpin, onContextMe
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
       className="group flex items-center gap-1 px-3 py-1.5 text-sm cursor-pointer select-none min-w-0 max-w-[180px] transition-colors"
       style={{
         backgroundColor: isActive
@@ -70,6 +100,11 @@ function TabItem({ tab, isActive, onSelect, onClose, onPin, onUnpin, onContextMe
         borderBottom: isActive ? '2px solid var(--accent)' : '2px solid transparent',
         color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
         opacity: isDragging ? 0.5 : 1,
+        boxShadow: dropSide === 'left'
+          ? 'inset 2px 0 0 var(--accent)'
+          : dropSide === 'right'
+            ? 'inset -2px 0 0 var(--accent)'
+            : 'none',
       }}
       onClick={onSelect}
       onDoubleClick={handleDoubleClick}
@@ -114,7 +149,7 @@ function TabItem({ tab, isActive, onSelect, onClose, onPin, onUnpin, onContextMe
   );
 }
 
-export function RightPaneTabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, onTabUnpin, onTabContextMenu }: RightPaneTabBarProps) {
+export function RightPaneTabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, onTabUnpin, onTabContextMenu, onReorderTab }: RightPaneTabBarProps) {
   if (tabs.length === 0) {
     return null;
   }
@@ -133,6 +168,7 @@ export function RightPaneTabBar({ tabs, activeTabId, onTabSelect, onTabClose, on
           onPin={() => onTabPin(tab.id)}
           onUnpin={onTabUnpin ? () => onTabUnpin(tab.id) : undefined}
           onContextMenu={onTabContextMenu ? (e) => onTabContextMenu(e, tab) : undefined}
+          onReorder={onReorderTab}
         />
       ))}
     </div>

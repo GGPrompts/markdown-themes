@@ -26,7 +26,7 @@ import { DiffViewer } from '../components/viewers/DiffViewer';
 import { ArchiveModal } from '../components/ArchiveModal';
 import { FileContextMenu } from '../components/FileContextMenu';
 import { ChatPanel } from '../components/chat';
-import { ChatBubble } from '../components/ChatBubble';
+
 import { TerminalPanel } from '../components/TerminalPanel';
 import { TerminalProvider } from '../context/TerminalContext';
 import { NotepadPanel } from '../components/NotepadPanel';
@@ -1282,6 +1282,9 @@ export function Files() {
                 onTerminalToggle={handleTerminalToggle}
                 isNotepadOpen={notepadOpen}
                 onNotepadToggle={toggleNotepadPanel}
+                isChatOpen={thirdColumnOpen && thirdColumnMode === 'chat'}
+                onChatToggle={handleChatPanelToggle}
+                isGenerating={isGenerating}
                 onReorderTab={reorderTab}
               />
 
@@ -1674,14 +1677,7 @@ export function Files() {
         />
       )}
 
-      {/* Floating chat bubble */}
-      <ChatBubble
-        isGenerating={isGenerating}
-        isChatOpen={thirdColumnOpen && thirdColumnMode === 'chat'}
-        isTerminalOpen={thirdColumnOpen && thirdColumnMode === 'terminal'}
-        onToggleChat={handleChatPanelToggle}
-        onToggleTerminal={handleTerminalToggle}
-      />
+
     </TerminalProvider>
   );
 }

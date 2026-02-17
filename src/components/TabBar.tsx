@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileDiff, Users, GitBranch, GitPullRequestDraft, Keyboard, Crosshair, Columns, LayoutGrid, Terminal, BookOpen } from 'lucide-react';
+import { FileDiff, Users, GitBranch, GitPullRequestDraft, Keyboard, Crosshair, Columns, LayoutGrid, Terminal, BookOpen, MessageSquare } from 'lucide-react';
 import type { Tab } from '../hooks/useTabManager';
 import { getFileIconInfo } from '../utils/fileIcons';
 
@@ -36,6 +36,11 @@ interface TabBarProps {
   /** Notepad toggle */
   isNotepadOpen?: boolean;
   onNotepadToggle?: () => void;
+  /** AI Chat toggle */
+  isChatOpen?: boolean;
+  onChatToggle?: () => void;
+  /** AI is generating a response */
+  isGenerating?: boolean;
   /** Tab reordering */
   onReorderTab?: (fromId: string, toId: string) => void;
 }
@@ -220,8 +225,8 @@ function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, onUnpin
   );
 }
 
-export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, onTabUnpin, pane = 'left', streamingFilePath, onTabContextMenu, isGitGraph, isWorkingTree, isBeadsBoard, onGitGraphToggle, onWorkingTreeToggle, onBeadsBoardToggle, onHotkeysClick, isFollowMode, onFollowModeToggle, activeSubagentCount, isSplit, onSplitToggle, isTerminalOpen, onTerminalToggle, isNotepadOpen, onNotepadToggle, onReorderTab }: TabBarProps) {
-  const hasActions = !!(onGitGraphToggle || onWorkingTreeToggle || onBeadsBoardToggle || onHotkeysClick || onFollowModeToggle || onSplitToggle || onTerminalToggle);
+export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, onTabUnpin, pane = 'left', streamingFilePath, onTabContextMenu, isGitGraph, isWorkingTree, isBeadsBoard, onGitGraphToggle, onWorkingTreeToggle, onBeadsBoardToggle, onHotkeysClick, isFollowMode, onFollowModeToggle, activeSubagentCount, isSplit, onSplitToggle, isTerminalOpen, onTerminalToggle, isNotepadOpen, onNotepadToggle, isChatOpen, onChatToggle, isGenerating, onReorderTab }: TabBarProps) {
+  const hasActions = !!(onGitGraphToggle || onWorkingTreeToggle || onBeadsBoardToggle || onHotkeysClick || onFollowModeToggle || onSplitToggle || onTerminalToggle || onChatToggle);
 
   if (tabs.length === 0 && !hasActions) {
     return null;
@@ -394,6 +399,43 @@ export function TabBar({ tabs, activeTabId, onTabSelect, onTabClose, onTabPin, o
               title={isNotepadOpen ? 'Close notepad (Ctrl+Shift+N)' : 'Open notepad (Ctrl+Shift+N)'}
             >
               <BookOpen size={16} />
+            </button>
+          )}
+          {onChatToggle && (
+            <button
+              onClick={onChatToggle}
+              className="relative w-7 h-7 flex items-center justify-center rounded transition-colors"
+              style={{
+                backgroundColor: isChatOpen ? 'var(--accent)' : 'transparent',
+                color: isChatOpen ? 'var(--bg-primary)' : 'var(--text-secondary)',
+              }}
+              onMouseEnter={(e) => {
+                if (!isChatOpen) {
+                  e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+                  e.currentTarget.style.color = 'var(--text-primary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isChatOpen) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = 'var(--text-secondary)';
+                }
+              }}
+              title={isChatOpen ? 'Close AI chat (Ctrl+Shift+C)' : 'Open AI chat (Ctrl+Shift+C)'}
+            >
+              <MessageSquare size={16} />
+              {isGenerating && !isChatOpen && (
+                <span className="absolute top-0.5 right-0.5 flex h-2 w-2">
+                  <span
+                    className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                    style={{ backgroundColor: 'var(--accent)' }}
+                  />
+                  <span
+                    className="relative inline-flex rounded-full h-2 w-2"
+                    style={{ backgroundColor: 'var(--accent)' }}
+                  />
+                </span>
+              )}
             </button>
           )}
           {onTerminalToggle && (

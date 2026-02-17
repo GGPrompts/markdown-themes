@@ -255,6 +255,9 @@ export function ConversationMarkdownViewer({
     [throttledContent, isStreaming, getMetadata]
   );
 
+  // Track whether user is "following" (near the bottom)
+  const isFollowingRef = useRef(true);
+
   // Scroll to bottom on initial load (conversations are chronological)
   // Uses ResizeObserver to handle async rendering (Shiki, Streamdown)
   useEffect(() => {
@@ -282,6 +285,49 @@ export function ConversationMarkdownViewer({
       clearTimeout(maxTimer);
     };
   }, [markdown]);
+
+  // Track user scroll position to determine if they're following along
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      // Consider "following" if within 150px of bottom
+      isFollowingRef.current = scrollHeight - scrollTop - clientHeight < 150;
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // During streaming, keep scrolling to bottom if user is following
+  // Uses ResizeObserver to catch height changes from auto-expanding details blocks
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !isStreaming) return;
+
+    const scrollToBottom = () => {
+      if (isFollowingRef.current) {
+        container.scrollTop = container.scrollHeight;
+      }
+    };
+
+    // Scroll on content changes
+    scrollToBottom();
+
+    // Also scroll when container resizes (details expanding, async renders)
+    const observer = new ResizeObserver(scrollToBottom);
+    observer.observe(container);
+
+    // Watch for child size changes too (details blocks expanding)
+    const prose = container.querySelector('.streamdown-content');
+    if (prose) {
+      observer.observe(prose);
+    }
+
+    return () => observer.disconnect();
+  }, [markdown, isStreaming]);
 
   // Restore HTML classes stripped by Streamdown's rehype-sanitize,
   // then set up viewport-aware expansion via IntersectionObserver.

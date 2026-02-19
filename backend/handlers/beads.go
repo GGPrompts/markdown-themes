@@ -1,34 +1,32 @@
 package handlers
 
 import (
-	"database/sql"
+	"bufio"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
-// BeadsIssue represents a single issue from .beads/beads.db
+// BeadsIssue represents a single issue from .beads/issues.jsonl
 type BeadsIssue struct {
-	ID           string           `json:"id"`
-	Title        string           `json:"title"`
-	Description  string           `json:"description,omitempty"`
-	Notes        string           `json:"notes,omitempty"`
-	Design       string           `json:"design,omitempty"`
-	Status       string           `json:"status"`
-	Priority     int              `json:"priority"`
-	IssueType    string           `json:"issue_type,omitempty"`
-	Owner        string           `json:"owner,omitempty"`
-	Labels       []string         `json:"labels,omitempty"`
+	ID           string            `json:"id"`
+	Title        string            `json:"title"`
+	Description  string            `json:"description,omitempty"`
+	Notes        string            `json:"notes,omitempty"`
+	Design       string            `json:"design,omitempty"`
+	Status       string            `json:"status"`
+	Priority     int               `json:"priority"`
+	IssueType    string            `json:"issue_type,omitempty"`
+	Owner        string            `json:"owner,omitempty"`
+	Labels       []string          `json:"labels,omitempty"`
 	Dependencies []BeadsDependency `json:"dependencies,omitempty"`
-	CreatedAt    string           `json:"created_at,omitempty"`
-	UpdatedAt    string           `json:"updated_at,omitempty"`
-	ClosedAt     string           `json:"closed_at,omitempty"`
-	CloseReason  string           `json:"close_reason,omitempty"`
+	CreatedAt    string            `json:"created_at,omitempty"`
+	UpdatedAt    string            `json:"updated_at,omitempty"`
+	ClosedAt     string            `json:"closed_at,omitempty"`
+	CloseReason  string            `json:"close_reason,omitempty"`
 }
 
 // BeadsDependency represents a dependency between issues
@@ -55,9 +53,10 @@ func BeadsIssues(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	dbPath := filepath.Join(filepath.Clean(path), ".beads", "beads.db")
+	jsonlPath := filepath.Join(filepath.Clean(path), ".beads", "issues.jsonl")
 
-	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+	f, err := os.Open(jsonlPath)
+	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"issues": []BeadsIssue{},
@@ -65,93 +64,29 @@ func BeadsIssues(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-
-	// Open in read-only mode with WAL support
-	db, err := sql.Open("sqlite3", dbPath+"?mode=ro&_journal_mode=WAL")
-	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error": "failed to open beads db: %s"}`, err.Error()), http.StatusInternalServerError)
-		return
-	}
-	defer db.Close()
-
-	// Query issues (exclude deleted)
-	rows, err := db.Query(`
-		SELECT id, title, description, notes, design, status, priority,
-		       issue_type, assignee, created_at, updated_at, closed_at, close_reason
-		FROM issues
-		WHERE deleted_at IS NULL
-		ORDER BY created_at DESC
-	`)
-	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error": "failed to query issues: %s"}`, err.Error()), http.StatusInternalServerError)
-		return
-	}
-	defer rows.Close()
+	defer f.Close()
 
 	var issues []BeadsIssue
-	for rows.Next() {
-		var issue BeadsIssue
-		var desc, notes, design, issueType, owner, createdAt, updatedAt, closedAt, closeReason sql.NullString
-		err := rows.Scan(
-			&issue.ID, &issue.Title, &desc, &notes, &design,
-			&issue.Status, &issue.Priority, &issueType, &owner,
-			&createdAt, &updatedAt, &closedAt, &closeReason,
-		)
-		if err != nil {
+	scanner := bufio.NewScanner(f)
+	// JSONL lines can be large (long descriptions/notes)
+	scanner.Buffer(make([]byte, 0, 1024*1024), 1024*1024)
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
 			continue
 		}
-		issue.Description = desc.String
-		issue.Notes = notes.String
-		issue.Design = design.String
-		issue.IssueType = issueType.String
-		issue.Owner = owner.String
-		issue.CreatedAt = createdAt.String
-		issue.UpdatedAt = updatedAt.String
-		issue.ClosedAt = closedAt.String
-		issue.CloseReason = closeReason.String
+		var issue BeadsIssue
+		if err := json.Unmarshal([]byte(line), &issue); err != nil {
+			continue
+		}
 		issues = append(issues, issue)
 	}
 
-	// Fetch labels for all issues
-	labelRows, err := db.Query(`SELECT issue_id, label FROM labels`)
-	if err == nil {
-		defer labelRows.Close()
-		labelMap := make(map[string][]string)
-		for labelRows.Next() {
-			var issueID, label string
-			if labelRows.Scan(&issueID, &label) == nil {
-				labelMap[issueID] = append(labelMap[issueID], label)
-			}
-		}
-		for i := range issues {
-			if labels, ok := labelMap[issues[i].ID]; ok {
-				issues[i].Labels = labels
-			}
-		}
-	}
-
-	// Fetch dependencies for all issues
-	depRows, err := db.Query(`
-		SELECT issue_id, depends_on_id, type, created_at
-		FROM dependencies
-	`)
-	if err == nil {
-		defer depRows.Close()
-		depMap := make(map[string][]BeadsDependency)
-		for depRows.Next() {
-			var dep BeadsDependency
-			var createdAt sql.NullString
-			if depRows.Scan(&dep.IssueID, &dep.DependsOnID, &dep.Type, &createdAt) == nil {
-				dep.CreatedAt = createdAt.String
-				depMap[dep.IssueID] = append(depMap[dep.IssueID], dep)
-			}
-		}
-		for i := range issues {
-			if deps, ok := depMap[issues[i].ID]; ok {
-				issues[i].Dependencies = deps
-			}
-		}
-	}
+	// Sort by created_at descending (newest first)
+	sort.Slice(issues, func(i, j int) bool {
+		return issues[i].CreatedAt > issues[j].CreatedAt
+	})
 
 	if issues == nil {
 		issues = []BeadsIssue{}

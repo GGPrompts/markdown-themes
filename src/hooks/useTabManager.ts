@@ -17,6 +17,13 @@ export interface ConversationData {
   autoClose?: boolean;
 }
 
+// Beads issue data for issue detail tabs
+// Stores id + title for tab display; full issue is fetched/passed separately
+export interface BeadsIssueData {
+  id: string;
+  title: string;
+}
+
 export interface TabMetadata {
   /** Tab was auto-opened by Follow AI Edits mode */
   autoOpened?: boolean;
@@ -31,9 +38,10 @@ export interface Tab {
   path: string;
   isPreview: boolean;
   isPinned: boolean;
-  type: 'file' | 'diff' | 'conversation' | ViewTabType;
+  type: 'file' | 'diff' | 'conversation' | 'beads-issue' | ViewTabType;
   diffData?: DiffData;
   conversationData?: ConversationData;
+  beadsIssueData?: BeadsIssueData;
   metadata?: TabMetadata;
 }
 
@@ -61,6 +69,7 @@ interface UseTabManagerResult {
   activeTab: Tab | null;
   openTab: (path: string, options?: boolean | OpenTabOptions) => void;
   openDiffTab: (base: string, file: string, head?: string) => void;
+  openBeadsIssueTab: (issueId: string, title: string) => void;
   openConversationTab: (path: string, data: ConversationData) => void;
   closeConversationTab: (sessionId: string) => void;
   openViewTab: (viewType: ViewTabType) => string;
@@ -307,6 +316,43 @@ export function useTabManager(options: UseTabManagerOptions = {}): UseTabManager
     setActiveTabId(newTab.id);
   }, []);
 
+  const openBeadsIssueTab = useCallback((issueId: string, title: string) => {
+    const currentTabs = tabsRef.current;
+
+    // Check if this issue is already open
+    const existingTab = currentTabs.find(
+      (t) => t.type === 'beads-issue' && t.beadsIssueData?.id === issueId
+    );
+    if (existingTab) {
+      setActiveTabId(existingTab.id);
+      return;
+    }
+
+    // Create new beads-issue tab as preview (replaces previous unpinned beads-issue tab)
+    const newTab: Tab = {
+      id: generateTabId(),
+      path: `__beads-issue__:${issueId}`,
+      isPreview: true,
+      isPinned: false,
+      type: 'beads-issue',
+      beadsIssueData: { id: issueId, title },
+    };
+
+    setTabs((prevTabs) => {
+      // Find an existing unpinned beads-issue tab to replace
+      const existingPreviewIndex = prevTabs.findIndex(
+        (t) => t.type === 'beads-issue' && !t.isPinned
+      );
+      if (existingPreviewIndex >= 0) {
+        const newTabs = [...prevTabs];
+        newTabs[existingPreviewIndex] = newTab;
+        return newTabs;
+      }
+      return [...prevTabs, newTab];
+    });
+    setActiveTabId(newTab.id);
+  }, []);
+
   const openConversationTab = useCallback((path: string, data: ConversationData) => {
     const currentTabs = tabsRef.current;
 
@@ -419,6 +465,7 @@ export function useTabManager(options: UseTabManagerOptions = {}): UseTabManager
     activeTab,
     openTab,
     openDiffTab,
+    openBeadsIssueTab,
     openConversationTab,
     closeConversationTab,
     openViewTab,

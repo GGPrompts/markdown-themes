@@ -246,7 +246,6 @@ function getHomePath(workspacePath: string | null): string {
 export function Files() {
   // Get page state from context for persistence across navigation
   const { filesState, setFilesState } = usePageState();
-  const [selectedBeadsIssue, setSelectedBeadsIssue] = useState<BeadsIssue | null>(null);
 
   // Tab manager with initial state from context
   const handleTabStateChange = useCallback(
@@ -262,6 +261,7 @@ export function Files() {
     activeTab,
     openTab,
     openDiffTab,
+    openBeadsIssueTab,
     openConversationTab,
     closeConversationTab,
     openViewTab,
@@ -964,16 +964,10 @@ export function Files() {
     }
   }, [isSplit, rightPaneContent, setRightFile, setRightPaneBeadsBoard, tabs, activeTabId, closeViewTab, setActiveTab, openViewTab]);
 
-  // Handle issue selection from beads board — show detail in left pane
+  // Handle issue selection from beads board — open as a tab
   const handleBeadsIssueSelect = useCallback((issue: BeadsIssue) => {
-    setSelectedBeadsIssue(issue);
-  }, []);
-
-  // Wrap setActiveTab to clear beads detail when clicking a tab
-  const handleTabSelect = useCallback((id: string) => {
-    setSelectedBeadsIssue(null);
-    setActiveTab(id);
-  }, [setActiveTab]);
+    openBeadsIssueTab(issue.id, issue.title);
+  }, [openBeadsIssueTab]);
 
   // Handle chat panel toggle
   const handleChatPanelToggle = useCallback(() => {
@@ -1260,7 +1254,7 @@ export function Files() {
               <TabBar
                 tabs={tabs}
                 activeTabId={activeTabId}
-                onTabSelect={handleTabSelect}
+                onTabSelect={setActiveTab}
                 onTabClose={handleCloseTab}
                 onTabPin={pinTab}
                 onTabUnpin={unpinTab}
@@ -1318,25 +1312,27 @@ export function Files() {
                 )
               )}
 
-              {/* Beads issue detail in main pane (selected from board) */}
-              {selectedBeadsIssue && activeTab?.type !== 'beads-board' && (
-                <BeadsDetail
-                  issue={selectedBeadsIssue}
-                  fontSize={appState.fontSize}
-                  onBack={() => setSelectedBeadsIssue(null)}
-                />
-              )}
-
               {/* Beads board in main pane (as tab) */}
               {activeTab?.type === 'beads-board' && (
                 <BeadsBoard
                   workspacePath={workspacePath}
                   fontSize={appState.fontSize}
+                  onSelectIssue={handleBeadsIssueSelect}
+                />
+              )}
+
+              {/* Beads issue detail in main pane (as tab) */}
+              {activeTab?.type === 'beads-issue' && activeTab.beadsIssueData && (
+                <BeadsDetail
+                  issue={activeTab.beadsIssueData}
+                  workspacePath={workspacePath}
+                  fontSize={appState.fontSize}
+                  onBack={() => closeTab(activeTab.id)}
                 />
               )}
 
               {/* File viewer content (default main pane view) */}
-              {!selectedBeadsIssue && (!activeTab || activeTab.type === 'file' || activeTab.type === 'diff' || activeTab.type === 'conversation') && (
+              {(!activeTab || activeTab.type === 'file' || activeTab.type === 'diff' || activeTab.type === 'conversation') && (
                 <>
                   {(activeTab?.type === 'file' || activeTab?.type === 'conversation') && loading && (
                     <div className="flex items-center justify-center h-full">

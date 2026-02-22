@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileDiff, Users, GitBranch, GitPullRequestDraft, Keyboard, Crosshair, Columns, LayoutGrid, Terminal, BookOpen, MessageSquare } from 'lucide-react';
+import { FileDiff, Users, GitBranch, GitPullRequestDraft, Keyboard, Crosshair, Columns, LayoutGrid, Terminal, BookOpen, MessageSquare, CircleDot } from 'lucide-react';
 import type { Tab } from '../hooks/useTabManager';
 import { getFileIconInfo } from '../utils/fileIcons';
 
@@ -75,17 +75,21 @@ function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, onUnpin
     ? viewInfo.name
     : tab.type === 'diff' && tab.diffData
       ? `${tab.diffData.file.split('/').pop()} @ ${tab.diffData.base.substring(0, 7)}`
-      : tab.type === 'conversation' && tab.conversationData
-        ? tab.conversationData.taskDescription || `Subagent ${tab.conversationData.sessionId.substring(0, 8)}`
-        : (tab.path.split('/').pop() ?? tab.path.split('\\').pop() ?? tab.path);
+      : tab.type === 'beads-issue' && tab.beadsIssueData
+        ? tab.beadsIssueData.title
+        : tab.type === 'conversation' && tab.conversationData
+          ? tab.conversationData.taskDescription || `Subagent ${tab.conversationData.sessionId.substring(0, 8)}`
+          : (tab.path.split('/').pop() ?? tab.path.split('\\').pop() ?? tab.path);
 
   const tooltipText = viewInfo
     ? viewInfo.tooltip
     : tab.type === 'diff' && tab.diffData
       ? `Diff: ${tab.diffData.file} (${tab.diffData.base.substring(0, 7)})`
-      : tab.type === 'conversation' && tab.conversationData
-        ? `Subagent conversation: ${tab.conversationData.sessionId}\nPane: ${tab.conversationData.pane}\nWorking dir: ${tab.conversationData.workingDir}`
-        : tab.path;
+      : tab.type === 'beads-issue' && tab.beadsIssueData
+        ? `Issue: ${tab.beadsIssueData.id}`
+        : tab.type === 'conversation' && tab.conversationData
+          ? `Subagent conversation: ${tab.conversationData.sessionId}\nPane: ${tab.conversationData.pane}\nWorking dir: ${tab.conversationData.workingDir}`
+          : tab.path;
 
   const handleDoubleClick = () => {
     if (tab.isPreview) {
@@ -107,7 +111,7 @@ function TabItem({ tab, isActive, isStreaming, onSelect, onClose, onPin, onUnpin
     e.dataTransfer.setData('application/x-tab-id', tab.id);
     e.dataTransfer.setData('application/x-tab-pane', pane);
     // Also set text/plain for cross-pane transfer (file/conversation tabs only)
-    if (!isViewTab && tab.type !== 'diff') {
+    if (!isViewTab && tab.type !== 'diff' && tab.type !== 'beads-issue') {
       e.dataTransfer.setData('text/plain', `${pane}:${tab.path}`);
     }
     e.dataTransfer.effectAllowed = 'move';
@@ -566,6 +570,13 @@ function TabIcon({ tab }: { tab: Tab }) {
     return (
       <span className="w-4 h-4 flex items-center justify-center flex-shrink-0">
         <LayoutGrid size={14} style={{ color: 'var(--accent)' }} />
+      </span>
+    );
+  }
+  if (tab.type === 'beads-issue') {
+    return (
+      <span className="w-4 h-4 flex items-center justify-center flex-shrink-0">
+        <CircleDot size={14} style={{ color: 'var(--accent)' }} />
       </span>
     );
   }

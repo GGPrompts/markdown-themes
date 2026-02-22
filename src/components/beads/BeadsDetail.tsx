@@ -1,6 +1,7 @@
-import { ChevronLeft, Copy, Check } from 'lucide-react';
-import { useState } from 'react';
-import type { BeadsIssue } from '../../lib/api';
+import { ChevronLeft, Copy, Check, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { fetchBeadsIssues, type BeadsIssue } from '../../lib/api';
+import type { BeadsIssueData } from '../../hooks/useTabManager';
 
 const PRIORITY_LABELS: Record<number, { label: string; color: string }> = {
   0: { label: 'P0 Critical', color: '#ef4444' },
@@ -16,17 +17,44 @@ const STATUS_COLORS: Record<string, string> = {
   closed: '#22c55e',
 };
 
+function isFullIssue(issue: BeadsIssue | BeadsIssueData): issue is BeadsIssue {
+  return 'status' in issue;
+}
+
 interface BeadsDetailProps {
-  issue: BeadsIssue;
+  /** Full issue or partial tab data (will fetch full issue if partial) */
+  issue: BeadsIssue | BeadsIssueData;
+  /** Workspace path — needed to fetch full issue when opened from a tab */
+  workspacePath?: string | null;
   onBack?: () => void;
   fontSize?: number;
 }
 
-export function BeadsDetail({ issue, onBack, fontSize = 100 }: BeadsDetailProps) {
+export function BeadsDetail({ issue: issueProp, workspacePath, onBack, fontSize = 100 }: BeadsDetailProps) {
   const [copied, setCopied] = useState(false);
+  const [fetchedIssue, setFetchedIssue] = useState<BeadsIssue | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // If we only have partial data (from tab), fetch the full issue
+  const isPartial = !isFullIssue(issueProp);
+
+  useEffect(() => {
+    if (!isPartial || !workspacePath) return;
+    setLoading(true);
+    fetchBeadsIssues(workspacePath)
+      .then((issues) => {
+        const found = issues.find((i) => i.id === issueProp.id);
+        if (found) setFetchedIssue(found);
+      })
+      .catch(() => { /* ignore fetch errors, show partial data */ })
+      .finally(() => setLoading(false));
+  }, [isPartial, issueProp.id, workspacePath]);
+
+  const issue = fetchedIssue ?? issueProp;
+  const full = isFullIssue(issue) ? issue : null;
   const scale = fontSize / 100;
-  const priority = PRIORITY_LABELS[issue.priority] ?? PRIORITY_LABELS[4];
-  const statusColor = STATUS_COLORS[issue.status] ?? 'var(--text-secondary)';
+  const priority = PRIORITY_LABELS[full?.priority ?? 4] ?? PRIORITY_LABELS[4];
+  const statusColor = full ? (STATUS_COLORS[full.status] ?? 'var(--text-secondary)') : 'var(--text-secondary)';
 
   const handleCopyId = async () => {
     try {
@@ -70,27 +98,38 @@ export function BeadsDetail({ issue, onBack, fontSize = 100 }: BeadsDetailProps)
 
       {/* Body */}
       <div className="flex-1 overflow-auto px-4 py-3 space-y-4">
+        {loading && (
+          <div className="flex items-center gap-2 py-2" style={{ color: 'var(--text-secondary)' }}>
+            <Loader2 size={14} className="animate-spin" />
+            <span className="text-sm">Loading issue details...</span>
+          </div>
+        )}
+
         {/* Meta badges */}
         <div className="flex flex-wrap items-center gap-2">
-          <span
-            className="text-xs font-medium px-2 py-0.5 rounded"
-            style={{
-              color: statusColor,
-              backgroundColor: `color-mix(in srgb, ${statusColor} 15%, transparent)`,
-            }}
-          >
-            {issue.status.replace('_', ' ')}
-          </span>
-          <span
-            className="text-xs font-medium px-2 py-0.5 rounded"
-            style={{
-              color: priority.color,
-              backgroundColor: `color-mix(in srgb, ${priority.color} 15%, transparent)`,
-            }}
-          >
-            {priority.label}
-          </span>
-          {issue.issue_type && (
+          {full && (
+            <span
+              className="text-xs font-medium px-2 py-0.5 rounded"
+              style={{
+                color: statusColor,
+                backgroundColor: `color-mix(in srgb, ${statusColor} 15%, transparent)`,
+              }}
+            >
+              {full.status.replace('_', ' ')}
+            </span>
+          )}
+          {full && (
+            <span
+              className="text-xs font-medium px-2 py-0.5 rounded"
+              style={{
+                color: priority.color,
+                backgroundColor: `color-mix(in srgb, ${priority.color} 15%, transparent)`,
+              }}
+            >
+              {priority.label}
+            </span>
+          )}
+          {full?.issue_type && (
             <span
               className="text-xs font-medium px-2 py-0.5 rounded uppercase tracking-wider"
               style={{
@@ -98,10 +137,10 @@ export function BeadsDetail({ issue, onBack, fontSize = 100 }: BeadsDetailProps)
                 backgroundColor: 'color-mix(in srgb, var(--accent) 15%, transparent)',
               }}
             >
-              {issue.issue_type}
+              {full.issue_type}
             </span>
           )}
-          {(issue.labels ?? []).map((label) => (
+          {(full?.labels ?? []).map((label) => (
             <span
               key={label}
               className="text-xs px-2 py-0.5 rounded"
@@ -117,30 +156,30 @@ export function BeadsDetail({ issue, onBack, fontSize = 100 }: BeadsDetailProps)
         </div>
 
         {/* Description */}
-        {issue.description && (
+        {full?.description && (
           <Section title="Description">
-            <MarkdownBlock content={issue.description} />
+            <MarkdownBlock content={full.description} />
           </Section>
         )}
 
         {/* Design */}
-        {issue.design && (
+        {full?.design && (
           <Section title="Design">
-            <MarkdownBlock content={issue.design} />
+            <MarkdownBlock content={full.design} />
           </Section>
         )}
 
         {/* Notes */}
-        {issue.notes && (
+        {full?.notes && (
           <Section title="Notes">
-            <MarkdownBlock content={issue.notes} />
+            <MarkdownBlock content={full.notes} />
           </Section>
         )}
 
         {/* Close reason */}
-        {issue.close_reason && (
+        {full?.close_reason && (
           <Section title="Close Reason">
-            <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{issue.close_reason}</p>
+            <p className="text-sm" style={{ color: 'var(--text-primary)' }}>{full.close_reason}</p>
           </Section>
         )}
 
@@ -149,10 +188,10 @@ export function BeadsDetail({ issue, onBack, fontSize = 100 }: BeadsDetailProps)
           className="text-xs space-y-1 pt-2 border-t"
           style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)' }}
         >
-          {issue.created_at && <p>Created: {formatDate(issue.created_at)}</p>}
-          {issue.updated_at && <p>Updated: {formatDate(issue.updated_at)}</p>}
-          {issue.closed_at && <p>Closed: {formatDate(issue.closed_at)}</p>}
-          {issue.owner && <p>Owner: {issue.owner}</p>}
+          {full?.created_at && <p>Created: {formatDate(full.created_at)}</p>}
+          {full?.updated_at && <p>Updated: {formatDate(full.updated_at)}</p>}
+          {full?.closed_at && <p>Closed: {formatDate(full.closed_at)}</p>}
+          {full?.owner && <p>Owner: {full.owner}</p>}
         </div>
       </div>
     </div>

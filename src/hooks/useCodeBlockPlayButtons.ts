@@ -85,10 +85,10 @@ export function useCodeBlockPlayButtons(
 
         processedBlocksRef.current.add(block);
 
-        // Add "Run All" button to the header
+        // Add "Run All" button to the header's controls area
         const header = block.querySelector('[data-streamdown="code-block-header"]');
         if (header) {
-          const controlsDiv = header.querySelector('div:last-child') || header;
+          const controlsDiv = header.querySelector('div:last-child');
           const runAllBtn = document.createElement('button');
           runAllBtn.className = 'code-run-all-btn';
           runAllBtn.title = `Run all ${runnableCount} command${runnableCount > 1 ? 's' : ''}`;
@@ -98,7 +98,13 @@ export function useCodeBlockPlayButtons(
             e.preventDefault();
             sendAllCommands(lines);
           });
-          controlsDiv.prepend(runAllBtn);
+          if (controlsDiv) {
+            // Prepend into existing controls container (before copy button)
+            controlsDiv.prepend(runAllBtn);
+          } else {
+            // No controls div — append to header (after language label)
+            header.appendChild(runAllBtn);
+          }
         }
 
         // Add per-line play buttons

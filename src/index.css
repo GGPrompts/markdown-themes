@@ -1114,6 +1114,8 @@ body {
   font-size: 11px;
   border-radius: 4px;
   transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .code-run-all-btn:hover {

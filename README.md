@@ -2,6 +2,8 @@
 
 A themed markdown viewer for AI-assisted writing. Watch Claude edit files in real-time with beautiful style guide themes.
 
+![Markdown Themes — Cyberpunk theme with file tree, markdown viewer, and AI chat](assets/screenshot.png)
+
 ## Features
 
 - **Live file watching** — See changes as Claude writes, with streaming detection and auto-scroll
